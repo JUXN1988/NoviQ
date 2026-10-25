@@ -6,6 +6,10 @@
 </p>
 
 <p align="center">
+<a href="https://juxn1988.github.io/NoviQ/"><b>🌐 Visita la web del programa</b></a> · <a href="https://juxn1988.github.io/NoviQ/#ejecutar">Cómo ejecutarlo</a> · <a href="LICENSE.md">Licencia</a>
+</p>
+
+<p align="center">
 <img alt="Estado" src="https://img.shields.io/badge/estado-en%20actualizaci%C3%B3n-d98a5e?style=flat-square">
 <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-3fe9c4?style=flat-square">
 <a href="LICENSE.md"><img alt="Licencia" src="https://img.shields.io/badge/licencia-uso%20personal%20gratis-8aff45?style=flat-square"></a>
