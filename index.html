@@ -4,231 +4,240 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NoviQ — Agente de IA para programar</title>
-<meta name="description" content="NoviQ: agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora. Con modelos en la nube o modelos locales, y su avatar asistente.">
-<link rel="icon" href="docs/img/favicon.png">
+<meta name="description" content="NoviQ: agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora. Con modelos en la nube o locales, y su avatar asistente. Gratis para uso personal.">
+<meta name="theme-color" content="#070b0f">
 <meta property="og:title" content="NoviQ — Agente de IA para programar">
 <meta property="og:description" content="Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.">
-<meta property="og:image" content="docs/img/og.jpg">
+<meta property="og:image" content="https://juxn1988.github.io/noviark/docs/img/og.jpg">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="docs/img/favicon.png">
+<link rel="apple-touch-icon" href="docs/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
 <style>
-  :root{ --bg:#070b0f; --panel:#0c1218; --line:#17232e; --text:#e8f1f5; --muted:#8aa0ac; --g1:#3fe9c4; --g2:#6ff0ff; --warm:#d98a5e; }
-  :root[data-theme="light"]{ --bg:#f5f9fb; --panel:#ffffff; --line:#d5e1e8; --text:#0b1a24; --muted:#4b6270; }
-  @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --bg:#f5f9fb; --panel:#ffffff; --line:#d5e1e8; --text:#0b1a24; --muted:#4b6270; } }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  a{color:var(--g1)}
-  .wrap{max-width:1000px;margin:0 auto;padding:0 16px}
-  header{display:flex;justify-content:space-between;align-items:center;padding:18px 0;gap:12px;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.1rem;color:var(--text);text-decoration:none}
-  .brand img{width:34px;height:34px;border-radius:8px}
-  nav a{color:var(--muted);text-decoration:none;margin-left:16px;font-size:.92rem}
-  nav a:hover{color:var(--text)}
-  .lang{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer}
-  .hero{text-align:center;padding:36px 0 22px}
-  .hero img.logo{width:140px;height:140px;border-radius:30px}
-  h1{font-size:clamp(2rem,5vw,3rem);margin:16px 0 8px;letter-spacing:-.5px}
-  .lead{color:var(--muted);font-size:1.1rem;max-width:700px;margin:0 auto}
-  .banner{margin:24px auto 0;max-width:720px;border:1px solid var(--warm);border-radius:12px;padding:14px 18px;background:var(--panel);font-size:.95rem;text-align:left}
-  .banner strong{color:var(--warm)}
-  section{padding:34px 0;border-top:1px solid var(--line)}
-  h2{font-size:1.5rem;margin:0 0 14px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
-  .card h3{margin:0 0 6px;font-size:1.02rem}
-  .card p{margin:0;color:var(--muted);font-size:.93rem}
-  pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;font-size:.9rem}
-  code{font-family:ui-monospace,Consolas,monospace}
-  .muted{color:var(--muted);font-size:.95rem}
-  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
-  .shots figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .shots img{width:100%;display:block}
-  .shots figcaption{padding:10px 14px;color:var(--muted);font-size:.9rem}
-  .avatar-strip{width:100%;border-radius:14px;border:1px solid var(--line);margin:8px 0 16px}
-  table{width:100%;border-collapse:collapse;font-size:.95rem}
-  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
-  th{color:var(--muted);font-weight:600}
-  .feedback a.btn{display:inline-block;margin:6px 10px 0 0;padding:10px 16px;border-radius:10px;border:1px solid var(--g1);text-decoration:none;font-weight:700}
-  footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:.88rem;text-align:center}
-  @media (max-width:640px){ nav{display:none} }
+  /* Ajustes solo para las tarjetas del avatar (no cambian el diseño base) */
+  .av-frames figure{margin:0}
+  .av-frames img{width:100%;border-radius:12px;display:block;margin-bottom:12px;border:1px solid var(--line)}
+  .av-frames figcaption{font-size:14px;color:var(--muted)}
+  .av-frames figcaption b{color:var(--text)}
+  .shots p.cap{margin:14px 0 0;color:var(--muted);font-size:14px;text-align:center}
+  .faq .head{margin-bottom:10px}
+  .ver{font-size:13px;color:var(--muted)}
+  .ver code,.run-code{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
+  .run-code{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;font-size:14px;line-height:1.7;color:var(--text)}
+  .note{border:1px solid var(--line);border-left:3px solid var(--g2);background:var(--card);border-radius:12px;padding:14px 18px;color:var(--muted);font-size:15px}
+  .note b{color:var(--text)}
+  .cta-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .js-reveal .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s,transform .7s}
+  .js-reveal .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion: reduce){ .js-reveal .reveal{opacity:1;transform:none;transition:none} }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <a class="brand" href="#"><img src="docs/img/logo.png" alt="">NoviQ</a>
-    <nav>
-      <a href="#ejecutar" data-i="nav_run">Ejecutar</a>
-      <a href="#capturas" data-i="nav_shots">Capturas</a>
-      <a href="#avatar" data-i="nav_avatar">Avatar</a>
-      <a href="#comentarios" data-i="nav_feedback">Comentarios</a>
-      <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener">GitHub</a>
-    </nav>
-    <button class="lang" id="langBtn" type="button">EN</button>
-  </header>
+<div class="glow g1"></div><div class="glow g2"></div>
 
-  <div class="hero">
-    <img class="logo" src="docs/img/logo.png" alt="NoviQ">
-    <h1>NoviQ</h1>
-    <p class="lead" data-i="tagline">Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.</p>
-    <div class="banner">
-      <strong data-i="banner_title">⚠️ En actualización activa.</strong>
-      <span data-i="banner_text">Estamos mejorando el programa y pueden existir pequeñas fallas que se están corrigiendo. Usa siempre la última versión del repositorio.</span>
+<header class="nav" id="top">
+  <a class="brand" href="#top"><img src="docs/img/logo.png" alt="" width="36" height="36"><span>NoviQ</span></a>
+  <nav class="links">
+    <a href="#que-hace" data-i="nav_feat">Qué hace</a>
+    <a href="#capturas" data-i="nav_shots">Capturas</a>
+    <a href="#avatar" data-i="nav_avatar">Avatar</a>
+    <a href="#ejecutar" data-i="nav_run">Ejecutar</a>
+    <a href="#licencia" data-i="nav_lic">Licencia</a>
+    <a href="#comentarios" data-i="nav_fb">Comentarios</a>
+  </nav>
+  <div class="navr">
+    <button class="lang" id="langBtn" type="button" aria-label="Idioma / Language">EN</button>
+    <a class="btn sm ghost hide-sm" href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener" data-i="nav_gh">GitHub</a>
+    <button class="menu" id="menuBtn" type="button" aria-label="Menú">☰</button>
+  </div>
+</header>
+
+<main>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-txt">
+    <span class="pill"><span class="dot"></span> <span data-i="hero_pill">En actualización activa · se ejecuta desde el código</span></span>
+    <h1><span data-i="hero_t1">El agente de IA que programa</span> <span class="grad" data-i="hero_t2">en tu propia computadora.</span></h1>
+    <p class="lead" data-i="hero_p">NoviQ escribe los archivos, ejecuta el programa, lee los errores y los corrige. Usa modelos en la nube o modelos locales con Ollama y LM Studio.</p>
+    <div class="cta">
+      <a class="btn primary lg" href="#ejecutar"><span data-i="hero_run">Cómo ejecutarlo</span> →</a>
+      <a class="btn ghost lg" href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener"><span data-i="hero_gh">Ver el código en GitHub</span></a>
     </div>
+    <ul class="trust">
+      <li data-i="tr1">Gratis para uso personal</li><li data-i="tr2">Modelos en la nube o locales</li><li data-i="tr3">Pide permiso en acciones delicadas</li><li data-i="tr4">Español e inglés</li>
+    </ul>
+  </div>
+  <div class="hero-shot">
+    <div class="window">
+      <div class="wbar"><i></i><i></i><i></i><span>NoviQ</span></div>
+      <img data-src-es="docs/img/work_es.webp" data-src-en="docs/img/work_en.webp" src="docs/img/work_es.webp" alt="NoviQ construyendo un programa en vivo" width="1440" height="860">
+    </div>
+    <div class="float f1">🧪 <span data-i="float1">Ejecuta el programa y lee el error exacto</span></div>
+    <div class="float f2">🧠 <span data-i="float2">Plan que puedes editar antes de actuar</span></div>
+  </div>
+</section>
+
+<section class="strip">
+  <p data-i="strip_t">Proveedores de IA que puedes conectar</p>
+  <div class="marquee"><div class="track">
+    <span>NVIDIA</span><span>Google Gemini</span><span>OpenAI</span><span>Anthropic</span><span>OpenRouter</span><span>Groq</span><span>Ollama (local)</span><span>LM Studio (local)</span>
+    <span>NVIDIA</span><span>Google Gemini</span><span>OpenAI</span><span>Anthropic</span><span>OpenRouter</span><span>Groq</span><span>Ollama (local)</span><span>LM Studio (local)</span>
+  </div></div>
+</section>
+
+<!-- NUMEROS (verificados en el código) -->
+<section class="sec numbers">
+  <div class="nums">
+    <div><b>40</b><span data-i="n1">herramientas del agente: archivos, código, PowerShell, Python, Linux, web y navegador</span></div>
+    <div><b>3</b><span data-i="n2">modos de permiso; el de fábrica pregunta antes de actuar</span></div>
+    <div><b>2</b><span data-i="n3">idiomas de la interfaz: español e inglés</span></div>
+    <div><b>3.10+</b><span data-i="n4">versión mínima de Python para ejecutarlo</span></div>
+  </div>
+</section>
+
+<!-- QUE HACE -->
+<section id="que-hace" class="sec">
+  <div class="head"><span class="kicker" data-i="feat_k">Funciones</span><h2 data-i="feat_t">Qué hace, hoy</h2>
+  <p data-i="feat_p">Estas son las funciones que existen en el programa actual.</p></div>
+  <div class="grid">
+    <div class="card"><div class="ic">🛠</div><h3 data-i="f1t">40 herramientas</h3><p data-i="f1d">Archivos, búsqueda en el código, PowerShell, Python, Linux, procesos, HTTP, búsqueda y lectura web, imágenes, captura de pantalla, navegador automatizado y más.</p></div>
+    <div class="card"><div class="ic">🧠</div><h3 data-i="f2t">Plan antes de actuar</h3><p data-i="f2d">Puedes editar o aprobar el plan. Si no haces nada, se aprueba solo tras una cuenta regresiva.</p></div>
+    <div class="card"><div class="ic">🧪</div><h3 data-i="f3t">Se prueba a sí mismo</h3><p data-i="f3d">La herramienta diagnosticar revisa el proyecto con archivo y línea; probar_web prueba webs y juegos en un navegador invisible.</p></div>
+    <div class="card"><div class="ic">🛡</div><h3 data-i="f4t">Guardián de razonamiento</h3><p data-i="f4d">Si un modelo piensa demasiado sin actuar o entra en bucle, NoviQ lo corta y lo obliga a actuar.</p></div>
+    <div class="card"><div class="ic">⬆</div><h3 data-i="f5t">Escalado al modelo más capaz</h3><p data-i="f5d">Si el agente se atasca, el trabajo pasa al modelo más capaz que tengas habilitado.</p></div>
+    <div class="card"><div class="ic">💾</div><h3 data-i="f6t">Trabajo que no se pierde</h3><p data-i="f6d">Guarda el objetivo, el plan, lo hecho y los errores. Si un modelo falla, el siguiente continúa desde ahí.</p></div>
+    <div class="card"><div class="ic">💻</div><h3 data-i="f7t">IA local</h3><p data-i="f7d">Ollama y LM Studio, con el contexto ajustado a la memoria de tu equipo. Tu código no sale de tu PC.</p></div>
+    <div class="card"><div class="ic">🔐</div><h3 data-i="f8t">Seguridad</h3><p data-i="f8d">Modos de permiso, copias y puntos de restauración, borrado a la Papelera, escáner de secretos y bóveda de claves.</p></div>
+    <div class="card"><div class="ic">🔌</div><h3 data-i="f9t">Proveedores y MCP</h3><p data-i="f9d">NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq y más. Servidores MCP con el mismo formato que Claude Desktop.</p></div>
+  </div>
+</section>
+
+<!-- CAPTURAS -->
+<section id="capturas" class="sec shots">
+  <div class="head"><span class="kicker" data-i="shots_k">Capturas reales</span><h2 data-i="shots_t">Así se ve el programa</h2></div>
+  <div class="tabs" role="tablist">
+    <button class="on" type="button" data-shot="work" data-i="gal_1">Construyendo en vivo</button>
+    <button type="button" data-shot="plan" data-i="gal_2">Plan editable</button>
+    <button type="button" data-shot="picker" data-i="gal_3">Elegir modelo</button>
+    <button type="button" data-shot="project" data-i="gal_4">Proyectos</button>
+    <button type="button" data-shot="home" data-i="gal_5">Inicio</button>
+  </div>
+  <div class="window big"><div class="wbar"><i></i><i></i><i></i><span>NoviQ</span></div><img id="shotImg" src="docs/img/work_es.webp" alt="Captura de NoviQ construyendo un programa" width="1440" height="860" loading="lazy"></div>
+  <p class="cap" id="shotCap" data-i="gal_1">Construyendo en vivo</p>
+</section>
+
+<!-- AVATAR -->
+<section id="avatar" class="sec">
+  <div class="head"><span class="kicker" data-i="av_k">Incluido en el repositorio</span><h2 data-i="av_t">El avatar: noviq-avatar</h2>
+  <p data-i="av_p">Un robot que vive encima de cualquier programa, con fondo transparente. Tiene su propia mente, memoria, personalidad, voz, oído, herramientas y API. Funciona solo, con NoviQ o desde otra aplicación.</p></div>
+
+  <div class="window big"><div class="wbar"><i></i><i></i><i></i><span>noviq-avatar</span></div><img src="docs/img/avatar_estados.webp" alt="Estados del avatar: saluda, trabaja, analiza, usa herramientas y pide permiso" width="1584" height="360" loading="lazy"></div>
+
+  <div class="grid av-frames" style="margin-top:18px">
+    <figure class="card"><img src="docs/img/avatar_saluda.webp" alt="Avatar saludando" loading="lazy"><figcaption><b data-i="fr1t">Saluda</b> · <span data-i="fr1d">se presenta cuando lo abres.</span></figcaption></figure>
+    <figure class="card"><img src="docs/img/avatar_trabaja.webp" alt="Avatar trabajando" loading="lazy"><figcaption><b data-i="fr2t">Trabaja</b> · <span data-i="fr2d">cuando NoviQ empieza un trabajo.</span></figcaption></figure>
+    <figure class="card"><img src="docs/img/avatar_analiza.webp" alt="Avatar analizando" loading="lazy"><figcaption><b data-i="fr3t">Analiza</b> · <span data-i="fr3d">circuitos y paneles de datos salen de su cabeza.</span></figcaption></figure>
+    <figure class="card"><img src="docs/img/avatar_herramientas.webp" alt="Avatar usando herramientas" loading="lazy"><figcaption><b data-i="fr4t">Usa herramientas</b> · <span data-i="fr4d">un icono en su visor según la herramienta.</span></figcaption></figure>
+    <figure class="card"><img src="docs/img/avatar_pregunta.webp" alt="Avatar pidiendo permiso" loading="lazy"><figcaption><b data-i="fr5t">Pide permiso</b> · <span data-i="fr5d">«Necesito tu permiso…» y respondes sí o no.</span></figcaption></figure>
   </div>
 
-  <section id="ejecutar">
-    <h2 data-i="run_title">Ejecutar</h2>
-    <p class="muted" data-i="run_req">Necesitas Python 3.10 o superior. Todavía no hay instaladores publicados: se ejecuta desde el código.</p>
-<pre><code>git clone https://github.com/JUXN1988/noviark.git
+  <div class="head" style="margin-top:34px"><h2 style="font-size:1.35rem" data-i="st_t">Qué hace en cada momento</h2></div>
+  <ul class="checks">
+    <li data-i="st1"><b>Empieza un trabajo:</b> se despierta, pone cara de concentrado y escribe en su panel.</li>
+    <li data-i="st2"><b>Usa herramientas:</b> muestra un icono según la herramienta: código, lupa, terminal o web.</li>
+    <li data-i="st3"><b>Avanza las tareas:</b> una tableta con barra de progreso y la tarea actual.</li>
+    <li data-i="st4"><b>Pide permiso o ayuda:</b> lo delicado se aprueba respondiendo sí o no, sin decir su nombre.</li>
+    <li data-i="st5"><b>Termina:</b> dice «¡Ya terminé!» y pregunta qué más hacemos.</li>
+  </ul>
+
+  <div class="grid" style="margin-top:18px">
+    <div class="card"><div class="ic">🧠</div><h3 data-i="m1t">Mente propia</h3><p data-i="m1d">Responde al instante la hora, recordatorios y agenda. Para lo demás usa el modelo que tengas configurado.</p></div>
+    <div class="card"><div class="ic">💾</div><h3 data-i="m2t">Memoria permanente</h3><p data-i="m2d">Guarda tu nombre, lo que le cuentas, planes y recordatorios. Se guarda en su propio archivo de memoria.</p></div>
+    <div class="card"><div class="ic">🎭</div><h3 data-i="m3t">Personalidad combinable</h3><p data-i="m3d">Hasta cuatro rasgos (curioso, tranquilo, profesor, sarcástico y más) que cambian su cara, su ritmo y su tono.</p></div>
+    <div class="card"><div class="ic">🎙</div><h3 data-i="m4t">Voz y oído</h3><p data-i="m4d">Habla con sus propias voces y escucha siempre, pero solo reacciona cuando dices su nombre (o según lo configures).</p></div>
+    <div class="card"><div class="ic">🔌</div><h3 data-i="m5t">API y MCP</h3><p data-i="m5d">API HTTP y WebSocket compatible con OpenAI (/v1/chat/completions) y servidor MCP para otras aplicaciones.</p></div>
+    <div class="card"><div class="ic">🧰</div><h3 data-i="m6t">Herramientas propias</h3><p data-i="m6d">Buscar y leer en internet, abrir webs, carpetas y programas, portapapeles, recordatorios y calculadora.</p></div>
+  </div>
+  <p class="note" style="margin-top:18px"><b data-i="av_note_b">Nota:</b> <span data-i="av_note">el avatar está diseñado para Windows (usa sus rutas, sus voces y su bóveda de claves). En Linux y macOS, el programa se ejecuta con iniciar.sh, pero el avatar no está pensado para esos sistemas.</span></p>
+</section>
+
+<!-- EJECUTAR -->
+<section id="ejecutar" class="sec">
+  <div class="head"><span class="kicker" data-i="run_k">Ejecutar</span><h2 data-i="run_t">Ejecútalo desde el código</h2>
+  <p data-i="run_p">Todavía no hay instaladores publicados. Necesitas Python 3.10 o superior.</p></div>
+  <div class="grid">
+    <div class="card"><div class="ic">🪟</div><h3 data-i="r1t">Windows</h3><p data-i="r1d">Descarga el repositorio (botón <b>Code</b> → <b>Download ZIP</b>) o clónalo. Luego haz doble clic en <code>iniciar.bat</code>.</p></div>
+    <div class="card"><div class="ic">🐧</div><h3 data-i="r2t">Linux y macOS</h3><p data-i="r2d">En la carpeta del proyecto ejecuta <code>bash iniciar.sh</code>.</p></div>
+    <div class="card"><div class="ic">⚙</div><h3 data-i="r3t">Primer uso</h3><p data-i="r3d">Entra en Ajustes → Proveedores y claves, pega la clave de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.</p></div>
+  </div>
+  <pre class="run-code" style="margin-top:18px"><code>git clone https://github.com/JUXN1988/noviark.git
 cd noviark
 # Windows: doble clic en iniciar.bat
 # Linux / macOS:
 bash iniciar.sh</code></pre>
-    <p class="muted" data-i="run_after">Luego entra en Ajustes → Proveedores y claves, pega la API key de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.</p>
-  </section>
+  <p class="ver" data-i="run_manual">Para ejecutarlo a mano: <code>python app.py</code> y abre <code>http://127.0.0.1:7860</code>.</p>
+</section>
 
-  <section id="capturas">
-    <h2 data-i="shots_title">Capturas</h2>
-    <div class="shots">
-      <figure><img src="docs/img/app_inicio_es.png" alt="Pantalla de inicio"><figcaption data-i="shot_home">Pantalla de inicio: elige modelo, proyecto y permisos.</figcaption></figure>
-      <figure><img src="docs/img/app_ia_gratis_es.png" alt="IA gratis"><figcaption data-i="shot_free">🎁 IA gratis: conecta modelos sin pagar.</figcaption></figure>
-      <figure><img src="docs/img/work_es.webp" alt="Trabajando"><figcaption data-i="shot_work">NoviQ trabajando en un proyecto.</figcaption></figure>
-      <figure><img src="docs/img/plan_es.webp" alt="Plan"><figcaption data-i="shot_plan">Plan editable en vivo.</figcaption></figure>
-      <figure><img src="docs/img/picker_es.webp" alt="Selector de modelos"><figcaption data-i="shot_picker">Selector que muestra solo los modelos que funcionan.</figcaption></figure>
-      <figure><img src="docs/img/project_es.webp" alt="Proyecto"><figcaption data-i="shot_project">Vista de proyecto a pantalla completa.</figcaption></figure>
-    </div>
-  </section>
+<!-- SEGURIDAD -->
+<section id="seguridad" class="sec">
+  <div class="head"><span class="kicker" data-i="sec_k">Seguridad</span><h2 data-i="sec_t">Permisos y copias antes de actuar</h2>
+  <p data-i="sec_p">Estas son las protecciones que tiene el código actual.</p></div>
+  <ul class="checks">
+    <li data-i="c1">Tres modos de permiso: preguntar (el de fábrica), auto_seguro y auto.</li>
+    <li data-i="c2">Puntos de restauración y herramienta para deshacer cambios.</li>
+    <li data-i="c3">Los archivos borrados van a la Papelera, no se eliminan de forma directa.</li>
+    <li data-i="c4">Escáner de secretos para detectar claves expuestas en el código.</li>
+    <li data-i="c5">Con modelos locales, tu código no sale de tu computadora.</li>
+    <li data-i="c6">Bóveda de claves: en Windows se cifra con DPAPI. En Linux y macOS se guarda ofuscada con permisos 600, <b>no cifrada</b>.</li>
+  </ul>
+</section>
 
-  <section id="que-hace">
-    <h2 data-i="feat_title">Qué hace</h2>
-    <div class="grid">
-      <div class="card"><h3 data-i="f1t">40 herramientas</h3><p data-i="f1d">Archivos, búsqueda en el código, PowerShell, Python, Linux, procesos, HTTP, búsqueda y lectura web, imágenes, captura de pantalla, navegador automatizado y más.</p></div>
-      <div class="card"><h3 data-i="f2t">Plan antes de actuar</h3><p data-i="f2d">Puedes editar o aprobar el plan. Si no haces nada, se aprueba solo tras una cuenta regresiva.</p></div>
-      <div class="card"><h3 data-i="f3t">Se prueba a sí mismo</h3><p data-i="f3d">diagnosticar revisa el proyecto con archivo y línea; probar_web prueba webs y juegos en un navegador invisible.</p></div>
-      <div class="card"><h3 data-i="f4t">Guardián de razonamiento</h3><p data-i="f4d">Si un modelo piensa demasiado sin actuar o entra en bucle, NoviQ lo corta y lo obliga a actuar.</p></div>
-      <div class="card"><h3 data-i="f5t">Escalado al modelo más capaz</h3><p data-i="f5d">Si el agente se atasca, el trabajo pasa al modelo más capaz que tengas habilitado.</p></div>
-      <div class="card"><h3 data-i="f6t">Trabajo que no se pierde</h3><p data-i="f6d">Guarda objetivo, plan, lo hecho y los errores. Si un modelo falla, el siguiente continúa desde ahí.</p></div>
-      <div class="card"><h3 data-i="f7t">IA local</h3><p data-i="f7d">Ollama y LM Studio, con el contexto ajustado a la memoria de tu equipo. Tu código no sale de tu PC.</p></div>
-      <div class="card"><h3 data-i="f8t">Seguridad</h3><p data-i="f8d">Modos de permiso, copias y puntos de restauración, borrado a la Papelera, escáner de secretos y bóveda de claves (cifrada con DPAPI en Windows).</p></div>
-      <div class="card"><h3 data-i="f9t">Proveedores y MCP</h3><p data-i="f9d">NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq y más. Servidores MCP con el mismo formato que Claude Desktop.</p></div>
-    </div>
-  </section>
+<!-- LICENCIA -->
+<section id="licencia" class="sec">
+  <div class="head"><span class="kicker" data-i="lic_k">Licencia</span><h2 data-i="lic_t">Gratis para uso personal</h2></div>
+  <p data-i="lic_p">NoviQ es gratis para uso personal. El uso comercial (de empresas, organizaciones, microempresas o de trabajo por cuenta propia que genere ingresos) requiere una licencia comercial de pago: abre un issue con la etiqueta <b>business</b>. No es software de código abierto: el código es visible, pero el uso comercial es de pago.</p>
+  <div class="cta-links">
+    <a class="btn ghost" href="LICENSE.md" data-i="lic_link">Leer la licencia completa</a>
+    <a class="btn ghost" href="ROADMAP.md" data-i="road_link">Hoja de ruta</a>
+    <a class="btn ghost" href="CHANGELOG.md" data-i="chg_link">Historial de cambios</a>
+    <a class="btn ghost" href="LEEME.md" data-i="doc_link">Documentación completa</a>
+  </div>
+</section>
 
-  <section id="avatar">
-    <h2 data-i="avatar_title">El avatar (noviq-avatar)</h2>
-    <p class="muted" data-i="avatar_intro">Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviQ cuando está abierto.</p>
-    <img class="avatar-strip" src="docs/img/avatar_estados.webp" alt="Estados del avatar: saluda, trabaja, usa herramientas, pide ayuda y termina">
-    <table>
-      <thead><tr><th data-i="th_state">Estado</th><th data-i="th_does">Qué hace el robot</th></tr></thead>
-      <tbody>
-        <tr><td>👋 <span data-i="s1">Saluda</span></td><td data-i="s1d">Se presenta y saluda cuando lo abres.</td></tr>
-        <tr><td>✍️ <span data-i="s2">Trabaja</span></td><td data-i="s2d">Pone cara de concentrado cuando NoviQ empieza un trabajo y escribe en su panel.</td></tr>
-        <tr><td>🛠 <span data-i="s3">Usa herramientas</span></td><td data-i="s3d">Muestra un icono en su visor según la herramienta: código, lupa, terminal o web.</td></tr>
-        <tr><td>❓ <span data-i="s4">Pide permiso o ayuda</span></td><td data-i="s4d">«Necesito tu permiso…» o «Necesito tu ayuda…», y le respondes hablando.</td></tr>
-        <tr><td>✅ <span data-i="s5">Termina</span></td><td data-i="s5d">Dice «¡Ya terminé!» y pregunta qué más hacemos.</td></tr>
-      </tbody>
-    </table>
-    <p class="muted" data-i="avatar_more">Además: permisos por voz (responde sí o no sin decir su nombre), tareas a la vista con barra de progreso, API compatible con OpenAI y servidor MCP.</p>
-  </section>
+<!-- PREGUNTAS -->
+<section class="sec faq">
+  <div class="head"><h2 data-i="faq_t">Preguntas frecuentes</h2></div>
+  <details><summary data-i="q1">¿Mi código sale de mi computadora?</summary><p data-i="a1">Con modelos locales (Ollama o LM Studio), no. Con modelos en la nube, se envía al proveedor que elijas el texto necesario para cada tarea.</p></details>
+  <details><summary data-i="q2">¿Necesito una GPU?</summary><p data-i="a2">No es obligatoria. Con modelos en la nube funciona en cualquier equipo; los modelos locales dependen de la memoria de tu computadora.</p></details>
+  <details><summary data-i="q3">¿Hay instalador?</summary><p data-i="a3">Todavía no. Por ahora se ejecuta desde el código con iniciar.bat (Windows) o iniciar.sh (Linux y macOS).</p></details>
+  <details><summary data-i="q4">¿Puede hacer algo peligroso sin preguntar?</summary><p data-i="a4">Depende del modo de permiso. El modo de fábrica pregunta antes de actuar, y los puntos de restauración permiten volver atrás.</p></details>
+</section>
 
-  <section id="comentarios" class="feedback">
-    <h2 data-i="fb_title">Comentarios y sugerencias</h2>
-    <p class="muted" data-i="fb_text">Como el proyecto está en actualización, tu opinión ayuda mucho.</p>
-    <a class="btn" href="https://github.com/JUXN1988/noviark/issues/new?template=bug_report.yml" target="_blank" rel="noopener" data-i="fb_bug">🐞 Reportar un error</a>
-    <a class="btn" href="https://github.com/JUXN1988/noviark/issues/new?template=feature_request.yml" target="_blank" rel="noopener" data-i="fb_feat">💡 Proponer una mejora</a>
-    <a class="btn" href="https://github.com/JUXN1988/noviark/issues" target="_blank" rel="noopener" data-i="fb_all">📋 Ver issues abiertos</a>
-  </section>
+<!-- COMENTARIOS -->
+<section id="comentarios" class="sec">
+  <div class="head"><span class="kicker" data-i="fb_k">Comunidad</span><h2 data-i="fb_t">Comentarios y sugerencias</h2>
+  <p data-i="fb_p">El proyecto está en actualización. Tu opinión ayuda mucho: los errores y las mejoras se revisan en GitHub.</p></div>
+  <div class="cta-links">
+    <a class="btn primary" href="https://github.com/JUXN1988/noviark/issues/new?template=bug_report.yml" target="_blank" rel="noopener" data-i="fb_bug">🐞 Reportar un error</a>
+    <a class="btn ghost" href="https://github.com/JUXN1988/noviark/issues/new?template=feature_request.yml" target="_blank" rel="noopener" data-i="fb_feat">💡 Proponer una mejora</a>
+    <a class="btn ghost" href="https://github.com/JUXN1988/noviark/issues" target="_blank" rel="noopener" data-i="fb_all">📋 Ver issues abiertos</a>
+  </div>
+</section>
+</main>
 
-  <section id="licencia">
-    <h2 data-i="lic_title">Licencia</h2>
-    <p class="muted" data-i="lic_text">NoviQ se distribuye bajo la Licencia NoviQ de Uso Personal 1.0 (ver LICENSE.md). Es gratis para uso personal. Cualquier uso comercial (de empresas, organizaciones, microempresas o trabajo por cuenta propia que genere ingresos) requiere una licencia comercial de pago. Para solicitarla, abre un issue con la etiqueta business. No es software de código abierto: el código es visible, pero el uso comercial es de pago.</p>
-    <p><a href="LICENSE.md" data-i="lic_link">Leer la licencia completa</a> · <a href="ROADMAP.md" data-i="road_link">Hoja de ruta</a> · <a href="CHANGELOG.md" data-i="chg_link">Historial de cambios</a></p>
-  </section>
+<footer class="foot">
+  <div class="fbrand"><img src="docs/img/logo.png" alt="" width="28" height="28"> <b>NoviQ</b> <span class="small">© 2026</span></div>
+  <div class="flinks">
+    <a href="#que-hace" data-i="nav_feat">Qué hace</a>
+    <a href="#avatar" data-i="nav_avatar">Avatar</a>
+    <a href="#ejecutar" data-i="nav_run">Ejecutar</a>
+    <a href="#licencia" data-i="nav_lic">Licencia</a>
+    <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</footer>
 
-  <footer>
-    <p>© 2026 NoviQ Labs · <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener">GitHub</a></p>
-  </footer>
-</div>
-
-<script>
-(function(){
-  var ES = {
-    nav_run:"Ejecutar", nav_shots:"Capturas", nav_avatar:"Avatar", nav_feedback:"Comentarios",
-    tagline:"Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.",
-    banner_title:"⚠️ En actualización activa.", banner_text:"Estamos mejorando el programa y pueden existir pequeñas fallas que se están corrigiendo. Usa siempre la última versión del repositorio.",
-    run_title:"Ejecutar", run_req:"Necesitas Python 3.10 o superior. Todavía no hay instaladores publicados: se ejecuta desde el código.",
-    run_after:"Luego entra en Ajustes → Proveedores y claves, pega la API key de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.",
-    shots_title:"Capturas", shot_home:"Pantalla de inicio: elige modelo, proyecto y permisos.", shot_free:"🎁 IA gratis: conecta modelos sin pagar.", shot_work:"NoviQ trabajando en un proyecto.", shot_plan:"Plan editable en vivo.", shot_picker:"Selector que muestra solo los modelos que funcionan.", shot_project:"Vista de proyecto a pantalla completa.",
-    feat_title:"Qué hace",
-    f1t:"40 herramientas", f1d:"Archivos, búsqueda en el código, PowerShell, Python, Linux, procesos, HTTP, búsqueda y lectura web, imágenes, captura de pantalla, navegador automatizado y más.",
-    f2t:"Plan antes de actuar", f2d:"Puedes editar o aprobar el plan. Si no haces nada, se aprueba solo tras una cuenta regresiva.",
-    f3t:"Se prueba a sí mismo", f3d:"diagnosticar revisa el proyecto con archivo y línea; probar_web prueba webs y juegos en un navegador invisible.",
-    f4t:"Guardián de razonamiento", f4d:"Si un modelo piensa demasiado sin actuar o entra en bucle, NoviQ lo corta y lo obliga a actuar.",
-    f5t:"Escalado al modelo más capaz", f5d:"Si el agente se atasca, el trabajo pasa al modelo más capaz que tengas habilitado.",
-    f6t:"Trabajo que no se pierde", f6d:"Guarda objetivo, plan, lo hecho y los errores. Si un modelo falla, el siguiente continúa desde ahí.",
-    f7t:"IA local", f7d:"Ollama y LM Studio, con el contexto ajustado a la memoria de tu equipo. Tu código no sale de tu PC.",
-    f8t:"Seguridad", f8d:"Modos de permiso, copias y puntos de restauración, borrado a la Papelera, escáner de secretos y bóveda de claves (cifrada con DPAPI en Windows).",
-    f9t:"Proveedores y MCP", f9d:"NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq y más. Servidores MCP con el mismo formato que Claude Desktop.",
-    avatar_title:"El avatar (noviq-avatar)", avatar_intro:"Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviQ cuando está abierto.",
-    th_state:"Estado", th_does:"Qué hace el robot",
-    s1:"Saluda", s1d:"Se presenta y saluda cuando lo abres.",
-    s2:"Trabaja", s2d:"Pone cara de concentrado cuando NoviQ empieza un trabajo y escribe en su panel.",
-    s3:"Usa herramientas", s3d:"Muestra un icono en su visor según la herramienta: código, lupa, terminal o web.",
-    s4:"Pide permiso o ayuda", s4d:"«Necesito tu permiso…» o «Necesito tu ayuda…», y le respondes hablando.",
-    s5:"Termina", s5d:"Dice «¡Ya terminé!» y pregunta qué más hacemos.",
-    avatar_more:"Además: permisos por voz (responde sí o no sin decir su nombre), tareas a la vista con barra de progreso, API compatible con OpenAI y servidor MCP.",
-    fb_title:"Comentarios y sugerencias", fb_text:"Como el proyecto está en actualización, tu opinión ayuda mucho.",
-    fb_bug:"🐞 Reportar un error", fb_feat:"💡 Proponer una mejora", fb_all:"📋 Ver issues abiertos",
-    lic_title:"Licencia", lic_text:"NoviQ se distribuye bajo la Licencia NoviQ de Uso Personal 1.0 (ver LICENSE.md). Es gratis para uso personal. Cualquier uso comercial (de empresas, organizaciones, microempresas o trabajo por cuenta propia que genere ingresos) requiere una licencia comercial de pago. Para solicitarla, abre un issue con la etiqueta business. No es software de código abierto: el código es visible, pero el uso comercial es de pago.",
-    lic_link:"Leer la licencia completa", road_link:"Hoja de ruta", chg_link:"Historial de cambios"
-  };
-  var EN = {
-    nav_run:"Run", nav_shots:"Screenshots", nav_avatar:"Avatar", nav_feedback:"Feedback",
-    tagline:"An AI agent that writes, runs, tests and fixes programs on your computer.",
-    banner_title:"⚠️ Active development.", banner_text:"We are improving the app and minor bugs may exist while we fix them. Always use the latest version of the repository.",
-    run_title:"Run", run_req:"You need Python 3.10 or newer. No installers are published yet: run it from the source code.",
-    run_after:"Then go to Settings → Providers & keys, paste an API key from a provider (or connect Ollama / LM Studio) and start a conversation.",
-    shots_title:"Screenshots", shot_home:"Home screen: pick a model, a project and permissions.", shot_free:"🎁 Free AI: connect models without paying.", shot_work:"NoviQ working on a project.", shot_plan:"Editable live plan.", shot_picker:"Picker showing only the models that work.", shot_project:"Full-screen project view.",
-    feat_title:"What it does",
-    f1t:"40 tools", f1d:"Files, code search, PowerShell, Python, Linux, processes, HTTP, web search and reading, images, screenshots, automated browser and more.",
-    f2t:"Plan before acting", f2d:"You can edit or approve the plan. If you do nothing, it is approved automatically after a countdown.",
-    f3t:"Tests its own work", f3d:"diagnosticar reviews the project with file and line; probar_web tests web apps and games in an invisible browser.",
-    f4t:"Reasoning guardian", f4d:"If a model thinks too long without acting or loops, NoviQ stops it and makes it act.",
-    f5t:"Escalation to the most capable model", f5d:"If the agent gets stuck, the work moves to the most capable model you have enabled.",
-    f6t:"Work that is not lost", f6d:"Keeps the goal, plan, what is done and errors. If a model fails, the next one continues from there.",
-    f7t:"Local AI", f7d:"Ollama and LM Studio, with context sized to your computer's memory. Your code stays on your PC.",
-    f8t:"Safety", f8d:"Permission modes, backups and restore points, deletes go to the Recycle Bin, secret scanner and key vault (DPAPI-encrypted on Windows).",
-    f9t:"Providers and MCP", f9d:"NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq and more. MCP servers with the same format as Claude Desktop.",
-    avatar_title:"The avatar (noviq-avatar)", avatar_intro:"A robot that lives above your programs with a transparent background. It has its own mind, memory, voice and hearing, and can use NoviQ's tools when NoviQ is open.",
-    th_state:"State", th_does:"What the robot does",
-    s1:"Greets", s1d:"Introduces itself and says hello when you open it.",
-    s2:"Works", s2d:"Looks focused when NoviQ starts a job and writes in its panel.",
-    s3:"Uses tools", s3d:"Shows an icon on its visor for the tool in use: code, magnifier, terminal or web.",
-    s4:"Asks permission or help", s4d:"«I need your permission…» or «I need your help…», and you answer by voice.",
-    s5:"Finishes", s5d:"Says «Done!» and asks what to do next.",
-    avatar_more:"Also: voice permissions (answer yes or no without saying its name), tasks at a glance with a progress bar, an OpenAI-compatible API and an MCP server.",
-    fb_title:"Comments and suggestions", fb_text:"Since the project is being updated, your feedback helps a lot.",
-    fb_bug:"🐞 Report a bug", fb_feat:"💡 Suggest an improvement", fb_all:"📋 See open issues",
-    lic_title:"License", lic_text:"NoviQ is distributed under the NoviQ Personal Use License 1.0 (see LICENSE.md). It is free for personal use. Any commercial use (by companies, organizations, microenterprises or self-employed people earning income) requires a paid commercial license. To request one, open an issue labeled business. This is not open-source software: the code is visible, but commercial use is paid.",
-    lic_link:"Read the full license", road_link:"Roadmap", chg_link:"Changelog"
-  };
-  var lang = "es";
-  try { lang = localStorage.getItem("noviark_lang") || ((navigator.language||"").indexOf("es")===0 ? "es" : "en"); } catch(e) {}
-  function apply(){
-    var dict = lang === "en" ? EN : ES;
-    document.documentElement.lang = lang;
-    document.querySelectorAll("[data-i]").forEach(function(el){
-      var k = el.getAttribute("data-i");
-      if (dict[k] !== undefined) el.textContent = dict[k];
-    });
-    document.getElementById("langBtn").textContent = lang === "en" ? "ES" : "EN";
-  }
-  document.getElementById("langBtn").addEventListener("click", function(){
-    lang = lang === "en" ? "es" : "en";
-    try { localStorage.setItem("noviark_lang", lang); } catch(e) {}
-    apply();
-  });
-  apply();
-})();
-</script>
+<script src="js/main.js"></script>
 </body>
 </html>
