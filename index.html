@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NoviArk — El agente de IA autónomo que tu empresa controla</title>
+<meta name="description" content="NoviArk planifica, escribe, ejecuta, prueba y corrige software de punta a punta. Usa cualquier IA: nube o local. Windows, macOS y Linux.">
+<meta property="og:title" content="NoviArk — Agente de IA autónomo">
+<meta property="og:description" content="38+ herramientas reales. 20+ proveedores de IA. Tu código nunca sale de casa.">
+<meta property="og:image" content="docs/img/og.jpg">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="docs/img/favicon.png">
+<link rel="apple-touch-icon" href="docs/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070b0f;--bg2:#0c1218;--card:#101920;--card2:#15212b;
+  --line:#1f2d39;--text:#e9f2ee;--muted:#93a4a0;
+  --g1:#3fdc2b;--g2:#8aff45;--cu:#d98a5e;--r:16px;
+  --nav:64px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.6;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;height:auto;display:block}
+button{cursor:pointer;border:none;background:none;font:inherit;color:inherit}
+
+/* ── BANNER ACTUALIZACIÓN ── */
+#update-banner{
+  background:linear-gradient(90deg,#1a1200,#241800,#1a1200);
+  border-bottom:1px solid #d98a5e44;
+  padding:10px 20px;
+  text-align:center;
+  font-size:.85rem;
+  color:var(--cu);
+  position:sticky;top:0;z-index:1000;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  animation:bannerPulse 4s ease-in-out infinite;
+}
+@keyframes bannerPulse{0%,100%{opacity:.9}50%{opacity:1}}
+#update-banner .dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--cu);
+  animation:blink 1.4s steps(1) infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+#close-banner{
+  margin-left:12px;opacity:.6;font-size:1rem;line-height:1;
+  cursor:pointer;transition:opacity .2s;
+}
+#close-banner:hover{opacity:1}
+
+/* ── NAV ── */
+nav{
+  position:sticky;top:40px;z-index:900;
+  height:var(--nav);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;
+  background:rgba(7,11,15,.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);
+  transition:top .3s;
+}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;letter-spacing:-.01em}
+.nav-logo img{width:36px;height:36px;border-radius:8px}
+.nav-links{display:flex;align-items:center;gap:28px;font-size:.9rem;color:var(--muted)}
+.nav-links a:hover{color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:12px}
+#lang-btn{
+  font-size:.8rem;font-weight:600;padding:5px 12px;
+  border:1px solid var(--line);border-radius:6px;
+  color:var(--muted);transition:.2s;
+}
+#lang-btn:hover{border-color:var(--g1);color:var(--g1)}
+.btn-nav{
+  padding:8px 18px;border-radius:8px;font-size:.88rem;font-weight:600;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  color:#041604;transition:.2s;
+}
+.btn-nav:hover{transform:translateY(-1px);box-shadow:0 6px 20px #3fdc2b33}
+#mobile-menu-btn{display:none;flex-direction:column;gap:5px;padding:4px}
+#mobile-menu-btn span{width:24px;height:2px;background:var(--text);border-radius:2px;transition:.3s}
+#mobile-menu{display:none;position:absolute;top:var(--nav);left:0;right:0;background:var(--bg2);border-bottom:1px solid var(--line);padding:20px;z-index:800}
+#mobile-menu a{display:block;padding:12px 0;border-bottom:1px solid var(--line);color:var(--muted);font-size:.95rem}
+#mobile-menu a:last-child{border:none}
+
+/* ── HERO ── */
+#hero{
+  min-height:calc(100vh - var(--nav) - 40px);
+  display:grid;grid-template-columns:1.05fr 1.2fr;
+  align-items:center;gap:60px;
+  padding:80px 80px 60px;
+  position:relative;overflow:hidden;
+}
+#hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 50% at 30% 40%,#3fdc2b0d 0%,transparent 70%),
+              radial-gradient(ellipse 40% 60% at 80% 20%,#8aff450a 0%,transparent 60%);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#3fdc2b15;border:1px solid #3fdc2b40;
+  color:var(--g2);font-size:.82rem;font-weight:600;
+  padding:6px 14px;border-radius:100px;margin-bottom:22px;
+}
+.hero-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--g1);animation:blink 1.8s ease-in-out infinite}
+h1{font-size:clamp(2.2rem,4vw,3.4rem);font-weight:800;line-height:1.12;letter-spacing:-.03em;margin-bottom:20px}
+h1 .accent{
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{font-size:1.05rem;color:var(--muted);max-width:480px;margin-bottom:32px;line-height:1.7}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:40px}
+.btn-primary{
+  padding:13px 28px;border-radius:10px;font-size:.95rem;font-weight:700;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  color:#041604;transition:.25s;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px #3fdc2b44}
+.btn-secondary{
+  padding:13px 28px;border-radius:10px;font-size:.95rem;font-weight:600;
+  border:1px solid var(--line);color:var(--text);transition:.25s;
+}
+.btn-secondary:hover{border-color:var(--g1);color:var(--g1)}
+.hero-stats{display:flex;gap:32px}
+.hero-stat{text-align:center}
+.hero-stat-n{font-size:1.6rem;font-weight:800;color:var(--g2)}
+.hero-stat-l{font-size:.78rem;color:var(--muted);margin-top:2px}
+
+/* NOVIQ AVATAR SVG HERO */
+.hero-visual{
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.robot-wrap{
+  position:relative;
+  animation:float 4s ease-in-out infinite;
+  filter:drop-shadow(0 20px 60px #3fe9c422);
+}
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-16px)}
+}
+/* Glow ring behind avatar */
+.robot-wrap::before{
+  content:'';
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:320px;height:320px;border-radius:50%;
+  background:radial-gradient(circle,#3fe9c415 0%,transparent 70%);
+  pointer-events:none;
+}
+/* Eye blink */
+@keyframes avEyeBlink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(.05)}}
+.av-eye-l,.av-eye-r{transform-box:fill-box;transform-origin:center}
+.av-eye-l{animation:avEyeBlink 3.2s ease-in-out infinite}
+.av-eye-r{animation:avEyeBlink 3.2s ease-in-out infinite .18s}
+/* Heartbeat emblem pulse */
+@keyframes avHeartbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+#av-emblem{transform-box:fill-box;transform-origin:center;animation:avHeartbeat 1s ease-in-out infinite}
+/* Pulse line sweep */
+@keyframes avPulse{0%{stroke-dashoffset:0}100%{stroke-dashoffset:-96}}
+#av-pulse-line{animation:avPulse 1.5s linear infinite}
+/* Propulsor glow oscillation */
+@keyframes avPropulsor{0%,100%{opacity:.65}50%{opacity:1}}
+#av-propulsor{animation:avPropulsor .9s ease-in-out infinite}
+/* Arm wave */
+@keyframes avArmWave{0%,100%{transform:rotate(0deg)}50%{transform:rotate(9deg)}}
+.av-arm-wave{transform-origin:50% 5%;animation:avArmWave 3s ease-in-out infinite}
+
+/* ── MARQUEE ── */
+.marquee-section{padding:12px 0;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+.marquee-track{display:flex;gap:40px;width:max-content;animation:marquee 22s linear infinite}
+.marquee-section:hover .marquee-track{animation-play-state:paused}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.marquee-item{
+  display:flex;align-items:center;gap:8px;
+  color:var(--muted);font-size:.85rem;font-weight:500;white-space:nowrap;
+}
+.marquee-item span{color:var(--g1);font-size:.75rem}
+
+/* ── SECTIONS ── */
+section{padding:90px 80px}
+.section-label{
+  display:inline-block;
+  color:var(--g1);font-size:.8rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  margin-bottom:14px;
+}
+h2{font-size:clamp(1.8rem,3vw,2.6rem);font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-bottom:16px}
+.section-sub{color:var(--muted);font-size:1.05rem;max-width:560px;margin-bottom:54px;line-height:1.7}
+
+/* ── NUMBERS ── */
+#numbers{padding:60px 80px;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.numbers-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.num-card{
+  text-align:center;padding:36px 20px;
+  background:var(--card);
+  transition:.25s;
+}
+.num-card:hover{background:var(--card2)}
+.num-n{
+  font-size:clamp(2.8rem,5vw,4.2rem);font-weight:800;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  line-height:1;margin-bottom:8px;
+}
+.num-l{font-size:.95rem;color:var(--muted);font-weight:500}
+
+/* ── FEATURES GRID ── */
+#features{background:var(--bg)}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat-card{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);padding:28px;
+  transition:.3s;position:relative;overflow:hidden;
+}
+.feat-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,#3fdc2b08,transparent);
+  opacity:0;transition:.3s;
+}
+.feat-card:hover{border-color:#3fdc2b40;transform:translateY(-3px);box-shadow:0 12px 40px #00000044}
+.feat-card:hover::before{opacity:1}
+.feat-icon{
+  width:44px;height:44px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;margin-bottom:16px;
+  background:linear-gradient(135deg,#3fdc2b20,#3fdc2b08);
+  border:1px solid #3fdc2b30;
+}
+.feat-title{font-weight:700;font-size:1rem;margin-bottom:8px}
+.feat-desc{font-size:.88rem;color:var(--muted);line-height:1.65}
+
+/* ── GALLERY ── */
+#gallery{background:var(--bg2)}
+.gallery-tabs{display:flex;gap:8px;margin-bottom:32px;flex-wrap:wrap}
+.gtab{
+  padding:8px 18px;border-radius:8px;font-size:.88rem;font-weight:600;
+  border:1px solid var(--line);color:var(--muted);transition:.2s;
+}
+.gtab.active,.gtab:hover{border-color:var(--g1);color:var(--g1);background:#3fdc2b10}
+.gallery-panels{position:relative}
+.gpanel{display:none}
+.gpanel.active{display:block}
+.gallery-img{
+  border-radius:var(--r);border:1px solid var(--line);
+  overflow:hidden;
+  box-shadow:0 20px 60px #00000066;
+}
+.gallery-img img{width:100%;display:block}
+.gallery-caption{
+  margin-top:16px;font-size:.88rem;color:var(--muted);text-align:center;
+}
+
+/* ── ROI CALCULATOR ── */
+#roi{background:var(--bg)}
+.roi-wrap{
+  display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;
+}
+.roi-sliders{display:flex;flex-direction:column;gap:28px}
+.roi-slider-row label{
+  display:flex;justify-content:space-between;
+  font-size:.88rem;color:var(--muted);margin-bottom:10px;
+}
+.roi-slider-row label span{color:var(--text);font-weight:700}
+input[type=range]{
+  width:100%;height:4px;border-radius:4px;
+  background:var(--line);outline:none;-webkit-appearance:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  cursor:pointer;transition:.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.roi-result{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);padding:36px;
+}
+.roi-result-val{
+  font-size:clamp(2rem,4vw,3rem);font-weight:800;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:8px;
+}
+.roi-result-label{color:var(--muted);font-size:.9rem;margin-bottom:24px}
+.roi-breakdown{display:flex;flex-direction:column;gap:14px}
+.roi-row{display:flex;justify-content:space-between;font-size:.9rem}
+.roi-row span:last-child{font-weight:700;color:var(--text)}
+
+/* ── PLANS ── */
+#plans{background:var(--bg2)}
+.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.plan-card{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);padding:32px;
+  position:relative;transition:.3s;
+}
+.plan-card.featured{
+  border-color:var(--g1);
+  background:linear-gradient(135deg,var(--card2),var(--card));
+}
+.plan-badge{
+  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  color:#041604;font-size:.75rem;font-weight:800;
+  padding:4px 14px;border-radius:100px;letter-spacing:.05em;white-space:nowrap;
+}
+.plan-name{font-size:1.1rem;font-weight:700;margin-bottom:6px}
+.plan-price{font-size:2rem;font-weight:800;margin-bottom:4px}
+.plan-price span{font-size:1rem;font-weight:400;color:var(--muted)}
+.plan-desc{font-size:.85rem;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.plan-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.plan-features li{display:flex;align-items:flex-start;gap:10px;font-size:.88rem;color:var(--muted)}
+.plan-features li .chk{color:var(--g1);font-size:1rem;flex-shrink:0;margin-top:1px}
+.btn-plan{
+  width:100%;padding:12px;border-radius:10px;font-weight:700;font-size:.9rem;text-align:center;
+  border:1px solid var(--line);transition:.25s;display:block;
+}
+.plan-card.featured .btn-plan{
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  color:#041604;border-color:transparent;
+}
+.plan-card.featured .btn-plan:hover{transform:translateY(-1px);box-shadow:0 6px 20px #3fdc2b33}
+.btn-plan:not(.plan-card.featured .btn-plan):hover{border-color:var(--g1);color:var(--g1)}
+
+/* ── DOWNLOAD ── */
+#download{background:var(--bg)}
+.download-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.dl-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:32px 28px;text-align:center;transition:.3s;
+}
+.dl-card:hover{border-color:var(--g1);transform:translateY(-3px)}
+.dl-icon{font-size:2.4rem;margin-bottom:14px}
+.dl-name{font-size:1.05rem;font-weight:700;margin-bottom:4px}
+.dl-desc{font-size:.82rem;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.dl-btn{
+  display:block;width:100%;padding:11px;border-radius:9px;font-weight:700;font-size:.88rem;
+  background:linear-gradient(135deg,var(--g1),var(--g2));color:#041604;
+  margin-bottom:10px;transition:.2s;
+}
+.dl-btn:hover{box-shadow:0 6px 18px #3fdc2b33}
+.dl-alt{font-size:.8rem;color:var(--muted)}
+.dl-alt a{color:var(--g1);text-decoration:underline;text-underline-offset:3px}
+#dl-count-wrap{text-align:center;margin-top:40px;color:var(--muted);font-size:.9rem}
+#dl-total{color:var(--g2);font-weight:700}
+
+/* ── ROADMAP ── */
+#roadmap{background:var(--bg2)}
+.roadmap-line{position:relative;padding-left:40px;display:flex;flex-direction:column;gap:0}
+.roadmap-line::before{
+  content:'';position:absolute;left:12px;top:8px;bottom:8px;
+  width:2px;background:linear-gradient(180deg,var(--g1),transparent);
+}
+.rm-item{position:relative;padding-bottom:36px}
+.rm-item:last-child{padding-bottom:0}
+.rm-dot{
+  position:absolute;left:-34px;top:5px;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--bg2);border:2px solid var(--line);
+}
+.rm-item.done .rm-dot{background:var(--g1);border-color:var(--g1);box-shadow:0 0 12px #3fdc2b66}
+.rm-item.active .rm-dot{background:var(--cu);border-color:var(--cu);box-shadow:0 0 12px #d98a5e66}
+.rm-version{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;font-family:'JetBrains Mono',monospace}
+.rm-item.done .rm-version{color:var(--g1)}
+.rm-item.active .rm-version{color:var(--cu)}
+.rm-title{font-size:1rem;font-weight:700;margin-bottom:4px}
+.rm-desc{font-size:.87rem;color:var(--muted);line-height:1.6;max-width:520px}
+
+/* ── CONTACT / COMMUNITY ── */
+#contact{background:var(--bg)}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+.contact-info h3{font-size:1.4rem;font-weight:700;margin-bottom:14px}
+.contact-info p{font-size:.95rem;color:var(--muted);line-height:1.7;margin-bottom:28px}
+.contact-links{display:flex;flex-direction:column;gap:12px}
+.contact-link{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 18px;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;font-size:.9rem;transition:.25s;
+}
+.contact-link:hover{border-color:var(--g1);color:var(--g1)}
+.contact-link .ico{font-size:1.2rem}
+
+/* ── FAQ ── */
+#faq{background:var(--bg2)}
+.faq-list{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:4px}
+.faq-item{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.faq-q{
+  width:100%;text-align:left;padding:18px 22px;
+  display:flex;justify-content:space-between;align-items:center;
+  font-weight:600;font-size:.95rem;cursor:pointer;transition:.2s;
+}
+.faq-q:hover{color:var(--g1)}
+.faq-q .arrow{font-size:.85rem;transition:.3s;color:var(--muted)}
+.faq-item.open .faq-q .arrow{transform:rotate(180deg);color:var(--g1)}
+.faq-a{
+  display:none;padding:0 22px 18px;
+  font-size:.9rem;color:var(--muted);line-height:1.7;
+  border-top:1px solid var(--line);padding-top:14px;
+}
+.faq-item.open .faq-a{display:block}
+
+/* ── CTA FINAL ── */
+#cta{
+  padding:100px 80px;text-align:center;
+  background:linear-gradient(135deg,var(--bg),#0c1a10,var(--bg));
+  position:relative;overflow:hidden;
+}
+#cta::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 70% at 50% 50%,#3fdc2b0c,transparent 70%);
+  pointer-events:none;
+}
+#cta h2{font-size:clamp(2rem,4vw,3rem);margin-bottom:16px}
+#cta p{color:var(--muted);max-width:480px;margin:0 auto 36px;font-size:1.05rem}
+#cta .cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+
+/* ── FOOTER ── */
+footer{
+  background:var(--bg2);border-top:1px solid var(--line);
+  padding:48px 80px;
+}
+.footer-grid{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:40px;margin-bottom:40px}
+.footer-brand p{font-size:.85rem;color:var(--muted);margin-top:12px;line-height:1.6;max-width:240px}
+.footer-col h4{font-size:.82rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g1);margin-bottom:14px}
+.footer-col a{display:block;font-size:.88rem;color:var(--muted);margin-bottom:8px;transition:.2s}
+.footer-col a:hover{color:var(--text)}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:28px;border-top:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+.footer-logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem;margin-bottom:10px}
+.footer-logo img{width:28px;height:28px;border-radius:6px}
+
+/* ── REVEAL ANIMATION ── */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s,transform .6s}
+.reveal.visible{opacity:1;transform:none}
+
+/* ── RESPONSIVE ── */
+@media(max-width:980px){
+  nav{padding:0 24px}
+  .nav-links{display:none}
+  #mobile-menu-btn{display:flex}
+  #hero{grid-template-columns:1fr;gap:40px;padding:60px 28px 40px;text-align:center}
+  .hero-sub{max-width:100%}
+  .hero-actions{justify-content:center}
+  .hero-stats{justify-content:center}
+  .hero-visual{order:-1}
+  section{padding:70px 28px}
+  #numbers{padding:50px 28px}
+  .numbers-grid{grid-template-columns:1fr}
+  .features-grid{grid-template-columns:1fr 1fr}
+  .plans-grid{grid-template-columns:1fr}
+  .download-grid{grid-template-columns:1fr}
+  .roi-wrap{grid-template-columns:1fr}
+  .contact-grid{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr 1fr;gap:30px}
+  #cta{padding:70px 28px}
+}
+@media(max-width:620px){
+  #hero{padding:40px 20px 30px}
+  section{padding:54px 20px}
+  .features-grid{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr}
+  .footer-bottom{flex-direction:column;gap:10px;text-align:center}
+}
+</style>
+</head>
+
+<body>
+
+<!-- BANNER ACTUALIZACIÓN -->
+<div id="update-banner">
+  <div class="dot"></div>
+  <span id="banner-text">⚠️ NoviArk está en actualización activa — pueden existir pequeñas fallas que se están corrigiendo. Se recomienda usar la última versión.</span>
+  <button id="close-banner" onclick="document.getElementById('update-banner').style.display='none'" aria-label="Cerrar">✕</button>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <img src="docs/img/logo.png" alt="NoviArk">
+    <span>NoviArk</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features" data-i="nav_feat">Características</a>
+    <a href="#plans" data-i="nav_plans">Planes</a>
+    <a href="#download" data-i="nav_dl">Descargar</a>
+    <a href="#roadmap" data-i="nav_road">Roadmap</a>
+    <a href="#faq" data-i="nav_faq">FAQ</a>
+  </div>
+  <div class="nav-right">
+    <button id="lang-btn" onclick="toggleLang()">EN</button>
+    <a href="#download" class="btn-nav" data-i="nav_cta">Descargar gratis</a>
+    <button id="mobile-menu-btn" onclick="toggleMenu()" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div id="mobile-menu">
+  <a href="#features" onclick="toggleMenu()" data-i="nav_feat">Características</a>
+  <a href="#plans" onclick="toggleMenu()" data-i="nav_plans">Planes</a>
+  <a href="#download" onclick="toggleMenu()" data-i="nav_dl">Descargar</a>
+  <a href="#roadmap" onclick="toggleMenu()" data-i="nav_road">Roadmap</a>
+  <a href="#faq" onclick="toggleMenu()" data-i="nav_faq">FAQ</a>
+  <a href="#download" onclick="toggleMenu()" class="btn-primary" style="margin-top:8px;display:block;text-align:center" data-i="nav_cta">Descargar gratis</a>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-text">
+    <div class="hero-badge"><div class="dot"></div><span data-i="hero_badge">Nuevo en v4.2 — depuración con diagnóstico visual</span></div>
+    <h1><span data-i="hero_h1a">El agente de IA autónomo que</span><br><span class="accent" data-i="hero_h1b">tu empresa controla</span></h1>
+    <p class="hero-sub" data-i="hero_sub">NoviArk planifica, escribe, ejecuta, prueba y corrige software de punta a punta. Usa cualquier IA — nube o local. Tu código nunca sale de casa.</p>
+    <div class="hero-actions">
+      <a href="#download" class="btn-primary" id="hero-dl">
+        <span>⬇</span> <span data-i="hero_dl">Descargar para Windows</span>
+      </a>
+      <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener" class="btn-secondary">
+        ★ GitHub
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-n">38+</div><div class="hero-stat-l" data-i="stat_tools">Herramientas</div></div>
+      <div class="hero-stat"><div class="hero-stat-n">20+</div><div class="hero-stat-l" data-i="stat_prov">Proveedores IA</div></div>
+      <div class="hero-stat"><div class="hero-stat-n">3</div><div class="hero-stat-l" data-i="stat_plat">Plataformas</div></div>
+    </div>
+  </div>
+
+  <!-- ROBOT AVATAR -->
+  <div class="hero-visual">
+    <div class="robot-wrap">
+      <svg id="noviq-avatar" width="300" height="409" viewBox="0 0 440 600" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="NoviArk Avatar">
+  <defs>
+    <radialGradient id="av-head" cx=".38" cy=".26" r=".82">
+      <stop offset="0" stop-color="#f2feff"/><stop offset=".22" stop-color="#b6eff4"/>
+      <stop offset=".55" stop-color="#78d0e4"/><stop offset=".82" stop-color="#4a9fcf"/><stop offset="1" stop-color="#2d6fae"/>
+    </radialGradient>
+    <radialGradient id="av-body" cx=".38" cy=".25" r=".9">
+      <stop offset="0" stop-color="#effdff"/><stop offset=".35" stop-color="#b0e6f5"/>
+      <stop offset=".75" stop-color="#68b1dc"/><stop offset="1" stop-color="#3977ba"/>
+    </radialGradient>
+    <linearGradient id="av-visor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16305c"/><stop offset=".55" stop-color="#0b1c3b"/><stop offset="1" stop-color="#07142c"/>
+    </linearGradient>
+    <linearGradient id="av-ring" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9f7fc"/><stop offset=".6" stop-color="#a6e3f3"/><stop offset="1" stop-color="#78c3e6"/>
+    </linearGradient>
+    <linearGradient id="av-eye" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8ffff"/><stop offset=".45" stop-color="#8ff4ff"/><stop offset="1" stop-color="#46d2f2"/>
+    </linearGradient>
+    <linearGradient id="av-mouth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b8fdff"/><stop offset="1" stop-color="#4fd6f3"/>
+    </linearGradient>
+    <linearGradient id="av-cyl" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5a9ad2"/><stop offset=".32" stop-color="#e4f7ff"/>
+      <stop offset=".6" stop-color="#abdcf4"/><stop offset="1" stop-color="#3b79ba"/>
+    </linearGradient>
+    <linearGradient id="av-joint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d6599"/><stop offset=".5" stop-color="#1c355f"/><stop offset="1" stop-color="#0f213f"/>
+    </linearGradient>
+    <radialGradient id="av-ball" cx=".35" cy=".3" r=".8">
+      <stop offset="0" stop-color="#f4fcff"/><stop offset=".45" stop-color="#a9dcf6"/>
+      <stop offset=".85" stop-color="#5091cf"/><stop offset="1" stop-color="#2f69a6"/>
+    </radialGradient>
+    <radialGradient id="av-ear" cx=".3" cy=".35" r=".85">
+      <stop offset="0" stop-color="#e9fbff"/><stop offset=".5" stop-color="#93d4ef"/><stop offset="1" stop-color="#3f7fc0"/>
+    </radialGradient>
+    <radialGradient id="av-nucleus" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#1c4d86"/><stop offset="1" stop-color="#0a1a38"/>
+    </radialGradient>
+    <radialGradient id="av-aura" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#58d4ff" stop-opacity=".30"/>
+      <stop offset=".55" stop-color="#3aa8f0" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#2a8ae0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="av-halo" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#c8feff" stop-opacity=".95"/>
+      <stop offset=".35" stop-color="#5fe0ff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#2aa6ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="av-glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset=".45" stop-color="#ffffff" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="av-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="av-visor-clip">
+      <path d="M134,244 C134,206 146,180 174,178 C197,177 204,196 220,196 C236,196 243,177 266,178 C294,180 306,206 306,244 C306,286 270,308 220,308 C170,308 134,286 134,244 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background aura -->
+  <ellipse cx="220" cy="340" rx="200" ry="235" fill="url(#av-aura)"/>
+
+  <!-- ═══ ARMS ═══ -->
+  <!-- Left arm -->
+  <g transform="translate(147,356)">
+    <circle r="23" fill="url(#av-ball)" stroke="#2c5f93" stroke-width="1"/>
+    <ellipse cx="-7" cy="-9" rx="7" ry="4" fill="#fff" opacity=".45" transform="rotate(-25 -7 -9)"/>
+    <rect x="-12.5" y="4" width="25" height="58" rx="12.5" fill="url(#av-cyl)" stroke="#2c5f93" stroke-width=".9"/>
+    <g transform="translate(0,58)">
+      <circle r="12" fill="url(#av-joint)"/>
+      <circle r="7.5" fill="none" stroke="#4d86c2" stroke-width="1.4"/>
+      <circle r="3.3" fill="#7ff3ff"/>
+      <path d="M-11,2 L11,2 L14,44 Q14,53 6,53 L-6,53 Q-14,53 -14,44 Z" fill="url(#av-cyl)" stroke="#2c5f93" stroke-width=".9"/>
+      <rect x="-2.4" y="12" width="4.8" height="6" rx="1.5" fill="#76f2ff"/>
+      <rect x="-2.4" y="21" width="4.8" height="6" rx="1.5" fill="#76f2ff" opacity=".85"/>
+      <g transform="translate(0,52)">
+        <circle r="9" fill="url(#av-joint)"/>
+        <circle r="3" fill="#7ff3ff"/>
+        <path d="M-13.5,4 Q-13.5,1.5 -10.5,1.5 L10.5,1.5 Q13.5,1.5 13.5,4 L15.5,28 Q15.5,34 10,34 L-10,34 Q-15.5,34 -15.5,28 Z" fill="url(#av-body)" stroke="#2c5f93" stroke-width=".9"/>
+        <rect x="-1.1" y="22" width="2.2" height="2.6" rx="1.1" fill="#8ff7ff"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Right arm (wave) -->
+  <g class="av-arm-wave" transform="translate(293,356)">
+    <circle r="23" fill="url(#av-ball)" stroke="#2c5f93" stroke-width="1"/>
+    <ellipse cx="7" cy="-9" rx="7" ry="4" fill="#fff" opacity=".45" transform="rotate(25 7 -9)"/>
+    <rect x="-12.5" y="4" width="25" height="58" rx="12.5" fill="url(#av-cyl)" stroke="#2c5f93" stroke-width=".9"/>
+    <g transform="translate(0,58)">
+      <circle r="12" fill="url(#av-joint)"/>
+      <circle r="7.5" fill="none" stroke="#4d86c2" stroke-width="1.4"/>
+      <circle r="3.3" fill="#7ff3ff"/>
+      <path d="M-11,2 L11,2 L14,44 Q14,53 6,53 L-6,53 Q-14,53 -14,44 Z" fill="url(#av-cyl)" stroke="#2c5f93" stroke-width=".9"/>
+      <rect x="-2.4" y="12" width="4.8" height="6" rx="1.5" fill="#76f2ff"/>
+      <rect x="-2.4" y="21" width="4.8" height="6" rx="1.5" fill="#76f2ff" opacity=".85"/>
+      <g transform="translate(0,52)">
+        <circle r="9" fill="url(#av-joint)"/>
+        <circle r="3" fill="#7ff3ff"/>
+        <path d="M-13.5,4 Q-13.5,1.5 -10.5,1.5 L10.5,1.5 Q13.5,1.5 13.5,4 L15.5,28 Q15.5,34 10,34 L-10,34 Q-15.5,34 -15.5,28 Z" fill="url(#av-body)" stroke="#2c5f93" stroke-width=".9"/>
+        <rect x="-1.1" y="22" width="2.2" height="2.6" rx="1.1" fill="#8ff7ff"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ═══ TORSO / CHEST ═══ -->
+  <path d="M150,360 C150,340 166,332 188,332 L252,332 C274,332 290,340 290,360 L285,408 C281,434 263,448 240,448 L200,448 C177,448 159,434 155,408 Z" fill="url(#av-body)" stroke="#2c5f93" stroke-width="1.2"/>
+  <path d="M166,350 Q220,338 274,350" stroke="#fff" stroke-width="4.5" opacity=".38" fill="none" stroke-linecap="round"/>
+  <!-- Neck collar -->
+  <ellipse cx="220" cy="336" rx="38" ry="9" fill="url(#av-joint)"/>
+
+  <!-- Heartbeat emblem on chest -->
+  <g id="av-emblem" transform="translate(220,390)">
+    <circle r="27" fill="#0a1a38" stroke="#5de8ff" stroke-width="3" filter="url(#av-glow)"/>
+    <circle r="22" fill="url(#av-nucleus)"/>
+    <path d="M-16,1 L-8,1 L-4,-10 L1,12 L5,-5 L8,1 L16,1" fill="none" stroke="#5fdfff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#av-glow)"/>
+    <path id="av-pulse-line" d="M-16,1 L-8,1 L-4,-10 L1,12 L5,-5 L8,1 L16,1" fill="none" stroke="#f0ffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="18 80" stroke-dashoffset="0"/>
+  </g>
+
+  <!-- Floating lower body -->
+  <path d="M176,452 C176,490 200,516 220,518 C240,516 264,490 264,452 Z" fill="url(#av-body)" stroke="#2c5f93" stroke-width="1.1"/>
+  <path d="M182,474 Q220,488 258,474" stroke="#1f4579" stroke-width="3" fill="none" opacity=".55"/>
+  <rect x="178" y="442" width="84" height="18" rx="9" fill="url(#av-joint)"/>
+  <path d="M190,451 L250,451" stroke="#62e6ff" stroke-width="1.8" stroke-linecap="round" opacity=".8"/>
+  <ellipse id="av-propulsor" cx="220" cy="516" rx="12" ry="4.6" fill="#d4feff" filter="url(#av-glow)"/>
+  <ellipse cx="220" cy="530" rx="46" ry="10" fill="url(#av-halo)"/>
+
+  <!-- ═══ NECK ═══ -->
+  <rect x="200" y="312" width="40" height="28" rx="8" fill="url(#av-joint)"/>
+  <path d="M202,321 L238,321 M202,329 L238,329" stroke="#4f86c4" stroke-width="1.6" opacity=".85"/>
+
+  <!-- ═══ HEAD ═══ -->
+  <!-- Ears -->
+  <rect x="94" y="204" width="46" height="80" rx="21" fill="url(#av-ear)" stroke="#2c5f93" stroke-width="1.1"/>
+  <rect x="100" y="216" width="14" height="56" rx="7" fill="#dff8ff" opacity=".45"/>
+  <rect x="300" y="204" width="46" height="80" rx="21" fill="url(#av-ear)" stroke="#2c5f93" stroke-width="1.1"/>
+  <rect x="326" y="216" width="14" height="56" rx="7" fill="#9fd8f0" opacity=".45"/>
+
+  <!-- Main head sphere -->
+  <ellipse cx="220" cy="232" rx="108" ry="103" fill="url(#av-head)" stroke="#2c5f93" stroke-width="1.3"/>
+  <!-- Glass shine -->
+  <ellipse cx="220" cy="190" rx="96" ry="60" fill="url(#av-glass)"/>
+  <!-- Highlight spots -->
+  <ellipse cx="220" cy="146" rx="42" ry="13" fill="#e2fbff" opacity=".75"/>
+  <path d="M140,200 C146,176 166,156 190,146" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" opacity=".5"/>
+  <ellipse cx="282" cy="165" rx="6" ry="3.6" fill="#fff" opacity=".85" transform="rotate(35 282 165)"/>
+  <ellipse cx="296" cy="179" rx="4" ry="2.6" fill="#fff" opacity=".75" transform="rotate(45 296 179)"/>
+  <ellipse cx="270" cy="155" rx="3" ry="2" fill="#fff" opacity=".6" transform="rotate(25 270 155)"/>
+
+  <!-- ═══ VISOR (double-lobe face panel) ═══ -->
+  <path d="M134,244 C134,206 146,180 174,178 C197,177 204,196 220,196 C236,196 243,177 266,178 C294,180 306,206 306,244 C306,286 270,308 220,308 C170,308 134,286 134,244 Z" fill="none" stroke="#3f8fc4" stroke-width="15" stroke-linejoin="round"/>
+  <path d="M134,244 C134,206 146,180 174,178 C197,177 204,196 220,196 C236,196 243,177 266,178 C294,180 306,206 306,244 C306,286 270,308 220,308 C170,308 134,286 134,244 Z" fill="none" stroke="url(#av-ring)" stroke-width="11" stroke-linejoin="round"/>
+  <path d="M134,244 C134,206 146,180 174,178 C197,177 204,196 220,196 C236,196 243,177 266,178 C294,180 306,206 306,244 C306,286 270,308 220,308 C170,308 134,286 134,244 Z" fill="url(#av-visor)"/>
+  <path d="M134,244 C134,206 146,180 174,178 C197,177 204,196 220,196 C236,196 243,177 266,178 C294,180 306,206 306,244 C306,286 270,308 220,308 C170,308 134,286 134,244 Z" fill="none" stroke="#5fdcff" stroke-width="1.4" opacity=".55"/>
+  <path d="M160,205 C168,190 182,186 192,188" stroke="#cfefff" stroke-width="4" opacity=".14" fill="none" stroke-linecap="round"/>
+
+  <!-- ═══ EYES + FACE (clipped to visor) ═══ -->
+  <g clip-path="url(#av-visor-clip)">
+    <!-- Left eye (tombstone/teardrop shape) -->
+    <g class="av-eye-l">
+      <path d="M171.5,243.55 C171.5,213.34 198.5,213.34 198.5,243.55 C198.5,249.47 171.5,249.47 171.5,243.55 Z" fill="url(#av-eye)" filter="url(#av-glow)"/>
+    </g>
+    <!-- Right eye -->
+    <g class="av-eye-r">
+      <path d="M241.5,243.55 C241.5,213.34 268.5,213.34 268.5,243.55 C268.5,249.47 241.5,249.47 241.5,243.55 Z" fill="url(#av-eye)" filter="url(#av-glow)"/>
+    </g>
+    <!-- Eye highlights -->
+    <ellipse cx="180" cy="227" rx="3.2" ry="2.4" fill="#ffffff" opacity=".95"/>
+    <ellipse cx="250" cy="227" rx="3.2" ry="2.4" fill="#ffffff" opacity=".95"/>
+    <!-- Smile -->
+    <path d="M200,272 Q220,290 240,272 C239,291 201,291 200,272 Z" fill="url(#av-mouth)" filter="url(#av-glow)"/>
+  </g>
+</svg>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track" id="marqueeTrack"></div>
+</div>
+
+<!-- NUMBERS -->
+<section id="numbers">
+  <div class="numbers-grid">
+    <div class="num-card reveal">
+      <div class="num-n">38+</div>
+      <div class="num-l" data-i="num_tools">Herramientas reales: archivos, terminal, web, visión, Docker y más</div>
+    </div>
+    <div class="num-card reveal">
+      <div class="num-n">20+</div>
+      <div class="num-l" data-i="num_prov">Proveedores de IA verificados en vivo con rotación automática de claves</div>
+    </div>
+    <div class="num-card reveal">
+      <div class="num-n">3</div>
+      <div class="num-l" data-i="num_plat">Plataformas: Windows, macOS y Linux con instaladores nativos</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label" data-i="feat_label">Características</div>
+  <h2 data-i="feat_h2">Todo lo que necesita un agente real</h2>
+  <p class="section-sub" data-i="feat_sub">Desde la planificación hasta la corrección de errores, NoviArk lo hace todo sin que tengas que cambiar de herramienta.</p>
+  <div class="features-grid" id="feat-grid"></div>
+</section>
+
+<!-- GALLERY -->
+<section id="gallery">
+  <div class="section-label" data-i="gal_label">Capturas</div>
+  <h2 data-i="gal_h2">Vélo en acción</h2>
+  <div class="gallery-tabs" id="gal-tabs"></div>
+  <div class="gallery-panels" id="gal-panels"></div>
+</section>
+
+<!-- ROI CALCULATOR -->
+<section id="roi">
+  <div class="section-label" data-i="roi_label">Calculadora</div>
+  <h2 data-i="roi_h2">¿Cuánto ahorra tu equipo?</h2>
+  <p class="section-sub" data-i="roi_sub">Mueve los controles y ve el impacto estimado en tiempo real.</p>
+  <div class="roi-wrap">
+    <div class="roi-sliders">
+      <div class="roi-slider-row">
+        <label><span data-i="roi_devs">Desarrolladores en el equipo</span><span id="roi-devs-val">5</span></label>
+        <input type="range" id="roi-devs" min="1" max="50" value="5" oninput="calcROI()">
+      </div>
+      <div class="roi-slider-row">
+        <label><span data-i="roi_sal">Salario mensual promedio (USD)</span><span id="roi-sal-val">$5,000</span></label>
+        <input type="range" id="roi-sal" min="1000" max="20000" step="500" value="5000" oninput="calcROI()">
+      </div>
+      <div class="roi-slider-row">
+        <label><span data-i="roi_tasks">Tareas automatizables por dev/semana</span><span id="roi-tasks-val">8</span></label>
+        <input type="range" id="roi-tasks" min="1" max="40" value="8" oninput="calcROI()">
+      </div>
+      <div class="roi-slider-row">
+        <label><span data-i="roi_hrs">Horas por tarea sin NoviArk</span><span id="roi-hrs-val">3</span></label>
+        <input type="range" id="roi-hrs" min="0.5" max="8" step="0.5" value="3" oninput="calcROI()">
+      </div>
+    </div>
+    <div class="roi-result">
+      <div class="roi-result-val" id="roi-saving">$0</div>
+      <div class="roi-result-label" data-i="roi_per_mo">ahorro estimado por mes</div>
+      <div class="roi-breakdown">
+        <div class="roi-row"><span data-i="roi_hrs_saved">Horas ahorradas/mes</span><span id="roi-hrs-saved">—</span></div>
+        <div class="roi-row"><span data-i="roi_cost_saved">Costo ahorrado</span><span id="roi-cost-saved">—</span></div>
+        <div class="roi-row"><span data-i="roi_noviark_cost">Costo NoviArk</span><span>Gratis*</span></div>
+        <div class="roi-row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+          <span><strong data-i="roi_net">Ganancia neta</strong></span>
+          <span id="roi-net" style="color:var(--g2);font-weight:800">—</span>
+        </div>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:16px;line-height:1.5" data-i="roi_note">*Gratis para uso personal. Ver planes para empresas.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PLANS -->
+<section id="plans">
+  <div class="section-label" data-i="plans_label">Precios</div>
+  <h2 data-i="plans_h2">El plan que necesitas</h2>
+  <p class="section-sub" data-i="plans_sub">Sin tarjeta de crédito para empezar. Cancela cuando quieras.</p>
+  <div class="plans-grid">
+    <div class="plan-card reveal">
+      <div class="plan-name" data-i="plan1_name">Community</div>
+      <div class="plan-price">$0<span data-i="plan_mo">/mes</span></div>
+      <div class="plan-desc" data-i="plan1_desc">Para uso personal, educativo, investigación y ONG. Sin límite de tiempo.</div>
+      <ul class="plan-features">
+        <li><span class="chk">✓</span><span data-i="plan1_f1">Todos los modelos de IA (tú pones la clave)</span></li>
+        <li><span class="chk">✓</span><span data-i="plan1_f2">Modelos locales: Ollama, LM Studio</span></li>
+        <li><span class="chk">✓</span><span data-i="plan1_f3">38+ herramientas reales</span></li>
+        <li><span class="chk">✓</span><span data-i="plan1_f4">Proyectos ilimitados</span></li>
+        <li><span class="chk">✓</span><span data-i="plan1_f5">Actualizaciones automáticas</span></li>
+      </ul>
+      <a href="#download" class="btn-plan" data-i="plan1_cta">Descargar gratis</a>
+    </div>
+    <div class="plan-card featured reveal">
+      <div class="plan-badge" data-i="plan2_badge">Más popular</div>
+      <div class="plan-name" data-i="plan2_name">Business</div>
+      <div class="plan-price">$29<span data-i="plan_mo">/mes</span></div>
+      <div class="plan-desc" data-i="plan2_desc">Para equipos y empresas. Incluye 60 días de prueba gratis.</div>
+      <ul class="plan-features">
+        <li><span class="chk">✓</span><span data-i="plan2_f1">Todo lo de Community</span></li>
+        <li><span class="chk">✓</span><span data-i="plan2_f2">Rotación automática de claves API</span></li>
+        <li><span class="chk">✓</span><span data-i="plan2_f3">Proyectos en paralelo ilimitados</span></li>
+        <li><span class="chk">✓</span><span data-i="plan2_f4">Soporte por email prioritario</span></li>
+        <li><span class="chk">✓</span><span data-i="plan2_f5">Uso comercial</span></li>
+      </ul>
+      <a href="https://github.com/JUXN1988/noviark/issues/new?labels=business&title=Business+License+Request" target="_blank" class="btn-plan" data-i="plan2_cta">Empezar prueba gratis</a>
+    </div>
+    <div class="plan-card reveal">
+      <div class="plan-name" data-i="plan3_name">Enterprise</div>
+      <div class="plan-price" data-i="plan3_price">Contactar</div>
+      <div class="plan-desc" data-i="plan3_desc">Para grandes empresas con requisitos de privacidad y despliegue propio.</div>
+      <ul class="plan-features">
+        <li><span class="chk">✓</span><span data-i="plan3_f1">Todo lo de Business</span></li>
+        <li><span class="chk">✓</span><span data-i="plan3_f2">Despliegue on-premise / air-gapped</span></li>
+        <li><span class="chk">✓</span><span data-i="plan3_f3">SSO + auditoría + consola admin</span></li>
+        <li><span class="chk">✓</span><span data-i="plan3_f4">SLA garantizado y soporte dedicado</span></li>
+        <li><span class="chk">✓</span><span data-i="plan3_f5">Capacitación y onboarding incluidos</span></li>
+      </ul>
+      <a href="https://github.com/JUXN1988/noviark/issues/new?labels=business&title=Enterprise+Inquiry" target="_blank" class="btn-plan" data-i="plan3_cta">Hablar con ventas</a>
+    </div>
+  </div>
+</section>
+
+<!-- DOWNLOAD -->
+<section id="download">
+  <div class="section-label" data-i="dl_label">Descargar</div>
+  <h2 data-i="dl_h2">Disponible para tu plataforma</h2>
+  <p class="section-sub" data-i="dl_sub">Instaladores nativos para Windows, macOS y Linux. Un solo ejecutable, sin dependencias.</p>
+  <div class="download-grid">
+    <div class="dl-card reveal">
+      <div class="dl-icon">🪟</div>
+      <div class="dl-name">Windows</div>
+      <div class="dl-desc" data-i="dl_win_desc">Windows 10 / 11 de 64 bits. Instalador con accesos directos + versión portable.</div>
+      <a href="../../releases/latest/download/NoviArk-Setup-Windows.exe" class="dl-btn" data-i="dl_win_btn">Descargar .exe (Instalador)</a>
+      <div class="dl-alt"><a href="../../releases/latest/download/NoviArk-Windows-portable.zip" data-i="dl_win_alt">También disponible: portable .zip</a></div>
+    </div>
+    <div class="dl-card reveal">
+      <div class="dl-icon">🍎</div>
+      <div class="dl-name">macOS</div>
+      <div class="dl-desc" data-i="dl_mac_desc">Apple Silicon (M1–M4) e Intel. Arrastra NoviArk a Aplicaciones.</div>
+      <a href="../../releases/latest/download/NoviArk-macOS-arm64.dmg" class="dl-btn" data-i="dl_mac_btn">Descargar .dmg (Apple Silicon)</a>
+      <div class="dl-alt"><a href="../../releases/latest/download/NoviArk-macOS-x86_64.dmg" data-i="dl_mac_alt">Intel: .dmg x86_64</a></div>
+    </div>
+    <div class="dl-card reveal">
+      <div class="dl-icon">🐧</div>
+      <div class="dl-name">Linux</div>
+      <div class="dl-desc" data-i="dl_lin_desc">Ubuntu / Debian (amd64) con paquete .deb. Otras distros con .tar.gz.</div>
+      <a href="../../releases/latest/download/NoviArk-Linux-amd64.deb" class="dl-btn" data-i="dl_lin_btn">Descargar .deb (Ubuntu/Debian)</a>
+      <div class="dl-alt"><a href="../../releases/latest/download/NoviArk-Linux-x86_64.tar.gz" data-i="dl_lin_alt">Otras distros: .tar.gz</a></div>
+    </div>
+  </div>
+  <div id="dl-count-wrap">
+    <span data-i="dl_total_pre">Total de descargas en todas las versiones:</span>
+    <span id="dl-total">cargando…</span>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="section-label" data-i="road_label">Roadmap</div>
+  <h2 data-i="road_h2">Lo que viene</h2>
+  <p class="section-sub" data-i="road_sub">NoviArk evoluciona rápido. Aquí está el plan público.</p>
+  <div class="roadmap-line" id="roadmap-list"></div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-grid">
+    <div class="contact-info reveal">
+      <div class="section-label" data-i="cont_label">Contacto</div>
+      <h3 data-i="cont_h2">¿Tienes preguntas o propuestas?</h3>
+      <p data-i="cont_sub">Para empresas, pilotos, inversión o adquisición — abre un issue en GitHub con la etiqueta <em>business</em>. Para errores o sugerencias, usa los issues normales. Respondemos a todos.</p>
+      <div class="contact-links">
+        <a href="https://github.com/JUXN1988/noviark/issues/new?labels=business&title=Business+Inquiry" target="_blank" class="contact-link">
+          <span class="ico">💼</span>
+          <span data-i="cont_biz">Propuesta de negocio / licencia enterprise</span>
+        </a>
+        <a href="https://github.com/JUXN1988/noviark/issues/new" target="_blank" class="contact-link">
+          <span class="ico">🐛</span>
+          <span data-i="cont_bug">Reportar un bug o sugerencia</span>
+        </a>
+        <a href="https://github.com/JUXN1988/noviark" target="_blank" class="contact-link">
+          <span class="ico">⭐</span>
+          <span data-i="cont_star">Dale una estrella en GitHub</span>
+        </a>
+      </div>
+    </div>
+    <div class="reveal" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:36px;display:flex;flex-direction:column;gap:18px;justify-content:center;align-items:center;text-align:center">
+      <div style="font-size:3.5rem">🤖</div>
+      <div style="font-weight:700;font-size:1.1rem" data-i="cont_card_h">NoviArk Labs</div>
+      <p style="font-size:.9rem;color:var(--muted);line-height:1.7" data-i="cont_card_p">Construimos la próxima generación de agentes de IA para equipos de desarrollo. Código abierto, privacidad primero, sin lock-in.</p>
+      <a href="https://github.com/JUXN1988/noviark" target="_blank" class="btn-primary" style="margin-top:8px">
+        <span>★</span> <span data-i="cont_card_btn">Ver en GitHub</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-label" data-i="faq_label">FAQ</div>
+  <h2 style="text-align:center;margin-bottom:10px" data-i="faq_h2">Preguntas frecuentes</h2>
+  <p style="text-align:center;color:var(--muted);margin-bottom:48px;font-size:.95rem" data-i="faq_sub">Las dudas más comunes, respondidas.</p>
+  <div class="faq-list" id="faq-list"></div>
+</section>
+
+<!-- CTA FINAL -->
+<section id="cta">
+  <div class="section-label" data-i="cta_label">Empieza hoy</div>
+  <h2 data-i="cta_h2">Tu equipo merece un agente real</h2>
+  <p data-i="cta_sub">Gratis para uso personal. Sin tarjeta de crédito. Descarga e instala en menos de 2 minutos.</p>
+  <div class="cta-actions">
+    <a href="#download" class="btn-primary"><span>⬇</span> <span data-i="cta_dl">Descargar NoviArk</span></a>
+    <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener" class="btn-secondary">★ GitHub</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">
+        <img src="docs/img/logo.png" alt="NoviArk">
+        <span>NoviArk</span>
+      </div>
+      <p data-i="foot_desc">El agente de IA autónomo que tu empresa controla. Tu código nunca sale de casa.</p>
+    </div>
+    <div class="footer-col">
+      <h4 data-i="foot_product">Producto</h4>
+      <a href="#features" data-i="nav_feat">Características</a>
+      <a href="#plans" data-i="nav_plans">Planes</a>
+      <a href="#download" data-i="nav_dl">Descargar</a>
+      <a href="#roadmap" data-i="nav_road">Roadmap</a>
+    </div>
+    <div class="footer-col">
+      <h4 data-i="foot_resources">Recursos</h4>
+      <a href="https://github.com/JUXN1988/noviark/blob/main/README.md" target="_blank">Documentación</a>
+      <a href="https://github.com/JUXN1988/noviark/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
+      <a href="https://github.com/JUXN1988/noviark/blob/main/ROADMAP.md" target="_blank">Roadmap</a>
+      <a href="https://github.com/JUXN1988/noviark/blob/main/LEEME.md" target="_blank">LEEME (ES)</a>
+    </div>
+    <div class="footer-col">
+      <h4 data-i="foot_legal">Legal</h4>
+      <a href="https://github.com/JUXN1988/noviark/blob/main/LICENSE.md" target="_blank">Licencia</a>
+      <a href="https://github.com/JUXN1988/noviark/blob/main/SECURITY.md" target="_blank">Seguridad</a>
+      <a href="https://github.com/JUXN1988/noviark/issues/new?labels=business" target="_blank" data-i="foot_contact">Contacto</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 NoviArk Labs. <span data-i="foot_rights">Todos los derechos reservados.</span></span>
+    <span data-i="foot_made">Hecho con ❤️ para devs</span>
+  </div>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════ */
+var CFG = {
+  repo: "JUXN1988/noviark",
+  version: "4.2.0"
+};
+
+/* ═══════════════════════════════════════════
+   i18n — Traducciones EN
+═══════════════════════════════════════════ */
+var EN = {
+  banner_text:"⚠️ NoviArk is under active development — minor bugs may exist and are being fixed. Always use the latest version.",
+  nav_feat:"Features", nav_plans:"Plans", nav_dl:"Download", nav_road:"Roadmap", nav_faq:"FAQ", nav_cta:"Download free",
+  hero_badge:"New in v4.2 — visual diagnosis debugger",
+  hero_h1a:"The autonomous AI agent", hero_h1b:"your company controls",
+  hero_sub:"NoviArk plans, writes, runs, tests and fixes software end to end. Use any AI — cloud or local. Your code never leaves your network.",
+  hero_dl:"Download for Windows",
+  stat_tools:"Tools", stat_prov:"AI Providers", stat_plat:"Platforms",
+  feat_label:"Features", feat_h2:"Everything a real agent needs",
+  feat_sub:"From planning to bug fixing, NoviArk does it all without switching tools.",
+  gal_label:"Screenshots", gal_h2:"See it in action",
+  roi_label:"Calculator", roi_h2:"How much does your team save?",
+  roi_sub:"Move the sliders and see the estimated impact in real time.",
+  roi_devs:"Developers in team", roi_sal:"Average monthly salary (USD)",
+  roi_tasks:"Automatable tasks per dev/week", roi_hrs:"Hours per task without NoviArk",
+  roi_per_mo:"estimated savings per month",
+  roi_hrs_saved:"Hours saved/month", roi_cost_saved:"Cost saved",
+  roi_noviark_cost:"NoviArk cost", roi_net:"Net gain",
+  roi_note:"*Free for personal use. See plans for businesses.",
+  plans_label:"Pricing", plans_h2:"The plan you need",
+  plans_sub:"No credit card to start. Cancel anytime.",
+  plan_mo:"/mo",
+  plan1_name:"Community", plan1_desc:"For personal, educational, research and non-profit use. No time limit.",
+  plan1_f1:"All AI models (you bring the key)", plan1_f2:"Local models: Ollama, LM Studio",
+  plan1_f3:"38+ real tools", plan1_f4:"Unlimited projects", plan1_f5:"Automatic updates",
+  plan1_cta:"Download free",
+  plan2_badge:"Most popular", plan2_name:"Business",
+  plan2_desc:"For teams and companies. Includes 60-day free trial.",
+  plan2_f1:"Everything in Community", plan2_f2:"Automatic API key rotation",
+  plan2_f3:"Unlimited parallel projects", plan2_f4:"Priority email support", plan2_f5:"Commercial use",
+  plan2_cta:"Start free trial",
+  plan3_name:"Enterprise", plan3_price:"Contact us",
+  plan3_desc:"For large companies with privacy requirements and self-hosted deployment.",
+  plan3_f1:"Everything in Business", plan3_f2:"On-premise / air-gapped deployment",
+  plan3_f3:"SSO + audit log + admin console", plan3_f4:"Guaranteed SLA and dedicated support", plan3_f5:"Training and onboarding included",
+  plan3_cta:"Talk to sales",
+  dl_label:"Download", dl_h2:"Available for your platform",
+  dl_sub:"Native installers for Windows, macOS and Linux. Single executable, no dependencies.",
+  dl_win_desc:"Windows 10 / 11 64-bit. Installer with shortcuts + portable version.",
+  dl_win_btn:"Download .exe (Installer)", dl_win_alt:"Also available: portable .zip",
+  dl_mac_desc:"Apple Silicon (M1–M4) and Intel. Drag NoviArk to Applications.",
+  dl_mac_btn:"Download .dmg (Apple Silicon)", dl_mac_alt:"Intel: .dmg x86_64",
+  dl_lin_desc:"Ubuntu / Debian (amd64) with .deb package. Other distros with .tar.gz.",
+  dl_lin_btn:"Download .deb (Ubuntu/Debian)", dl_lin_alt:"Other distros: .tar.gz",
+  dl_total_pre:"Total downloads across all versions:",
+  road_label:"Roadmap", road_h2:"What's coming",
+  road_sub:"NoviArk evolves fast. Here's the public plan.",
+  cont_label:"Contact", cont_h2:"Questions or proposals?",
+  cont_sub:"For companies, pilots, investment or acquisition — open an issue on GitHub with the label business. For bugs or suggestions, use regular issues. We respond to all.",
+  cont_biz:"Business proposal / enterprise license",
+  cont_bug:"Report a bug or suggestion",
+  cont_star:"Give us a star on GitHub",
+  cont_card_h:"NoviArk Labs",
+  cont_card_p:"We build the next generation of AI agents for development teams. Open source, privacy first, no lock-in.",
+  cont_card_btn:"View on GitHub",
+  faq_label:"FAQ", faq_h2:"Frequently asked questions", faq_sub:"The most common questions, answered.",
+  cta_label:"Start today", cta_h2:"Your team deserves a real agent",
+  cta_sub:"Free for personal use. No credit card. Download and install in under 2 minutes.",
+  cta_dl:"Download NoviArk",
+  foot_desc:"The autonomous AI agent your company controls. Your code never leaves your network.",
+  foot_product:"Product", foot_resources:"Resources", foot_legal:"Legal",
+  foot_contact:"Contact", foot_rights:"All rights reserved.",
+  foot_made:"Made with ❤️ for devs",
+  num_tools:"Real tools: files, terminal, web, vision, Docker and more",
+  num_prov:"Live-verified AI providers with automatic key rotation",
+  num_plat:"Platforms: Windows, macOS and Linux with native installers"
+};
+
+var currentLang = localStorage.getItem('noviqLang') || 'es';
+
+function t(key){
+  if(currentLang==='en' && EN[key]) return EN[key];
+  return null; // use existing HTML
+}
+
+function applyLang(){
+  document.querySelectorAll('[data-i]').forEach(function(el){
+    var k = el.getAttribute('data-i');
+    var v = t(k);
+    if(v) el.textContent = v;
+  });
+  // Banner special
+  var bannerTxt = document.getElementById('banner-text');
+  if(bannerTxt){
+    var bv = t('banner_text');
+    if(bv) bannerTxt.textContent = bv;
+  }
+  // Hero download button detect OS
+  var heroBtn = document.getElementById('hero-dl');
+  if(heroBtn){
+    var ua = navigator.userAgent;
+    if(/Mac/i.test(ua)){
+      heroBtn.href='../../releases/latest/download/NoviArk-macOS-arm64.dmg';
+      heroBtn.querySelector('[data-i]').textContent = currentLang==='en'?'Download for macOS':'Descargar para macOS';
+    } else if(/Linux/i.test(ua) && !/Android/i.test(ua)){
+      heroBtn.href='../../releases/latest/download/NoviArk-Linux-amd64.deb';
+      heroBtn.querySelector('[data-i]').textContent = currentLang==='en'?'Download for Linux':'Descargar para Linux';
+    } else {
+      heroBtn.href='../../releases/latest/download/NoviArk-Setup-Windows.exe';
+    }
+  }
+  document.getElementById('lang-btn').textContent = currentLang==='es'?'EN':'ES';
+  document.documentElement.lang = currentLang;
+  // Re-render dynamic content
+  renderFeatures();
+  renderGallery();
+  renderRoadmap();
+  renderFAQ();
+}
+
+function toggleLang(){
+  currentLang = currentLang==='es'?'en':'es';
+  localStorage.setItem('noviqLang', currentLang);
+  applyLang();
+}
+
+/* ═══════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════ */
+var FEATURES_ES = [
+  {icon:"🧠", title:"Cerebro planificador", desc:"El modelo que mejor razona diseña un plan paso a paso. Tú lo editas o apruebas antes de ejecutar. El plan se actualiza en vivo según avanza."},
+  {icon:"🔧", title:"38+ herramientas reales", desc:"Archivos, PowerShell, Python, Linux (WSL), Docker, entornos virtuales, instaladores, HTTP, búsqueda web, automatización del navegador y visión de pantalla."},
+  {icon:"🔍", title:"Depuración experta", desc:"`diagnosticar` devuelve una lista priorizada de errores reales con archivo:línea. `probar_web` abre apps en navegador invisible y reporta fallos JS y UI."},
+  {icon:"🔄", title:"Escalado automático", desc:"Si el agente se atasca, el trabajo pasa a la IA más capaz que tengas habilitada, con todo el estado preservado. Nunca empieza de cero."},
+  {icon:"🌐", title:"20+ proveedores de IA", desc:"NVIDIA NIM, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cloudflare, HuggingFace y cualquier API compatible. Varias claves con rotación automática."},
+  {icon:"🏠", title:"IA 100% local", desc:"Ollama y LM Studio, con tamaño de contexto ajustado automáticamente a tu VRAM/RAM. Tu código nunca sale de tu red."},
+  {icon:"⚡", title:"Proyectos en paralelo", desc:"Cada proyecto tiene su propia pantalla, su propio modelo y su propio estado. Trabaja en varios simultáneamente sin confusión."},
+  {icon:"🛡️", title:"Seguridad y guardianes", desc:"Permisos por nivel de riesgo, puntos de restauración automáticos, papelera de reciclaje, escáner de secretos y bóveda cifrada de claves (Windows DPAPI)."},
+  {icon:"🖥️", title:"App nativa ES + EN", desc:"Interfaz nativa en español e inglés, detectada automáticamente. Servidores MCP con el mismo formato que Claude Desktop."},
+  {icon:"📊", title:"Estado persistente", desc:"El estado de trabajo (meta, plan, hecho, archivos, errores, siguiente paso) se guarda en cada conversación. Si una IA falla, la siguiente continúa exactamente donde quedó."},
+  {icon:"🎁", title:"IA gratis incluida", desc:"Acceso a modelos gratuitos sin necesidad de clave propia. Perfecto para empezar sin coste."},
+  {icon:"📦", title:"Instaladores nativos", desc:"Windows (.exe + portable), macOS (.dmg Apple Silicon e Intel) y Linux (.deb + .tar.gz). Construidos por GitHub Actions con cada release."}
+];
+var FEATURES_EN = [
+  {icon:"🧠", title:"Planning brain", desc:"The strongest reasoning model drafts a step-by-step plan. You edit or approve it before anything runs. The plan updates live as tasks finish."},
+  {icon:"🔧", title:"38+ real tools", desc:"Files, PowerShell, Python, Linux (WSL), Docker, virtual environments, installers, HTTP, web search, browser and desktop automation, and screen vision."},
+  {icon:"🔍", title:"Expert debugging", desc:"`diagnose` returns a prioritized list of real problems with file:line. `test_web` opens apps in an invisible browser and reports JS errors and UI failures."},
+  {icon:"🔄", title:"Automatic escalation", desc:"If the agent gets stuck, work is handed to the most capable model you have enabled, with full state preserved. Never starts from zero."},
+  {icon:"🌐", title:"20+ AI providers", desc:"NVIDIA NIM, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cloudflare, HuggingFace and any compatible API. Multiple keys with auto-rotation."},
+  {icon:"🏠", title:"100% local AI", desc:"Ollama and LM Studio, with context size tuned automatically to your VRAM/RAM. Your code never leaves your network."},
+  {icon:"⚡", title:"Parallel projects", desc:"Each project has its own screen, its own model and its own state. Work on several simultaneously without confusion."},
+  {icon:"🛡️", title:"Security & guardrails", desc:"Risk-level permissions, automatic restore points, recycle bin, secret scanner and encrypted key vault (Windows DPAPI)."},
+  {icon:"🖥️", title:"Native app ES + EN", desc:"Native interface in Spanish and English, auto-detected. MCP servers with the same format as Claude Desktop."},
+  {icon:"📊", title:"Persistent state", desc:"Work state (goal, plan, done, files, errors, next step) is kept for every conversation. If an AI fails, the next one continues exactly where it stopped."},
+  {icon:"🎁", title:"Free AI included", desc:"Access to free models without your own key. Perfect to start at no cost."},
+  {icon:"📦", title:"Native installers", desc:"Windows (.exe + portable), macOS (.dmg Apple Silicon and Intel) and Linux (.deb + .tar.gz). Built by GitHub Actions on each release."}
+];
+
+var GALLERY_TABS = [
+  {key:"work",    labelES:"Trabajando",  labelEN:"Working",     imgES:"docs/img/work_es.webp",    imgEN:"docs/img/work_en.webp",    capES:"NoviArk construyendo una app en tiempo real",   capEN:"NoviArk building an app live"},
+  {key:"plan",    labelES:"Plan vivo",   labelEN:"Live plan",   imgES:"docs/img/plan_en.webp",    imgEN:"docs/img/plan_en.webp",    capES:"Plan editable que se actualiza en vivo",         capEN:"Editable live plan"},
+  {key:"picker",  labelES:"Selector IA", labelEN:"AI picker",   imgES:"docs/img/picker_en.webp",  imgEN:"docs/img/picker_en.webp",  capES:"Solo muestra los modelos que funcionan",        capEN:"Shows only models that actually work"},
+  {key:"project", labelES:"Proyecto",    labelEN:"Project",     imgES:"docs/img/project_en.webp", imgEN:"docs/img/project_en.webp", capES:"Vista completa del proyecto en pantalla",       capEN:"Full-screen project view"}
+];
+
+var ROADMAP_ES = [
+  {v:"v4.2",  done:true,  active:false, title:"Depuración visual + diagnose",   desc:"Lista priorizada de errores reales con archivo:línea. test_web para apps en navegador invisible. ✓ Disponible"},
+  {v:"v4.5",  done:false, active:true,  title:"Instaladores firmados + autoupdate", desc:"Firmado de código para eliminar advertencias de SmartScreen/Gatekeeper. Actualizaciones automáticas sin reinstalar."},
+  {v:"v5.0",  done:false, active:false, title:"Consola admin + SSO + audit log", desc:"Panel web para gestionar equipos, roles y permisos. Integración con SSO (SAML/OIDC) y registro de auditoría completo."},
+  {v:"v5.5",  done:false, active:false, title:"Agentes para documentos y oficina", desc:"NoviArk capaz de manejar Word, Excel, PowerPoint, correo y calendarios como tareas autónomas."},
+  {v:"v6.0",  done:false, active:false, title:"Modelos compactos fine-tuned",    desc:"Modelos locales especializados en código, ajustados para correr eficientemente en CPUs con RAM limitada."}
+];
+var ROADMAP_EN = [
+  {v:"v4.2",  done:true,  active:false, title:"Visual debugging + diagnose",     desc:"Prioritized list of real errors with file:line. test_web for apps in invisible browser. ✓ Available"},
+  {v:"v4.5",  done:false, active:true,  title:"Signed installers + autoupdate",  desc:"Code signing to remove SmartScreen/Gatekeeper warnings. Automatic updates without reinstalling."},
+  {v:"v5.0",  done:false, active:false, title:"Admin console + SSO + audit log", desc:"Web panel to manage teams, roles and permissions. SSO integration (SAML/OIDC) and full audit log."},
+  {v:"v5.5",  done:false, active:false, title:"Agents for documents and office",  desc:"NoviArk handling Word, Excel, PowerPoint, email and calendars as autonomous tasks."},
+  {v:"v6.0",  done:false, active:false, title:"Fine-tuned compact models",       desc:"Specialized local models for code, tuned to run efficiently on CPUs with limited RAM."}
+];
+
+var FAQ_ES = [
+  {q:"¿Es realmente gratis?", a:"Sí. NoviArk Community es completamente gratis para uso personal, educativo, de investigación y ONG, sin límite de tiempo ni funciones bloqueadas. Solo necesitas traer tu propia clave de API (o usar los modelos gratuitos incluidos)."},
+  {q:"¿Mi código sale de mi empresa?", a:"Solo si tú lo decides. Puedes usar modelos locales (Ollama, LM Studio) que no salen de tu red. Si usas un proveedor en la nube, el código solo va a ese proveedor — NoviArk no lo ve ni lo guarda."},
+  {q:"¿Qué modelos de IA puedo usar?", a:"Más de 20 proveedores: NVIDIA NIM, Google Gemini, OpenAI GPT-4, Anthropic Claude, OpenRouter, Groq, DeepSeek, Mistral, xAI Grok, Cloudflare AI, HuggingFace y cualquier API compatible con OpenAI. También modelos locales con Ollama y LM Studio."},
+  {q:"¿Funciona en Windows, Mac y Linux?", a:"Sí. Hay instaladores nativos para Windows 10/11 (exe + portable), macOS Apple Silicon e Intel (dmg) y Ubuntu/Debian + otras distros Linux (deb + tar.gz)."},
+  {q:"¿Qué es un 'agente de IA autónomo'?", a:"Un agente puede encadenar múltiples pasos por sí solo: lee un error, busca la causa, propone una solución, la aplica y verifica que funciona — sin que tú tengas que pedirle cada paso. NoviArk tiene 38+ herramientas reales para hacerlo."},
+  {q:"¿Puedo usarlo para mi empresa?", a:"Para evaluación, sí — 60 días gratis. Luego necesitas una licencia Business ($29/mes por usuario) o Enterprise (contactar). Abre un issue con la etiqueta 'business' en GitHub."}
+];
+var FAQ_EN = [
+  {q:"Is it really free?", a:"Yes. NoviArk Community is completely free for personal, educational, research and non-profit use — no time limit and no locked features. You only need to bring your own API key (or use the included free models)."},
+  {q:"Does my code leave my company?", a:"Only if you decide. You can use local models (Ollama, LM Studio) that never leave your network. If you use a cloud provider, your code only goes to that provider — NoviArk never sees or stores it."},
+  {q:"Which AI models can I use?", a:"More than 20 providers: NVIDIA NIM, Google Gemini, OpenAI GPT-4, Anthropic Claude, OpenRouter, Groq, DeepSeek, Mistral, xAI Grok, Cloudflare AI, HuggingFace and any OpenAI-compatible API. Also local models with Ollama and LM Studio."},
+  {q:"Does it work on Windows, Mac and Linux?", a:"Yes. Native installers for Windows 10/11 (exe + portable), macOS Apple Silicon and Intel (dmg) and Ubuntu/Debian + other Linux distros (deb + tar.gz)."},
+  {q:"What is an 'autonomous AI agent'?", a:"An agent can chain multiple steps on its own: reads an error, finds the cause, proposes a fix, applies it and verifies it works — without you having to ask for each step. NoviArk has 38+ real tools to do it."},
+  {q:"Can I use it for my company?", a:"For evaluation, yes — 60 days free. After that you need a Business license ($29/mo per user) or Enterprise (contact us). Open an issue with the 'business' label on GitHub."}
+];
+
+var MARQUEE_ITEMS = [
+  "🧠 NVIDIA NIM","🤖 Google Gemini","⚡ Anthropic Claude","🌀 OpenAI GPT","🚀 Groq","🌊 DeepSeek","✨ Mistral","🔮 OpenRouter","☁️ Cloudflare AI","🤗 HuggingFace",
+  "🏠 Ollama local","🖥️ LM Studio","🔧 38+ herramientas","🐍 Python / WSL","🐳 Docker","🌐 Web automation","👁️ Screen vision","📦 Native installers","🔒 Key vault","♾️ Proyectos paralelos"
+];
+
+/* ═══════════════════════════════════════════
+   RENDER FUNCIONES
+═══════════════════════════════════════════ */
+function renderFeatures(){
+  var data = currentLang==='en' ? FEATURES_EN : FEATURES_ES;
+  var g = document.getElementById('feat-grid');
+  if(!g) return;
+  g.innerHTML = data.map(function(f){
+    return '<div class="feat-card reveal"><div class="feat-icon">'+f.icon+'</div><div class="feat-title">'+f.title+'</div><div class="feat-desc">'+f.desc+'</div></div>';
+  }).join('');
+  observeReveal();
+}
+
+var currentGalTab = 0;
+function renderGallery(){
+  var tabs = document.getElementById('gal-tabs');
+  var panels = document.getElementById('gal-panels');
+  if(!tabs||!panels) return;
+  tabs.innerHTML = GALLERY_TABS.map(function(t,i){
+    var label = currentLang==='en'?t.labelEN:t.labelES;
+    return '<button class="gtab'+(i===currentGalTab?' active':'')+'" onclick="switchGal('+i+')">'+label+'</button>';
+  }).join('');
+  panels.innerHTML = GALLERY_TABS.map(function(t,i){
+    var img = currentLang==='en'?t.imgEN:t.imgES;
+    var cap = currentLang==='en'?t.capEN:t.capES;
+    return '<div class="gpanel'+(i===currentGalTab?' active':'')+'"><div class="gallery-img"><img src="'+img+'" alt="'+cap+'" loading="lazy"></div><p class="gallery-caption">'+cap+'</p></div>';
+  }).join('');
+}
+function switchGal(i){
+  currentGalTab=i;
+  renderGallery();
+}
+
+function renderRoadmap(){
+  var data = currentLang==='en' ? ROADMAP_EN : ROADMAP_ES;
+  var el = document.getElementById('roadmap-list');
+  if(!el) return;
+  el.innerHTML = data.map(function(r){
+    var cls = 'rm-item'+(r.done?' done':'')+(r.active?' active':'');
+    return '<div class="'+cls+'"><div class="rm-dot"></div><div class="rm-version">'+r.v+'</div><div class="rm-title">'+r.title+'</div><div class="rm-desc">'+r.desc+'</div></div>';
+  }).join('');
+}
+
+function renderFAQ(){
+  var data = currentLang==='en' ? FAQ_EN : FAQ_ES;
+  var el = document.getElementById('faq-list');
+  if(!el) return;
+  el.innerHTML = data.map(function(f,i){
+    return '<div class="faq-item" id="faq'+i+'"><button class="faq-q" onclick="toggleFAQ('+i+')"><span>'+f.q+'</span><span class="arrow">▾</span></button><div class="faq-a">'+f.a+'</div></div>';
+  }).join('');
+}
+function toggleFAQ(i){
+  var el = document.getElementById('faq'+i);
+  el.classList.toggle('open');
+}
+
+function renderMarquee(){
+  var track = document.getElementById('marqueeTrack');
+  if(!track) return;
+  var items = MARQUEE_ITEMS.map(function(m){ return '<div class="marquee-item"><span>•</span>'+m+'</div>'; }).join('');
+  track.innerHTML = items + items; // duplicate for seamless loop
+}
+
+/* ═══════════════════════════════════════════
+   ROI CALCULATOR
+═══════════════════════════════════════════ */
+function calcROI(){
+  var devs   = parseInt(document.getElementById('roi-devs').value)||5;
+  var sal    = parseInt(document.getElementById('roi-sal').value)||5000;
+  var tasks  = parseInt(document.getElementById('roi-tasks').value)||8;
+  var hrs    = parseFloat(document.getElementById('roi-hrs').value)||3;
+  document.getElementById('roi-devs-val').textContent = devs;
+  document.getElementById('roi-sal-val').textContent  = '$'+sal.toLocaleString();
+  document.getElementById('roi-tasks-val').textContent = tasks;
+  document.getElementById('roi-hrs-val').textContent  = hrs;
+  var hrRate   = sal / (4.33*40);
+  var hrsMonth = devs * tasks * 4.33 * hrs * 0.65; // 65% automation rate
+  var saving   = Math.round(hrsMonth * hrRate);
+  document.getElementById('roi-hrs-saved').textContent  = Math.round(hrsMonth)+' h';
+  document.getElementById('roi-cost-saved').textContent = '$'+saving.toLocaleString();
+  document.getElementById('roi-saving').textContent     = '$'+saving.toLocaleString();
+  document.getElementById('roi-net').textContent        = '$'+saving.toLocaleString();
+}
+
+/* ═══════════════════════════════════════════
+   GITHUB DOWNLOADS
+═══════════════════════════════════════════ */
+function loadDownloads(){
+  fetch('https://api.github.com/repos/'+CFG.repo+'/releases',{headers:{'Accept':'application/vnd.github.v3+json'}})
+    .then(function(r){return r.json()})
+    .then(function(releases){
+      var total = 0;
+      releases.forEach(function(rel){
+        (rel.assets||[]).forEach(function(a){ total += (a.download_count||0); });
+      });
+      var el = document.getElementById('dl-total');
+      if(el) el.textContent = total.toLocaleString();
+    })
+    .catch(function(){ var el=document.getElementById('dl-total'); if(el) el.textContent='N/A'; });
+}
+
+/* ═══════════════════════════════════════════
+   REVEAL ON SCROLL
+═══════════════════════════════════════════ */
+function observeReveal(){
+  var els = document.querySelectorAll('.reveal:not(.visible)');
+  if(!window.IntersectionObserver){
+    els.forEach(function(e){e.classList.add('visible')});
+    return;
+  }
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}
+    });
+  },{threshold:.12});
+  els.forEach(function(e){obs.observe(e)});
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE MENU
+═══════════════════════════════════════════ */
+function toggleMenu(){
+  var m = document.getElementById('mobile-menu');
+  m.style.display = m.style.display==='block'?'none':'block';
+}
+
+/* ═══════════════════════════════════════════
+   NAV STICKY — ocultar banner al scrollear
+═══════════════════════════════════════════ */
+var ticking = false;
+window.addEventListener('scroll', function(){
+  if(!ticking){
+    requestAnimationFrame(function(){
+      var nav = document.querySelector('nav');
+      if(nav){
+        var banner = document.getElementById('update-banner');
+        var bh = banner&&banner.style.display!=='none'?banner.offsetHeight:0;
+        nav.style.top = bh+'px';
+      }
+      ticking=false;
+    });
+    ticking=true;
+  }
+});
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function(){
+  renderMarquee();
+  renderFeatures();
+  renderGallery();
+  renderRoadmap();
+  renderFAQ();
+  calcROI();
+  loadDownloads();
+  applyLang();
+  observeReveal();
+});
+</script>
+</body>
+</html>
