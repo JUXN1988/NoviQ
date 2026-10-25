@@ -1,86 +1,84 @@
-<p align="center"><img src="docs/img/logo.png" width="140" alt="NoviArk — AI Agent"></p>
+<p align="center"><img src="docs/img/logo.png" width="140" alt="NoviArk"></p>
 <h1 align="center">NoviArk</h1>
 <p align="center">
-<b>The autonomous AI agent your company controls.</b><br>
-<b>El agente de IA autónomo que tu empresa controla.</b>
+<b>Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.</b><br>
+<b>An AI agent that writes, runs, tests and fixes programs on your computer.</b>
 </p>
 
 <p align="center">
-
-> ⚠️ **Active development / En actualización activa** — Minor bugs may exist and are being fixed. Pueden existir pequeñas fallas que se están corrigiendo.
-
+<img alt="Estado" src="https://img.shields.io/badge/estado-en%20desarrollo-d98a5e?style=flat-square">
+<img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-3fe9c4?style=flat-square">
+<a href="LICENSE.md"><img alt="Licencia" src="https://img.shields.io/badge/licencia-Community%20(gratis%20personal)-8aff45?style=flat-square"></a>
 </p>
 
 <p align="center">
-<a href="https://github.com/JUXN1988/noviark/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/JUXN1988/noviark?label=version&color=3fdc2b&style=flat-square"></a>
-<a href="https://github.com/JUXN1988/noviark/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/JUXN1988/noviark/total?color=d98a5e&style=flat-square"></a>
-<img alt="Platforms" src="https://img.shields.io/badge/Windows%20·%20macOS%20·%20Linux-supported-3fe9c4?style=flat-square">
-<a href="LICENSE.md"><img alt="License" src="https://img.shields.io/badge/license-Community%20(free)-8aff45?style=flat-square"></a>
-</p>
-
-<p align="center">
-<a href="#-download"><b>⬇ Download</b></a> ·
-<a href="#-descargar"><b>⬇ Descargar</b></a> ·
-<a href="#-features">Features</a> ·
+<a href="#-ejecutar-desde-el-código"><b>Ejecutar</b></a> ·
+<a href="#-qué-hace"><b>Qué hace</b></a> ·
 <a href="#-español">Español</a> ·
-<a href="ROADMAP.md">Roadmap</a> ·
-<a href="LICENSE.md">License</a>
+<a href="#-english">English</a> ·
+<a href="ROADMAP.md">Hoja de ruta</a> ·
+<a href="CHANGELOG.md">Cambios</a>
 </p>
 
-<p align="center"><img src="docs/img/work_en.webp" width="900" alt="NoviArk building an app live"></p>
+> **Estado / Status:** NoviArk está en desarrollo. Todavía **no hay instaladores publicados**: por ahora se ejecuta desde el código, como se explica abajo. / NoviArk is under development. **No installers are published yet**: for now, run it from the source code, as explained below.
 
-NoviArk is a desktop app that **plans, writes, runs, tests and fixes software end to end**. You describe what you want; the agent creates the project, writes the code, runs it, reads the errors and repairs them until it works. It works with **any AI model** — cloud providers such as NVIDIA NIM, Google Gemini or OpenRouter, or **local models that never leave your network** (Ollama, LM Studio) — so there is no vendor lock-in and your code stays in-house.
+---
 
-## ⬇ Download
+## 🇪🇸 Español
 
-| System | Download | Notes |
-|---|---|---|
-| **Windows 10 / 11** (64-bit) | [**NoviArk-Setup-Windows.exe**](../../releases/latest/download/NoviArk-Setup-Windows.exe) | Installer with Start-menu and desktop shortcuts. Portable: [NoviArk-Windows-portable.zip](../../releases/latest/download/NoviArk-Windows-portable.zip) |
-| **macOS** — Apple Silicon (M1–M4) | [**NoviArk-macOS-arm64.dmg**](../../releases/latest/download/NoviArk-macOS-arm64.dmg) | Drag NoviArk to Applications |
-| **macOS** — Intel | [**NoviArk-macOS-x86_64.dmg**](../../releases/latest/download/NoviArk-macOS-x86_64.dmg) | Drag NoviArk to Applications |
-| **Ubuntu / Debian** (amd64) | [**NoviArk-Linux-amd64.deb**](../../releases/latest/download/NoviArk-Linux-amd64.deb) | `sudo apt install ./NoviArk-Linux-amd64.deb` · Other distros: [NoviArk-Linux-x86_64.tar.gz](../../releases/latest/download/NoviArk-Linux-x86_64.tar.gz) |
+NoviArk es un programa de escritorio que recibe lo que quieres construir, crea el proyecto, escribe el código, lo ejecuta, lee los errores y los corrige. Funciona con modelos de IA en la nube (por ejemplo NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter) o con **modelos locales** en tu PC (Ollama y LM Studio), sin que tu código salga de tu equipo cuando usas modelos locales.
 
-All versions: [Releases](../../releases).
+### ▶ Ejecutar desde el código
 
-**First launch**
-- **Windows**: if SmartScreen shows "Windows protected your PC", click **More info → Run anyway** (the installers are not code-signed yet; signing is planned for v4.5).
-- **macOS**: right-click NoviArk in Applications → **Open** → **Open**. Or: System Settings → Privacy & Security → **Open Anyway**.
-- **Linux**: open **NoviArk** from your applications menu, or run `noviark` in a terminal.
+Necesitas **Python 3.10 o superior**.
 
-Then go to **⚙ Settings → Providers & keys**, paste one or more API keys (or use **🎁 Free AI**, or point it at Ollama / LM Studio) and start a conversation.
+```bash
+git clone https://github.com/JUXN1988/noviark.git
+cd noviark
+# Windows: doble clic en iniciar.bat   (crea el entorno .venv y abre la app)
+# Linux / macOS:
+bash iniciar.sh
+```
 
-## ✨ Features
+La app abre una ventana nativa. También puedes usar `python app.py` y abrir `http://127.0.0.1:7860` en el navegador.
 
-- **Autonomous agent with 38+ real tools** — files, PowerShell, Python, Linux (WSL), Docker, virtual environments, installers, HTTP, web search, browser and desktop automation, image generation and screen vision.
-- **Planning brain + approvable plan** — the strongest reasoning model drafts the plan; you edit or approve it before anything runs (auto-approval after a countdown you control). The plan updates live as tasks finish.
-- **Debugs like an expert** — `diagnose` returns a prioritized list of real problems with file:line; `test_web` opens web apps and games in an invisible browser and reports JavaScript errors, missing files, blank canvases and whether controls respond.
-- **Reasoning guardian** — if a model thinks too long without acting, or loops, NoviArk cuts it off, summarizes, and makes it act.
-- **Escalation to the most capable model** — when the agent gets stuck, work is handed to the smartest model you have enabled, with full state and diagnosis.
-- **Never starts from zero** — a work state (goal, plan, done, files, errors, next step) is kept for every conversation. If a model fails, runs out of quota or stops answering, the next one continues exactly where it stopped.
-- **20+ AI providers**, verified live — NVIDIA NIM, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cloudflare, Hugging Face and any OpenAI-compatible API. Several keys per provider with automatic rotation. The model list shows only models that actually work, best first.
-- **Local AI** — Ollama and LM Studio, with context size tuned automatically to your VRAM/RAM and a compact mode for small models.
-- **Parallel projects**, each with its own screen and its own model; import projects you already have.
-- **Continuous learning** from errors and the fixes that worked.
-- **MCP servers** — same config format as Claude Desktop.
-- **Guardrails** — permission levels (ask / auto / full auto), automatic restore points and undo, deletions go to the Recycle Bin, a secret scanner, and an **encrypted key vault** (Windows DPAPI).
-- **Native app window** in **English and Spanish**, detected automatically.
+Después entra en **⚙ Ajustes → Proveedores y claves**, pega la API key de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.
 
-<p align="center">
-<img src="docs/img/plan_en.webp" width="440" alt="Editable live plan">
-<img src="docs/img/picker_en.webp" width="440" alt="Model picker showing only working models">
-</p>
-<p align="center"><img src="docs/img/project_en.webp" width="900" alt="Full-screen project view"></p>
+### ✨ Qué hace
 
-## 🔐 Privacy and security
+- **Agente con 40 herramientas**: crear y editar archivos, buscar en el código, ejecutar PowerShell, Python y comandos de Linux, administrar procesos, hacer peticiones HTTP, buscar y leer páginas web, descargar archivos, generar imágenes, captura de pantalla, abrir archivos y programas, y usar un navegador automatizado.
+- **Plan antes de actuar**: el agente hace un plan de trabajo. Puedes editarlo o aprobarlo antes de que se ejecute; si no haces nada, se aprueba automáticamente tras una cuenta regresiva.
+- **Se prueba a sí mismo**: `diagnosticar` revisa el proyecto y reporta problemas con archivo y línea; `probar_web` abre webs y juegos en un navegador invisible y revisa errores de JavaScript, archivos que no cargan y si los controles responden.
+- **Guardián de razonamiento**: si un modelo piensa demasiado sin actuar o entra en bucle, NoviArk lo corta y lo obliga a actuar.
+- **Escalado**: si el agente se atasca, pasa el trabajo al modelo más capaz que tengas habilitado.
+- **Trabajo por etapas**: guarda el estado del trabajo (objetivo, plan, lo hecho, archivos y errores). Si un modelo falla o se queda sin cuota, el siguiente continúa desde ahí.
+- **Varios proyectos**, cada uno con su propia pantalla y su propio modelo. Puedes importar proyectos que ya tengas en tu PC.
+- **Servidores MCP**: usa el mismo formato de configuración que Claude Desktop (`datos/mcp.json`).
+- **Seguridad**:
+  - Modos de permiso: `preguntar`, `auto_seguro` y `auto`.
+  - Antes de modificar, crea copias y puntos de restauración que puedes volver a usar.
+  - Al eliminar, los archivos van a la Papelera de reciclaje.
+  - Escáner de secretos que revisa los proyectos en busca de claves filtradas.
+  - Las API keys se guardan en `claves.vault`. En Windows se cifran con DPAPI, así que solo tu usuario de Windows en esa PC puede leerlas. En otros sistemas están ofuscadas y con permisos 600; no están cifradas.
+- **Proveedores de IA**: NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cerebras, Hugging Face, Cohere, Cloudflare Workers AI, Ollama Cloud, Vercel AI Gateway, entre otros, y cualquier API compatible con OpenAI. Puedes guardar varias claves por proveedor.
+- **IA local**: Ollama y LM Studio, con el tamaño de contexto ajustado a la memoria de tu equipo.
+- **Interfaz en español e inglés.**
 
-- NoviArk runs on **your** computer. Your code and files are only sent to the AI provider **you** choose — or to nobody, if you use local models.
-- API keys are stored in `claves.vault`, encrypted with Windows DPAPI (only your Windows user on that PC can decrypt it). Keys are never shown in full on screen.
-- The agent asks for permission before running commands, deleting files or writing outside the projects folder, unless you choose otherwise.
-- Found a vulnerability? See [SECURITY.md](SECURITY.md).
+Plataformas en las que se ejecuta desde el código: Windows, Linux y macOS.
 
-## 🛠 Run from source
+### 📄 Licencia
 
-Requires **Python 3.10+**.
+NoviArk se distribuye bajo la **Noviark Community License 1.0** (ver [LICENSE.md](LICENSE.md)). Es **gratis para uso personal, educativo, de investigación y sin fines de lucro**. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere una licencia comercial.
+
+---
+
+## 🇬🇧 English
+
+NoviArk is a desktop app that takes what you want to build, creates the project, writes the code, runs it, reads the errors and fixes them. It works with cloud AI models (for example NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter) or with **local models** on your computer (Ollama and LM Studio); when you use local models, your code stays on your machine.
+
+### ▶ Run from source
+
+You need **Python 3.10 or newer**.
 
 ```bash
 git clone https://github.com/JUXN1988/noviark.git
@@ -90,74 +88,36 @@ cd noviark
 bash iniciar.sh
 ```
 
-The app serves its UI on `http://127.0.0.1:7860` and opens it in a native window.
+The app opens in a native window. You can also run `python app.py` and open `http://127.0.0.1:7860` in your browser.
 
-### Build the installers
+Then go to **⚙ Settings → Providers & keys**, paste an API key from a provider (or connect Ollama / LM Studio) and start a conversation.
 
-```bash
-packaging\windows\build.bat      # Windows → dist\NoviArk-Setup-Windows.exe + portable .zip (needs Inno Setup 6)
-bash packaging/linux/build.sh    # Ubuntu  → dist/NoviArk-Linux-amd64.deb + .tar.gz
-bash packaging/macos/build.sh    # macOS   → dist/NoviArk-macOS-<arch>.dmg
-```
+### ✨ What it does
 
-Pushing a tag like `v4.2.0` makes **GitHub Actions** build all installers (Windows, Linux, macOS Apple Silicon and Intel) and publish them in a Release.
+- **Agent with 40 tools**: create and edit files, search code, run PowerShell, Python and Linux commands, manage processes, make HTTP requests, search and read web pages, download files, generate images, take screenshots, open files and programs, and use an automated browser.
+- **Plan before acting**: the agent drafts a work plan. You can edit or approve it before it runs; if you do nothing, it is approved automatically after a countdown.
+- **Tests its own work**: `diagnosticar` checks the project and reports problems with file and line; `probar_web` opens web apps and games in an invisible browser and checks for JavaScript errors, files that fail to load and whether controls respond.
+- **Reasoning guardian**: if a model thinks too long without acting or gets stuck in a loop, NoviArk stops it and makes it act.
+- **Escalation**: if the agent gets stuck, the work moves to the most capable model you have enabled.
+- **Resumable work**: it keeps the state of the work (goal, plan, what is done, files and errors). If a model fails or runs out of quota, the next one continues from there.
+- **Several projects**, each with its own screen and model. You can import projects you already have on your PC.
+- **MCP servers**: same configuration format as Claude Desktop (`datos/mcp.json`).
+- **Safety**:
+  - Permission modes: `preguntar` (ask), `auto_seguro` (safe auto) and `auto`.
+  - Restore points are created before changes and can be restored.
+  - Deleted files go to the Recycle Bin.
+  - A secret scanner checks projects for leaked keys.
+  - API keys are stored in `claves.vault`. On Windows they are encrypted with DPAPI, so only your Windows user on that PC can read them. On other systems they are obfuscated and set to permission 600; they are not encrypted.
+- **AI providers**: NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cerebras, Hugging Face, Cohere, Cloudflare Workers AI, Ollama Cloud, Vercel AI Gateway, among others, and any OpenAI-compatible API. You can store several keys per provider.
+- **Local AI**: Ollama and LM Studio, with the context size adjusted to your computer's memory.
+- **Interface in Spanish and English.**
 
-## 🗺 Roadmap
+Runs from source on Windows, Linux and macOS.
 
-Signed installers and auto-update (v4.5), admin console + SSO + audit log (v5.0), agents for documents and office work (v5.5), and compact models fine-tuned for local coding (v6). Details in [ROADMAP.md](ROADMAP.md).
+### 📄 License
 
-## 📄 License
-
-NoviArk is **free for personal, educational, research and non-profit use**. Companies can **evaluate it free for 60 days**, then need a commercial license. The source code is available for review and learning. See [LICENSE.md](LICENSE.md).
-
-**Enterprise licenses, pilots, private deployment, investment or acquisition:** contact **NoviArk Labs** by opening an issue labeled *business*, or via the website.
-
----
-
-## 🇪🇸 Español
-
-NoviArk es un programa de escritorio que **planifica, escribe, ejecuta, prueba y corrige software de punta a punta**. Le dices qué quieres; el agente crea el proyecto, escribe el código, lo ejecuta, lee los errores y los arregla hasta que funciona. Funciona con **cualquier modelo de IA**: en la nube (NVIDIA NIM, Google Gemini, OpenRouter…) o **100 % dentro de tu red** con modelos locales (Ollama, LM Studio). Sin atarte a un proveedor y sin que tu código salga de casa.
-
-### ⬇ Descargar
-
-| Sistema | Descarga | Notas |
-|---|---|---|
-| **Windows 10 / 11** (64 bits) | [**NoviArk-Setup-Windows.exe**](../../releases/latest/download/NoviArk-Setup-Windows.exe) | Instalador con accesos en Inicio y Escritorio. Portable: [NoviArk-Windows-portable.zip](../../releases/latest/download/NoviArk-Windows-portable.zip) |
-| **macOS** con Apple Silicon (M1–M4) | [**NoviArk-macOS-arm64.dmg**](../../releases/latest/download/NoviArk-macOS-arm64.dmg) | Arrastra NoviArk a Aplicaciones |
-| **macOS** con Intel | [**NoviArk-macOS-x86_64.dmg**](../../releases/latest/download/NoviArk-macOS-x86_64.dmg) | Arrastra NoviArk a Aplicaciones |
-| **Ubuntu / Debian** (amd64) | [**NoviArk-Linux-amd64.deb**](../../releases/latest/download/NoviArk-Linux-amd64.deb) | `sudo apt install ./NoviArk-Linux-amd64.deb` · Otras distros: [NoviArk-Linux-x86_64.tar.gz](../../releases/latest/download/NoviArk-Linux-x86_64.tar.gz) |
-
-**La primera vez**
-- **Windows**: si aparece «Windows protegió su PC», pulsa **Más información → Ejecutar de todas formas** (los instaladores aún no están firmados; la firma llega en la v4.5).
-- **macOS**: clic derecho sobre NoviArk en Aplicaciones → **Abrir** → **Abrir**. O en Ajustes del Sistema → Privacidad y seguridad → **Abrir igualmente**.
-- **Linux**: abre **NoviArk** desde el menú de aplicaciones o escribe `noviark` en la terminal.
-
-Luego entra en **⚙ Ajustes → Proveedores y claves**, pega una o varias API keys (o usa **🎁 IA gratis**, u Ollama / LM Studio) y empieza a conversar.
-
-### ✨ Qué hace
-
-- **Agente autónomo con más de 38 herramientas reales**: archivos, PowerShell, Python, Linux (WSL), Docker, entornos virtuales, instaladores, HTTP, búsqueda web, automatización del navegador y del PC, generación de imágenes y visión de pantalla.
-- **Cerebro planificador y plan aprobable**: el modelo que mejor razona diseña el plan y tú lo editas o lo apruebas antes de ejecutarlo. El plan se actualiza en vivo.
-- **Depura como un experto**: `diagnosticar` da la lista priorizada de problemas reales con archivo:línea; `probar_web` abre webs y juegos en un navegador invisible y reporta errores de JavaScript, archivos que no cargan, pantallas vacías y si los controles responden.
-- **Guardián de razonamiento**: si la IA piensa demasiado sin actuar o entra en bucle, NoviArk la corta, resume y la obliga a actuar.
-- **Escalado a la IA más capaz**: si el agente se atasca, el trabajo pasa a la IA más inteligente que tengas habilitada, con todo el estado.
-- **Nunca empieza de cero**: si una IA falla, agota su cuota o deja de responder, la siguiente continúa exactamente donde quedó.
-- **20+ proveedores de IA** verificados en vivo, varias claves por proveedor con rotación automática, y solo se muestran los modelos que funcionan.
-- **IA local** con Ollama y LM Studio, ajustada automáticamente a tu VRAM y RAM.
-- **Proyectos en paralelo**, cada uno con su pantalla y su propia IA.
-- **Aprendizaje continuo**, **servidores MCP**, **permisos por nivel de riesgo**, **puntos de restauración** y **bóveda cifrada de claves**.
-- **Ventana nativa** en **español e inglés**, con detección automática del idioma.
-
-<p align="center"><img src="docs/img/work_es.webp" width="900" alt="NoviArk trabajando en español"></p>
-
-Guía completa en español: [LEEME.md](LEEME.md).
-
-### 📄 Licencia
-
-**Gratis para uso personal, educativo, de investigación y ONG.** Las empresas pueden **evaluarlo 60 días gratis** y luego necesitan una licencia comercial. Ver [LICENSE.md](LICENSE.md).
-
-**Licencias para empresas, pilotos, instalación privada, inversión o adquisición:** escribe a **NoviArk Labs** abriendo un issue con la etiqueta *business* o desde la web.
+NoviArk is distributed under the **Noviark Community License 1.0** (see [LICENSE.md](LICENSE.md)). It is **free for personal, educational, research and non-profit use**. Companies may evaluate it for up to 60 days; continued commercial use requires a commercial license.
 
 ---
 
-<p align="center">© 2026 NoviArk Labs</p>
+<p align="center">© 2026 Noviark Labs</p>
