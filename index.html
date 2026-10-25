@@ -4,37 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NoviArk — Agente de IA para programar</title>
-<meta name="description" content="NoviArk: agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora. Compatible con modelos en la nube y modelos locales.">
+<meta name="description" content="NoviArk: agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora. Con modelos en la nube o modelos locales, y su avatar asistente.">
 <link rel="icon" href="docs/img/favicon.png">
 <meta property="og:title" content="NoviArk — Agente de IA para programar">
 <meta property="og:description" content="Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.">
 <meta property="og:image" content="docs/img/og.jpg">
 <style>
-  :root{
-    --bg:#070b0f; --panel:#0c1218; --line:#17232e; --text:#e8f1f5; --muted:#8aa0ac;
-    --g1:#3fe9c4; --g2:#6ff0ff; --warm:#d98a5e;
-  }
-  @media (prefers-color-scheme: light){
-    :root:not([data-theme="dark"]){ --bg:#f5f9fb; --panel:#ffffff; --line:#d5e1e8; --text:#0b1a24; --muted:#4b6270; }
-  }
+  :root{ --bg:#070b0f; --panel:#0c1218; --line:#17232e; --text:#e8f1f5; --muted:#8aa0ac; --g1:#3fe9c4; --g2:#6ff0ff; --warm:#d98a5e; }
   :root[data-theme="light"]{ --bg:#f5f9fb; --panel:#ffffff; --line:#d5e1e8; --text:#0b1a24; --muted:#4b6270; }
-  :root[data-theme="dark"]{ --bg:#070b0f; --panel:#0c1218; --line:#17232e; --text:#e8f1f5; --muted:#8aa0ac; }
+  @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --bg:#f5f9fb; --panel:#ffffff; --line:#d5e1e8; --text:#0b1a24; --muted:#4b6270; } }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   a{color:var(--g1)}
-  .wrap{max-width:980px;margin:0 auto;padding:0 16px}
-  header{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 16px}
+  header{display:flex;justify-content:space-between;align-items:center;padding:18px 0;gap:12px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.1rem;color:var(--text);text-decoration:none}
   .brand img{width:34px;height:34px;border-radius:8px}
   nav a{color:var(--muted);text-decoration:none;margin-left:16px;font-size:.92rem}
   nav a:hover{color:var(--text)}
-  .lang{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer;margin-left:16px}
-  .hero{text-align:center;padding:40px 0 24px}
-  .hero img{width:150px;height:150px;border-radius:32px}
-  h1{font-size:clamp(2rem,5vw,3rem);margin:18px 0 8px;letter-spacing:-.5px}
-  .lead{color:var(--muted);font-size:1.1rem;max-width:680px;margin:0 auto}
-  .status{margin:26px auto 0;max-width:680px;border:1px solid var(--warm);border-radius:12px;padding:14px 18px;background:var(--panel);font-size:.95rem}
-  .status strong{color:var(--warm)}
+  .lang{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer}
+  .hero{text-align:center;padding:36px 0 22px}
+  .hero img.logo{width:140px;height:140px;border-radius:30px}
+  h1{font-size:clamp(2rem,5vw,3rem);margin:16px 0 8px;letter-spacing:-.5px}
+  .lead{color:var(--muted);font-size:1.1rem;max-width:700px;margin:0 auto}
+  .banner{margin:24px auto 0;max-width:720px;border:1px solid var(--warm);border-radius:12px;padding:14px 18px;background:var(--panel);font-size:.95rem;text-align:left}
+  .banner strong{color:var(--warm)}
   section{padding:34px 0;border-top:1px solid var(--line)}
   h2{font-size:1.5rem;margin:0 0 14px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
@@ -43,9 +37,16 @@
   .card p{margin:0;color:var(--muted);font-size:.93rem}
   pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;font-size:.9rem}
   code{font-family:ui-monospace,Consolas,monospace}
-  ul.plain{padding-left:20px;margin:0}
-  ul.plain li{margin:6px 0;color:var(--muted)}
-  .prov{color:var(--muted);font-size:.95rem}
+  .muted{color:var(--muted);font-size:.95rem}
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .shots figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .shots img{width:100%;display:block}
+  .shots figcaption{padding:10px 14px;color:var(--muted);font-size:.9rem}
+  .avatar-strip{width:100%;border-radius:14px;border:1px solid var(--line);margin:8px 0 16px}
+  table{width:100%;border-collapse:collapse;font-size:.95rem}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600}
+  .feedback a.btn{display:inline-block;margin:6px 10px 0 0;padding:10px 16px;border-radius:10px;border:1px solid var(--g1);text-decoration:none;font-weight:700}
   footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:.88rem;text-align:center}
   @media (max-width:640px){ nav{display:none} }
 </style>
@@ -56,33 +57,45 @@
     <a class="brand" href="#"><img src="docs/img/logo.png" alt="">NoviArk</a>
     <nav>
       <a href="#ejecutar" data-i="nav_run">Ejecutar</a>
-      <a href="#que-hace" data-i="nav_features">Qué hace</a>
-      <a href="#proveedores" data-i="nav_providers">Proveedores</a>
-      <a href="#licencia" data-i="nav_license">Licencia</a>
+      <a href="#capturas" data-i="nav_shots">Capturas</a>
+      <a href="#avatar" data-i="nav_avatar">Avatar</a>
+      <a href="#comentarios" data-i="nav_feedback">Comentarios</a>
       <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener">GitHub</a>
     </nav>
     <button class="lang" id="langBtn" type="button">EN</button>
   </header>
 
   <div class="hero">
-    <img src="docs/img/logo.png" alt="NoviArk">
+    <img class="logo" src="docs/img/logo.png" alt="NoviArk">
     <h1>NoviArk</h1>
     <p class="lead" data-i="tagline">Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.</p>
-    <div class="status">
-      <strong data-i="status_title">Estado:</strong>
-      <span data-i="status_text">en desarrollo. Todavía no hay instaladores publicados; por ahora se ejecuta desde el código (ver abajo).</span>
+    <div class="banner">
+      <strong data-i="banner_title">⚠️ En actualización activa.</strong>
+      <span data-i="banner_text">Estamos mejorando el programa y pueden existir pequeñas fallas que se están corrigiendo. Usa siempre la última versión del repositorio.</span>
     </div>
   </div>
 
   <section id="ejecutar">
-    <h2 data-i="run_title">Ejecutar desde el código</h2>
-    <p class="prov" data-i="run_req">Necesitas Python 3.10 o superior.</p>
+    <h2 data-i="run_title">Ejecutar</h2>
+    <p class="muted" data-i="run_req">Necesitas Python 3.10 o superior. Todavía no hay instaladores publicados: se ejecuta desde el código.</p>
 <pre><code>git clone https://github.com/JUXN1988/noviark.git
 cd noviark
 # Windows: doble clic en iniciar.bat
 # Linux / macOS:
 bash iniciar.sh</code></pre>
-    <p class="prov" data-i="run_after">Luego entra en Ajustes → Proveedores y claves, pega la API key de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.</p>
+    <p class="muted" data-i="run_after">Luego entra en Ajustes → Proveedores y claves, pega la API key de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.</p>
+  </section>
+
+  <section id="capturas">
+    <h2 data-i="shots_title">Capturas</h2>
+    <div class="shots">
+      <figure><img src="docs/img/app_inicio_es.png" alt="Pantalla de inicio"><figcaption data-i="shot_home">Pantalla de inicio: elige modelo, proyecto y permisos.</figcaption></figure>
+      <figure><img src="docs/img/app_ia_gratis_es.png" alt="IA gratis"><figcaption data-i="shot_free">🎁 IA gratis: conecta modelos sin pagar.</figcaption></figure>
+      <figure><img src="docs/img/work_es.webp" alt="Trabajando"><figcaption data-i="shot_work">NoviArk trabajando en un proyecto.</figcaption></figure>
+      <figure><img src="docs/img/plan_es.webp" alt="Plan"><figcaption data-i="shot_plan">Plan editable en vivo.</figcaption></figure>
+      <figure><img src="docs/img/picker_es.webp" alt="Selector de modelos"><figcaption data-i="shot_picker">Selector que muestra solo los modelos que funcionan.</figcaption></figure>
+      <figure><img src="docs/img/project_es.webp" alt="Proyecto"><figcaption data-i="shot_project">Vista de proyecto a pantalla completa.</figcaption></figure>
+    </div>
   </section>
 
   <section id="que-hace">
@@ -96,22 +109,39 @@ bash iniciar.sh</code></pre>
       <div class="card"><h3 data-i="f6t">Trabajo que no se pierde</h3><p data-i="f6d">Guarda objetivo, plan, lo hecho y los errores. Si un modelo falla, el siguiente continúa desde ahí.</p></div>
       <div class="card"><h3 data-i="f7t">IA local</h3><p data-i="f7d">Ollama y LM Studio, con el contexto ajustado a la memoria de tu equipo. Tu código no sale de tu PC.</p></div>
       <div class="card"><h3 data-i="f8t">Seguridad</h3><p data-i="f8d">Modos de permiso, copias y puntos de restauración, borrado a la Papelera, escáner de secretos y bóveda de claves (cifrada con DPAPI en Windows).</p></div>
-      <div class="card"><h3 data-i="f9t">Servidores MCP</h3><p data-i="f9d">Usa el mismo formato de configuración que Claude Desktop.</p></div>
+      <div class="card"><h3 data-i="f9t">Proveedores y MCP</h3><p data-i="f9d">NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq y más. Servidores MCP con el mismo formato que Claude Desktop.</p></div>
     </div>
   </section>
 
-  <section id="proveedores">
-    <h2 data-i="prov_title">Proveedores de IA</h2>
-    <p class="prov" data-i="prov_text">NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cerebras, Hugging Face, Cohere, Cloudflare Workers AI, Ollama Cloud, Vercel AI Gateway y cualquier API compatible con OpenAI. Además Ollama y LM Studio para modelos locales. Puedes guardar varias claves por proveedor.</p>
+  <section id="avatar">
+    <h2 data-i="avatar_title">El avatar (noviq-avatar)</h2>
+    <p class="muted" data-i="avatar_intro">Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviArk cuando está abierto.</p>
+    <img class="avatar-strip" src="docs/img/avatar_estados.webp" alt="Estados del avatar: saluda, trabaja, usa herramientas, pide ayuda y termina">
+    <table>
+      <thead><tr><th data-i="th_state">Estado</th><th data-i="th_does">Qué hace el robot</th></tr></thead>
+      <tbody>
+        <tr><td>👋 <span data-i="s1">Saluda</span></td><td data-i="s1d">Se presenta y saluda cuando lo abres.</td></tr>
+        <tr><td>✍️ <span data-i="s2">Trabaja</span></td><td data-i="s2d">Pone cara de concentrado cuando NoviArk empieza un trabajo y escribe en su panel.</td></tr>
+        <tr><td>🛠 <span data-i="s3">Usa herramientas</span></td><td data-i="s3d">Muestra un icono en su visor según la herramienta: código, lupa, terminal o web.</td></tr>
+        <tr><td>❓ <span data-i="s4">Pide permiso o ayuda</span></td><td data-i="s4d">«Necesito tu permiso…» o «Necesito tu ayuda…», y le respondes hablando.</td></tr>
+        <tr><td>✅ <span data-i="s5">Termina</span></td><td data-i="s5d">Dice «¡Ya terminé!» y pregunta qué más hacemos.</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" data-i="avatar_more">Además: permisos por voz (responde sí o no sin decir su nombre), tareas a la vista con barra de progreso, API compatible con OpenAI y servidor MCP.</p>
+  </section>
+
+  <section id="comentarios" class="feedback">
+    <h2 data-i="fb_title">Comentarios y sugerencias</h2>
+    <p class="muted" data-i="fb_text">Como el proyecto está en actualización, tu opinión ayuda mucho.</p>
+    <a class="btn" href="https://github.com/JUXN1988/noviark/issues/new?template=bug_report.yml" target="_blank" rel="noopener" data-i="fb_bug">🐞 Reportar un error</a>
+    <a class="btn" href="https://github.com/JUXN1988/noviark/issues/new?template=feature_request.yml" target="_blank" rel="noopener" data-i="fb_feat">💡 Proponer una mejora</a>
+    <a class="btn" href="https://github.com/JUXN1988/noviark/issues" target="_blank" rel="noopener" data-i="fb_all">📋 Ver issues abiertos</a>
   </section>
 
   <section id="licencia">
     <h2 data-i="lic_title">Licencia</h2>
-    <p class="prov" data-i="lic_text">NoviArk se distribuye bajo la Noviark Community License 1.0. Es gratis para uso personal, educativo, de investigación y sin fines de lucro. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere licencia comercial.</p>
-    <ul class="plain">
-      <li><a href="LICENSE.md" data-i="lic_link">Leer la licencia completa</a></li>
-      <li><a href="ROADMAP.md" data-i="road_link">Hoja de ruta</a> · <a href="CHANGELOG.md" data-i="chg_link">Historial de cambios</a></li>
-    </ul>
+    <p class="muted" data-i="lic_text">NoviArk se distribuye bajo la Noviark Community License 1.0. Es gratis para uso personal, educativo, de investigación y sin fines de lucro. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere licencia comercial. El avatar (noviq-avatar) tendrá su licencia definida aparte.</p>
+    <p><a href="LICENSE.md" data-i="lic_link">Leer la licencia completa</a> · <a href="ROADMAP.md" data-i="road_link">Hoja de ruta</a> · <a href="CHANGELOG.md" data-i="chg_link">Historial de cambios</a></p>
   </section>
 
   <footer>
@@ -122,11 +152,12 @@ bash iniciar.sh</code></pre>
 <script>
 (function(){
   var ES = {
-    nav_run:"Ejecutar", nav_features:"Qué hace", nav_providers:"Proveedores", nav_license:"Licencia",
+    nav_run:"Ejecutar", nav_shots:"Capturas", nav_avatar:"Avatar", nav_feedback:"Comentarios",
     tagline:"Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.",
-    status_title:"Estado:", status_text:"en desarrollo. Todavía no hay instaladores publicados; por ahora se ejecuta desde el código (ver abajo).",
-    run_title:"Ejecutar desde el código", run_req:"Necesitas Python 3.10 o superior.",
+    banner_title:"⚠️ En actualización activa.", banner_text:"Estamos mejorando el programa y pueden existir pequeñas fallas que se están corrigiendo. Usa siempre la última versión del repositorio.",
+    run_title:"Ejecutar", run_req:"Necesitas Python 3.10 o superior. Todavía no hay instaladores publicados: se ejecuta desde el código.",
     run_after:"Luego entra en Ajustes → Proveedores y claves, pega la API key de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.",
+    shots_title:"Capturas", shot_home:"Pantalla de inicio: elige modelo, proyecto y permisos.", shot_free:"🎁 IA gratis: conecta modelos sin pagar.", shot_work:"NoviArk trabajando en un proyecto.", shot_plan:"Plan editable en vivo.", shot_picker:"Selector que muestra solo los modelos que funcionan.", shot_project:"Vista de proyecto a pantalla completa.",
     feat_title:"Qué hace",
     f1t:"40 herramientas", f1d:"Archivos, búsqueda en el código, PowerShell, Python, Linux, procesos, HTTP, búsqueda y lectura web, imágenes, captura de pantalla, navegador automatizado y más.",
     f2t:"Plan antes de actuar", f2d:"Puedes editar o aprobar el plan. Si no haces nada, se aprueba solo tras una cuenta regresiva.",
@@ -136,19 +167,27 @@ bash iniciar.sh</code></pre>
     f6t:"Trabajo que no se pierde", f6d:"Guarda objetivo, plan, lo hecho y los errores. Si un modelo falla, el siguiente continúa desde ahí.",
     f7t:"IA local", f7d:"Ollama y LM Studio, con el contexto ajustado a la memoria de tu equipo. Tu código no sale de tu PC.",
     f8t:"Seguridad", f8d:"Modos de permiso, copias y puntos de restauración, borrado a la Papelera, escáner de secretos y bóveda de claves (cifrada con DPAPI en Windows).",
-    f9t:"Servidores MCP", f9d:"Usa el mismo formato de configuración que Claude Desktop.",
-    prov_title:"Proveedores de IA",
-    prov_text:"NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cerebras, Hugging Face, Cohere, Cloudflare Workers AI, Ollama Cloud, Vercel AI Gateway y cualquier API compatible con OpenAI. Además Ollama y LM Studio para modelos locales. Puedes guardar varias claves por proveedor.",
-    lic_title:"Licencia",
-    lic_text:"NoviArk se distribuye bajo la Noviark Community License 1.0. Es gratis para uso personal, educativo, de investigación y sin fines de lucro. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere licencia comercial.",
+    f9t:"Proveedores y MCP", f9d:"NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq y más. Servidores MCP con el mismo formato que Claude Desktop.",
+    avatar_title:"El avatar (noviq-avatar)", avatar_intro:"Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviArk cuando está abierto.",
+    th_state:"Estado", th_does:"Qué hace el robot",
+    s1:"Saluda", s1d:"Se presenta y saluda cuando lo abres.",
+    s2:"Trabaja", s2d:"Pone cara de concentrado cuando NoviArk empieza un trabajo y escribe en su panel.",
+    s3:"Usa herramientas", s3d:"Muestra un icono en su visor según la herramienta: código, lupa, terminal o web.",
+    s4:"Pide permiso o ayuda", s4d:"«Necesito tu permiso…» o «Necesito tu ayuda…», y le respondes hablando.",
+    s5:"Termina", s5d:"Dice «¡Ya terminé!» y pregunta qué más hacemos.",
+    avatar_more:"Además: permisos por voz (responde sí o no sin decir su nombre), tareas a la vista con barra de progreso, API compatible con OpenAI y servidor MCP.",
+    fb_title:"Comentarios y sugerencias", fb_text:"Como el proyecto está en actualización, tu opinión ayuda mucho.",
+    fb_bug:"🐞 Reportar un error", fb_feat:"💡 Proponer una mejora", fb_all:"📋 Ver issues abiertos",
+    lic_title:"Licencia", lic_text:"NoviArk se distribuye bajo la Noviark Community License 1.0. Es gratis para uso personal, educativo, de investigación y sin fines de lucro. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere licencia comercial. El avatar (noviq-avatar) tendrá su licencia definida aparte.",
     lic_link:"Leer la licencia completa", road_link:"Hoja de ruta", chg_link:"Historial de cambios"
   };
   var EN = {
-    nav_run:"Run", nav_features:"Features", nav_providers:"Providers", nav_license:"License",
+    nav_run:"Run", nav_shots:"Screenshots", nav_avatar:"Avatar", nav_feedback:"Feedback",
     tagline:"An AI agent that writes, runs, tests and fixes programs on your computer.",
-    status_title:"Status:", status_text:"under development. No installers are published yet; for now, run it from the source code (see below).",
-    run_title:"Run from source", run_req:"You need Python 3.10 or newer.",
+    banner_title:"⚠️ Active development.", banner_text:"We are improving the app and minor bugs may exist while we fix them. Always use the latest version of the repository.",
+    run_title:"Run", run_req:"You need Python 3.10 or newer. No installers are published yet: run it from the source code.",
     run_after:"Then go to Settings → Providers & keys, paste an API key from a provider (or connect Ollama / LM Studio) and start a conversation.",
+    shots_title:"Screenshots", shot_home:"Home screen: pick a model, a project and permissions.", shot_free:"🎁 Free AI: connect models without paying.", shot_work:"NoviArk working on a project.", shot_plan:"Editable live plan.", shot_picker:"Picker showing only the models that work.", shot_project:"Full-screen project view.",
     feat_title:"What it does",
     f1t:"40 tools", f1d:"Files, code search, PowerShell, Python, Linux, processes, HTTP, web search and reading, images, screenshots, automated browser and more.",
     f2t:"Plan before acting", f2d:"You can edit or approve the plan. If you do nothing, it is approved automatically after a countdown.",
@@ -158,11 +197,18 @@ bash iniciar.sh</code></pre>
     f6t:"Work that is not lost", f6d:"Keeps the goal, plan, what is done and errors. If a model fails, the next one continues from there.",
     f7t:"Local AI", f7d:"Ollama and LM Studio, with context sized to your computer's memory. Your code stays on your PC.",
     f8t:"Safety", f8d:"Permission modes, backups and restore points, deletes go to the Recycle Bin, secret scanner and key vault (DPAPI-encrypted on Windows).",
-    f9t:"MCP servers", f9d:"Uses the same configuration format as Claude Desktop.",
-    prov_title:"AI providers",
-    prov_text:"NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI, Cerebras, Hugging Face, Cohere, Cloudflare Workers AI, Ollama Cloud, Vercel AI Gateway and any OpenAI-compatible API. Plus Ollama and LM Studio for local models. You can store several keys per provider.",
-    lic_title:"License",
-    lic_text:"NoviArk is distributed under the Noviark Community License 1.0. It is free for personal, educational, research and non-profit use. Companies may evaluate it for up to 60 days; continued commercial use requires a commercial license.",
+    f9t:"Providers and MCP", f9d:"NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq and more. MCP servers with the same format as Claude Desktop.",
+    avatar_title:"The avatar (noviq-avatar)", avatar_intro:"A robot that lives above your programs with a transparent background. It has its own mind, memory, voice and hearing, and can use NoviArk's tools when NoviArk is open.",
+    th_state:"State", th_does:"What the robot does",
+    s1:"Greets", s1d:"Introduces itself and says hello when you open it.",
+    s2:"Works", s2d:"Looks focused when NoviArk starts a job and writes in its panel.",
+    s3:"Uses tools", s3d:"Shows an icon on its visor for the tool in use: code, magnifier, terminal or web.",
+    s4:"Asks permission or help", s4d:"«I need your permission…» or «I need your help…», and you answer by voice.",
+    s5:"Finishes", s5d:"Says «Done!» and asks what to do next.",
+    avatar_more:"Also: voice permissions (answer yes or no without saying its name), tasks at a glance with a progress bar, an OpenAI-compatible API and an MCP server.",
+    fb_title:"Comments and suggestions", fb_text:"Since the project is being updated, your feedback helps a lot.",
+    fb_bug:"🐞 Report a bug", fb_feat:"💡 Suggest an improvement", fb_all:"📋 See open issues",
+    lic_title:"License", lic_text:"NoviArk is distributed under the Noviark Community License 1.0. It is free for personal, educational, research and non-profit use. Companies may evaluate it for up to 60 days; continued commercial use requires a commercial license. The avatar (noviq-avatar) will have its license defined separately.",
     lic_link:"Read the full license", road_link:"Roadmap", chg_link:"Changelog"
   };
   var lang = "es";

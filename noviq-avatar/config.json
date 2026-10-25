@@ -1,0 +1,14 @@
+{
+  "_nota": "Configuración TÉCNICA del cuerpo y de la API. Voz, oído, cerebro (IA), personalidad, memoria y herramientas son ajustes propios del avatar: cámbialos en su página http://127.0.0.1:7777/ajustes (clic derecho en el robot → Ajustes).",
+  "puerto": 7777,
+  "token": "",
+  "origenesPermitidos": [],
+  "escala": 0.8,
+  "posicionInicial": "abajo-derecha",
+  "recordarPosicion": true,
+  "interactivo": true,
+  "dobleClicIcono": true,
+  "desactivarGPU": false,
+  "mostrarEnBarraTareas": false,
+  "nivelEncima": "screen-saver"
+}

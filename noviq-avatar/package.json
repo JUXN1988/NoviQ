@@ -1,0 +1,63 @@
+{
+  "name": "noviq-avatar",
+  "productName": "Noviq Avatar",
+  "version": "2.6.0",
+  "description": "Asistente de escritorio independiente: avatar flotante con su propia mente, memoria, voz, oído, herramientas y API (HTTP, WebSocket, OpenAI y MCP). Se conecta solo con Noviq para usar sus herramientas.",
+  "main": "main.js",
+  "author": "Gabriel",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node pruebas/prueba-agentes.js && node pruebas/prueba-mente.js && node pruebas/prueba-api2.js && node pruebas/prueba-cerebro.js && node pruebas/prueba-rapido.js && node pruebas/prueba-programador.js && node pruebas/prueba-asistente.js && node pruebas/prueba-autonomia.js",
+    "test-vivo": "node pruebas/prueba-api.js",
+    "empaquetar": "electron-builder --win portable nsis"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.noviq.avatar",
+    "productName": "Noviq Avatar",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**",
+      "renderer/**",
+      "panel/**",
+      "ajustes/**",
+      "assets/**",
+      "clientes/**",
+      "config.json",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "config.json",
+        "to": "../config.json"
+      }
+    ],
+    "win": {
+      "icon": "assets/icono.ico",
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "portable": {
+      "artifactName": "NoviqAvatar-${version}-portable.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "NoviqAvatar-${version}-instalador.exe"
+    }
+  }
+}

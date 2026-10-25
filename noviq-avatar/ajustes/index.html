@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ajustes del avatar</title>
+<link rel="icon" href="/ajustes/icono.svg">
+<link rel="stylesheet" href="/ajustes/ajustes.css">
+</head>
+<body>
+<header id="cab">
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 40 40" width="34" height="34"><circle cx="20" cy="20" r="17" fill="#0b1830" stroke="#3fe9c4" stroke-width="2.5"/>
+      <rect x="10" y="14" width="20" height="12" rx="6" fill="#06122a" stroke="#6ff0ff" stroke-width="1.5"/>
+      <circle cx="16" cy="20" r="2.2" fill="#6ff0ff"/><circle cx="24" cy="20" r="2.2" fill="#6ff0ff"/></svg>
+  </div>
+  <div class="titulo"><h1 id="tNombre">Avatar</h1><span id="tSub">Ajustes propios · independiente</span></div>
+  <div class="pills">
+    <span class="pill" id="pNoviq" title="Conexión con Noviq"><i></i><b>Noviq</b></span>
+    <span class="pill" id="pIA" title="IA con la que piensa"><i></i><b>IA</b></span>
+    <span class="pill" id="pOido" title="Motor del oído"><i></i><b>Oído</b></span>
+  </div>
+</header>
+
+<div id="cuerpo">
+  <nav id="nav" aria-label="Secciones">
+    <a href="#identidad" data-s="identidad">🤖 <span>Identidad</span></a>
+    <a href="#voz" data-s="voz">🗣 <span>Voz</span></a>
+    <a href="#oido" data-s="oido">🎙 <span>Oído</span></a>
+    <a href="#cerebro" data-s="cerebro">🧠 <span>Cerebro (IA)</span></a>
+    <a href="#herramientas" data-s="herramientas">🧰 <span>Herramientas</span></a>
+    <a href="#bots" data-s="bots">🤝 <span>Bots y MCP</span></a>
+    <a href="#vision" data-s="vision">👁 <span>Visión</span></a>
+    <a href="#memoria" data-s="memoria">💾 <span>Memoria</span></a>
+    <a href="#noviq" data-s="noviq">🔗 <span>Noviq</span></a>
+    <a href="#api" data-s="api">🔌 <span>API y otras apps</span></a>
+  </nav>
+
+  <main id="main">
+    <!-- ───────────────────────────── Identidad ───────────────────────────── -->
+    <section id="s-identidad" class="sec">
+      <h2>Identidad y personalidad</h2>
+      <p class="intro">Quién es tu asistente. Todo esto es suyo: lo lleva consigo aunque lo uses sin Noviq o desde otra app.</p>
+      <div class="tarjeta">
+        <div class="campo"><label for="i-nombre">Nombre (y palabra para llamarlo)</label>
+          <input id="i-nombre" data-k="identidad.nombre" maxlength="24" placeholder="Noviq"></div>
+        <div class="campo"><label for="i-variantes">Otras formas en que lo oye <small>separadas por comas</small></label>
+          <input id="i-variantes" data-k="identidad.variantes" placeholder="novi, nobi, robot"></div>
+        <div class="campo"><label>Personalidad <small>combina hasta 4</small></label><div id="rasgos" class="chips"></div></div>
+        <div class="campo"><label for="i-autonomia">Iniciativa propia <output id="o-autonomia"></output></label>
+          <input id="i-autonomia" type="range" min="0" max="3" step="1" data-k="identidad.autonomia" data-num>
+          <div class="escala"><span>Callado</span><span>Poca</span><span>Normal</span><span>Mucha</span></div></div>
+        <div class="campo"><label for="i-idioma">Idioma</label>
+          <select id="i-idioma" data-k="identidad.idioma"><option value="es">Español</option><option value="en">English</option></select></div>
+        <div class="campo"><label for="i-instr">Indicaciones para él <small>cómo quieres que te trate, qué debe saber…</small></label>
+          <textarea id="i-instr" data-k="identidad.instrucciones" rows="3" maxlength="1500" placeholder="Ej.: llámame jefe, sé breve por las mañanas…"></textarea></div>
+      </div>
+      <div class="tarjeta">
+        <h3>Presencia</h3>
+        <label class="sw"><input type="checkbox" data-k="apariencia.saludoInicial"><span></span>Saludarme al abrirse (con lo que tengo para hoy)</label>
+        <label class="sw"><input type="checkbox" data-k="apariencia.mirarCursor"><span></span>Los ojos siguen al puntero</label>
+        <label class="sw"><input type="checkbox" data-k="apariencia.iniciarConWindows"><span></span>Abrirse al iniciar Windows (sin esperar a Noviq)</label>
+        <div class="campo"><label for="i-dormir">Dormirse tras <output id="o-dormir"></output> sin actividad</label>
+          <input id="i-dormir" type="range" min="0" max="120" step="5" data-k="apariencia.dormirMin" data-num></div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── Voz ───────────────────────────── -->
+    <section id="s-voz" class="sec">
+      <h2>Voz</h2>
+      <p class="intro">Voces modernas y naturales, de hombre y de mujer, sobre todo latinas. Las de Microsoft son gratis y sin clave.</p>
+      <div class="tarjeta">
+        <label class="sw"><input type="checkbox" data-k="voz.activada"><span></span>Hablar en voz alta</label>
+        <div class="fila3">
+          <div class="campo"><label for="v-vel">Velocidad <output id="o-vel"></output></label><input id="v-vel" type="range" min="0.5" max="2" step="0.05" data-k="voz.velocidad" data-num></div>
+          <div class="campo"><label for="v-tono">Tono <output id="o-tono"></output></label><input id="v-tono" type="range" min="0.5" max="1.6" step="0.05" data-k="voz.tono" data-num></div>
+          <div class="campo"><label for="v-volumen">Volumen <output id="o-volumen"></output></label><input id="v-volumen" type="range" min="0" max="1.5" step="0.05" data-k="voz.volumen" data-num></div>
+        </div>
+        <div class="campo"><label for="v-motor">Motor</label>
+          <select id="v-motor" data-k="voz.motor">
+            <option value="auto">Automático (Microsoft → NVIDIA → Noviq → Windows)</option>
+            <option value="microsoft">Microsoft neuronales (gratis)</option><option value="nvidia">NVIDIA Magpie (con emociones)</option>
+            <option value="noviq">Las de Noviq (incluye Piper sin internet)</option><option value="windows">Voces de Windows (sin internet)</option>
+          </select></div>
+        <div class="elegida">Voz elegida: <b id="vozElegida">—</b> <span id="vozEstado" class="tenue"></span>
+          <button class="btn" id="probarAvatar">▶ Que la diga el avatar</button></div>
+      </div>
+      <div class="tarjeta">
+        <div class="filtros">
+          <div class="seg" id="fGenero"><button data-v="" class="on">Todas</button><button data-v="F">👩 Mujer</button><button data-v="M">👨 Hombre</button></div>
+          <div class="seg" id="fOrigen"><button data-v="latina" class="on">Latinas</button><button data-v="es">Español</button><button data-v="">Todos los idiomas</button></div>
+          <select id="fMotor"><option value="">Todos los motores</option></select>
+          <input id="fTexto" placeholder="Buscar país o nombre…">
+        </div>
+        <div id="voces" class="voces"></div>
+        <audio id="audio" hidden></audio>
+      </div>
+      <div class="tarjeta">
+        <h3>Sonidos de robot</h3>
+        <label class="sw"><input type="checkbox" data-k="sonidos.activados"><span></span>Sonidos de robot</label>
+        <label class="sw"><input type="checkbox" data-k="sonidos.automaticos"><span></span>Al hacer gestos y acciones</label>
+        <label class="sw"><input type="checkbox" data-k="sonidos.charla"><span></span>Pitidos al «hablar» cuando la voz está apagada</label>
+        <div class="campo"><label for="s-vol">Volumen <output id="o-svol"></output></label><input id="s-vol" type="range" min="0" max="1" step="0.05" data-k="sonidos.volumen" data-num></div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── Oído ───────────────────────────── -->
+    <section id="s-oido" class="sec">
+      <h2>Oído</h2>
+      <p class="intro">Cómo te escucha. Con «cuando lo llamo» escucha siempre pero solo responde si dices su nombre.</p>
+      <div class="tarjeta">
+        <div class="campo"><label>Escuchar</label>
+          <div class="opciones" id="oModo" data-k="oido.modo">
+            <button data-v="palabra">👂 Cuando lo llamo por su nombre</button><button data-v="siempre">🎧 Siempre (todo lo que oiga)</button>
+            <button data-v="pulsar">🖱 Solo al hacer clic o con el atajo</button><button data-v="apagado">🔇 Apagado</button></div></div>
+        <div class="fila2">
+          <div class="campo"><label for="o-sens">Sensibilidad del micrófono <output id="o-osens"></output></label><input id="o-sens" type="range" min="0.3" max="3" step="0.1" data-k="oido.sensibilidad" data-num></div>
+          <div class="campo"><label for="o-max">Frase más larga <output id="o-omax"></output></label><input id="o-max" type="range" min="4" max="60" step="1" data-k="oido.maxSeg" data-num></div>
+        </div>
+        <div class="campo"><label for="o-atajo">Atajo para hablarle <small>ej.: Control+Alt+Space</small></label>
+          <input id="o-atajo" data-k="apariencia.atajoHablar" placeholder="Control+Alt+Space"><small id="atajoInfo" class="tenue"></small></div>
+      </div>
+      <div class="tarjeta" id="tFondo">
+        <h3>Voces de fondo (TV, radio, otras personas)</h3>
+        <p class="nota">Distingue a quien le habla de la tele o de otra conversación: mira <b>qué</b> se dijo (¿es una orden o una pregunta para él?) y <b>cómo suena</b> (tu voz aprendida). Si dices su nombre o haces clic, siempre te escucha.</p>
+        <div class="campo"><label>Filtro</label>
+          <div class="opciones" id="oFiltro" data-k="oido.filtro">
+            <button data-v="normal">🧠 Normal</button><button data-v="estricto">🛡 Estricto (mucho ruido de fondo)</button><button data-v="apagado">🙉 Apagado (responde a todo en la charla)</button></div></div>
+        <div id="perfilVoz" class="lista-estado"></div>
+        <p class="nota">Para que conozca tu voz dile: <b>«Noviq, aprende mi voz»</b> (4 frases). Si la tele lo confunde: <b>«eso fue la tele»</b>.</p>
+        <button id="olvidarVoz" class="btn">Olvidar mi voz y la del fondo</button>
+      </div>
+      <div class="tarjeta">
+        <h3>Motor que entiende tu voz</h3>
+        <select id="o-motor" data-k="oido.motor">
+          <option value="auto">Automático (el más rápido que funcione)</option><option value="groq">Groq Whisper turbo (muy rápido · clave gratis)</option>
+          <option value="nvidia">NVIDIA Whisper large-v3 (tu clave nvapi-)</option><option value="openai">OpenAI (tu clave)</option>
+          <option value="noviq">Noviq (incluye faster-whisper sin internet)</option><option value="gratis">LLM7 Whisper (clave gratis de LLM7)</option><option value="windows">Windows (sin internet ni clave, menos preciso)</option></select>
+        <div id="motoresOido" class="lista-estado"></div>
+        <p class="nota">Las claves se ponen en <a href="#cerebro">🧠 Cerebro</a> (las mismas sirven para pensar y para oír).</p>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── Cerebro ───────────────────────────── -->
+    <section id="s-cerebro" class="sec">
+      <h2>Cerebro (IA)</h2>
+      <p class="intro">Con qué IA piensa. Cada servicio muestra su lista real de modelos: elige uno o deja «Automático» (el más rápido para conversar). Si uno falla, usa el siguiente.</p>
+      <div class="tarjeta">
+        <div class="fila2">
+          <div class="campo"><label for="c-prov">Usar primero</label><select id="c-prov" data-k="cerebro.proveedor"></select></div>
+          <div class="campo"><label>Ahora piensa con</label><div id="cEstado" class="estado-ia">…</div></div>
+        </div>
+        <label class="sw"><input type="checkbox" data-k="cerebro.gratis"><span></span>Si no tengo otra IA, usar las gratis sin cuenta (LLM7, Kilo) para pensar y oír <small>· tus frases van a esos servicios</small></label>
+        <div class="fila2">
+          <div class="campo"><label for="c-temp">Creatividad <output id="o-ctemp"></output></label><input id="c-temp" type="range" min="0" max="1.5" step="0.05" data-k="cerebro.temperatura" data-num></div>
+          <div class="campo"><label for="c-max">Largo máximo de respuesta <output id="o-cmax"></output></label><input id="c-max" type="range" min="64" max="2000" step="16" data-k="cerebro.maxTokens" data-num></div>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <h3>Servicios y modelos <small id="cifradas" class="tenue"></small></h3>
+        <p class="nota" style="margin:0 0 10px">Las claves se guardan cifradas con tu cuenta de Windows, se prueban al guardarlas y nunca salen por la API. Con una gratis de <b>Groq</b>, <b>Gemini</b> o <b>NVIDIA</b> piensa y oye rapidísimo; con <b>Ollama</b> o <b>LM Studio</b> abiertos piensa sin internet.</p>
+        <div class="traer"><button class="btn" id="traerClaves">⤵ Traer mis claves de Noviq</button><span id="traerInfo" class="tenue"></span></div>
+        <div id="provs" class="pvs"></div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── Herramientas ───────────────────────────── -->
+    <section id="s-herramientas" class="sec">
+      <h2>Herramientas</h2>
+      <p class="intro">Lo que puede hacer por su cuenta. Con Noviq abierto suma además todas las herramientas de Noviq.</p>
+      <div class="tarjeta">
+        <label class="sw"><input type="checkbox" data-k="herramientas.internet"><span></span>Buscar y leer en internet (noticias, precios, clima…)</label>
+        <label class="sw"><input type="checkbox" data-k="herramientas.abrir"><span></span>Abrir webs, carpetas y programas</label>
+        <label class="sw"><input type="checkbox" data-k="herramientas.recordatorios"><span></span>Recordatorios y agenda</label>
+        <label class="sw"><input type="checkbox" data-k="herramientas.portapapeles"><span></span>Leer y escribir el portapapeles</label>
+      </div>
+      <div class="tarjeta">
+        <h3>Portapapeles</h3>
+        <div class="opciones" id="pModo" data-k="portapapeles.modo">
+          <button data-v="observar">👀 Mirar lo que copio (para ayudarme)</button><button data-v="pregunta">❓ Solo cuando se lo pido</button><button data-v="apagado">🚫 Nunca</button></div>
+        <label class="sw"><input type="checkbox" data-k="portapapeles.ayudaErrores"><span></span>Ofrecer ayuda si copio un error</label>
+        <p class="nota">Lo copiado vive solo en la memoria RAM; las claves y contraseñas se descartan al instante.</p>
+      </div>
+      <div class="tarjeta"><h3>Disponibles ahora</h3><div id="listaHerr" class="lista-herr"></div></div>
+    </section>
+
+    <!-- ───────────────────────────── Bots y MCP ───────────────────────────── -->
+    <section id="s-bots" class="sec">
+      <h2>Bots internos y MCP</h2>
+      <p class="intro">El bot principal conversa y da órdenes; los bots internos hacen el trabajo (PC, proyectos, web, visión, Noviq y cada MCP que conectes) en segundo plano.</p>
+      <div class="tarjeta" id="tRapido"><h3>⚡ Vía rápida (sin IA)</h3>
+        <label class="sw"><input type="checkbox" data-k="rapido.activar"><span></span>Hacer al instante las órdenes del PC: abrir y cerrar programas, archivos, carpetas y proyectos, apagar, volumen, captura, buscar archivos</label>
+        <label class="sw"><input type="checkbox" data-k="rapido.noviqSoloProgramar"><span></span>A Noviq solo le mando programar (lo demás lo hacen mis bots, mucho más rápido)</label>
+        <div class="campo"><label for="r-apagado">Tiempo para arrepentirte de un apagado <output id="o-apagado"></output></label><input id="r-apagado" type="range" min="10" max="300" step="10" data-k="rapido.apagadoSeg" data-num></div>
+        <div class="campo"><label for="r-probar">Probar una frase <small>no hace nada: solo te dice qué haría</small></label>
+          <div class="copiar"><input id="r-probar" placeholder="abre Hub UI · apaga la PC · ejecuta el juego…"><button class="btn" id="rProbar">Probar</button><button class="btn" id="rReindexar" title="Vuelve a mirar el escritorio, el menú Inicio y tus proyectos">🔄 Buscar programas otra vez</button></div></div>
+        <pre id="rRes" class="codigo" hidden></pre>
+        <p class="nota">Lo de varios pasos va a sus bots (PC y proyectos). Un apagado siempre se puede anular diciendo «cancela el apagado».</p>
+      </div>
+      <div class="tarjeta">
+        <label class="sw"><input type="checkbox" data-k="agentes.activar"><span></span>Activar los bots internos</label>
+        <label class="sw"><input type="checkbox" data-k="agentes.segundoPlano"><span></span>Trabajar en segundo plano (y avisarme al terminar)</label>
+        <div class="campo"><label>Permisos para acciones</label>
+          <div class="opciones" id="aPermisos" data-k="agentes.permisos">
+            <button data-v="pregunta_todo">❓ Preguntar todo</button><button data-v="pregunta_cambios">✋ Preguntar si cambia algo</button><button data-v="solo_peligro">⚠ Solo lo peligroso</button></div></div>
+        <p class="nota">Antivirus, comandos codificados, la bóveda de Noviq y formatear discos están bloqueados siempre, aunque des permiso. Las aprobaciones nunca se dan por voz.</p>
+      </div>
+      <div class="tarjeta"><h3>Aprobaciones pendientes</h3><div id="aPend" class="lista"></div></div>
+      <div class="tarjeta"><h3>Bots</h3><div id="aBots" class="lista"></div></div>
+      <div class="tarjeta"><h3>Servidores MCP</h3><div id="mcpLista" class="lista"></div>
+        <h3>Añadir con un clic</h3><div id="mcpPresets" class="chips"></div></div>
+      <div class="tarjeta"><h3>Añadir un MCP propio</h3>
+        <div class="fila2">
+          <div class="campo"><label for="mcp-id">Id <small>minúsculas, sin espacios</small></label><input id="mcp-id" maxlength="24" placeholder="mi-servidor"></div>
+          <div class="campo"><label for="mcp-tipo">Tipo</label><select id="mcp-tipo"><option value="stdio">Programa local (stdio)</option><option value="http">Dirección web (HTTP)</option></select></div>
+        </div>
+        <div class="campo" id="mcp-f-cmd"><label for="mcp-cmd">Comando y argumentos</label><input id="mcp-cmd" placeholder="npx -y @modelcontextprotocol/server-memory"></div>
+        <div class="campo" id="mcp-f-url" hidden><label for="mcp-url">Dirección</label><input id="mcp-url" placeholder="http://127.0.0.1:8000/mcp"></div>
+        <div class="campo" id="mcp-f-tok" hidden><label for="mcp-tok">Token (opcional, se guarda y no se muestra)</label><input id="mcp-tok" type="password" autocomplete="off"></div>
+        <div class="campo"><label for="mcp-bot">Qué hace su bot</label><input id="mcp-bot" maxlength="200" placeholder="Ej.: gestiona mis notas"></div>
+        <div class="acciones"><button class="btn" id="mcpProbar">Probar</button><button class="btn" id="mcpAgregar">＋ Añadir</button><span id="mcpInfo" class="tenue"></span></div>
+      </div>
+      <div class="tarjeta"><h3>Últimas acciones</h3><div id="aLog" class="lista"></div></div>
+    </section>
+
+    <!-- ───────────────────────────── Visión ───────────────────────────── -->
+    <section id="s-vision" class="sec">
+      <h2>Visión</h2>
+      <p class="intro">Deja que el avatar mire por tu cámara o tu pantalla cuando se lo pidas. Solo toma una imagen por petición y no la guarda.</p>
+      <div class="tarjeta">
+        <label class="sw"><input type="checkbox" data-k="vision.camara"><span></span>Permitir que use mi cámara</label>
+        <label class="sw"><input type="checkbox" data-k="vision.soloLocal"><span></span>Solo modelos locales (nada sale de esta PC)</label>
+        <div class="campo"><label for="v-disp">Cámara</label><div class="copiar"><select id="v-disp" data-k="vision.dispositivo"><option value="">Predeterminada</option></select><button class="btn" id="vCamaras">Buscar cámaras</button></div></div>
+        <div class="fila2">
+          <div class="campo"><label for="v-prov">Proveedor</label><select id="v-prov" data-k="vision.proveedor"><option value="auto">Automático (local primero)</option><option value="ollama">Ollama</option><option value="lmstudio">LM Studio</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="groq">Groq</option><option value="mistral">Mistral</option></select></div>
+          <div class="campo"><label for="v-modelo">Modelo <small>vacío = elegir solo</small></label><input id="v-modelo" data-k="vision.modelo" placeholder="qwen3-vl:4b"></div>
+        </div>
+        <div class="acciones"><button class="btn" id="vProbarCam">📷 Probar con la cámara</button><button class="btn" id="vProbarPan">🖥 Probar con la pantalla</button><span id="vInfo" class="tenue"></span></div>
+        <pre id="vRes" class="codigo" hidden></pre>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── Memoria ───────────────────────────── -->
+    <section id="s-memoria" class="sec">
+      <h2>Memoria</h2>
+      <p class="intro">Su memoria permanente: quién eres y lo que le cuentas. Es suya, está en su carpeta de datos y no se mezcla con los proyectos.</p>
+      <div class="tarjeta">
+        <div class="fila2">
+          <div class="campo"><label for="m-nombre">Tu nombre</label><input id="m-nombre" placeholder="¿Cómo te llamas?"></div>
+          <div class="campo stats" id="mStats"></div>
+        </div>
+        <h3>Datos tuyos</h3><div id="mDatos" class="lista"></div>
+        <div class="add"><input id="mDatoK" placeholder="dato (ej.: ciudad)"><input id="mDatoV" placeholder="valor (ej.: Santo Domingo)"><button class="btn" id="mDatoAdd">＋</button></div>
+      </div>
+      <div class="tarjeta"><h3>Lo que recuerda de ti</h3><div id="mHechos" class="lista"></div>
+        <div class="add"><input id="mHecho" placeholder="Algo que debe recordar…"><button class="btn" id="mHechoAdd">＋</button></div></div>
+      <div class="tarjeta"><h3>Recordatorios</h3><div id="mRecs" class="lista"></div>
+        <div class="add"><input id="mRecQue" placeholder="Qué (ej.: llamar a Ana)"><input id="mRecCuando" placeholder="Cuándo (ej.: mañana a las 9)"><button class="btn" id="mRecAdd">＋</button></div></div>
+      <div class="tarjeta"><h3>Planes</h3><div id="mPlanes" class="lista"></div></div>
+      <div class="tarjeta"><h3>Respuestas que aprendió</h3><div id="mAprendido" class="lista"></div>
+        <div class="add"><input id="mApQ" placeholder="Cuando te diga…"><input id="mApR" placeholder="…responde"><button class="btn" id="mApAdd">＋</button></div></div>
+      <div class="tarjeta"><h3>Últimas charlas</h3><div id="mCharla" class="charla"></div>
+        <div class="peligro"><button class="btn" id="mBorrarCharla">Borrar charlas</button><button class="btn rojo" id="mOlvidar">Olvidar TODO</button></div></div>
+    </section>
+
+    <!-- ───────────────────────────── Noviq ───────────────────────────── -->
+    <section id="s-noviq" class="sec">
+      <h2>Conexión con Noviq</h2>
+      <p class="intro" id="nvIntro">Sin Noviq, el avatar trabaja solo con lo suyo (su IA, sus bots y herramientas). Cuando Noviq está abierto se conecta solo y le pasa lo que sus bots no pueden hacer.</p>
+      <div class="tarjeta">
+        <label class="sw"><input type="checkbox" data-k="noviq.usar"><span></span>Conectarme con Noviq cuando esté abierto</label>
+        <label class="sw"><input type="checkbox" data-k="noviq.herramientas"><span></span>Usar las herramientas de Noviq</label>
+        <label class="sw"><input type="checkbox" data-k="noviq.escalar"><span></span>Si mis bots no pueden algo, pasárselo a Noviq <small>· cerrado: te pregunto si lo abro</small></label>
+        <h3>Avisos de los trabajos de Noviq</h3>
+        <label class="sw"><input type="checkbox" data-k="noviq.avisosTrabajo"><span></span>Avisarme («ya terminé», «necesito tu permiso»…)</label>
+        <label class="sw"><input type="checkbox" data-k="noviq.anunciarInicio"><span></span>Anunciar cuando empieza un trabajo</label>
+        <label class="sw"><input type="checkbox" data-k="noviq.burbujasHerramientas"><span></span>Mostrar cada herramienta que usa</label>
+        <label class="sw"><input type="checkbox" data-k="noviq.queMas"><span></span>Preguntar «¿qué más hacemos?» al terminar</label>
+        <label class="sw"><input type="checkbox" data-k="noviq.ofrecerContinuar"><span></span>Ofrecer continuar lo que quedó a medias</label>
+        <label class="sw"><input type="checkbox" data-k="noviq.cerrarConNoviq"><span></span>Cerrarme cuando se cierra Noviq (si él me abrió)</label>
+        <div class="acciones"><button class="btn" id="heredar">⤵ Traer lo que tenía en Noviq (memoria y ajustes)</button><span id="heredarInfo" class="tenue"></span></div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── API ───────────────────────────── -->
+    <section id="s-api" class="sec">
+      <h2>API: llévalo a otras aplicaciones</h2>
+      <p class="intro">Cualquier programa de esta PC puede usar al avatar: moverlo, hacerlo hablar, conversar con su mente o usarlo como si fuera un modelo de IA.</p>
+      <div class="tarjeta">
+        <div class="campo"><label>Dirección</label><div class="copiar"><code id="apiBase">http://127.0.0.1:7777</code><button class="btn" data-copiar="apiBase">Copiar</button></div></div>
+        <div class="campo"><label>Clave del avatar <small>para /v1 (compatible con OpenAI) y para proteger la API</small></label>
+          <div class="copiar"><code id="apiClave" class="secreto">••••</code><button class="btn" id="verClave">Ver</button><button class="btn" data-copiar="apiClave">Copiar</button><button class="btn" id="nuevaClave">Nueva</button></div></div>
+      </div>
+      <div class="tarjeta">
+        <div class="pestanas" id="ejemplos"><button data-e="curl" class="on">curl</button><button data-e="py">Python</button><button data-e="js">JavaScript</button><button data-e="openai">SDK de OpenAI</button><button data-e="mcp">MCP</button><button data-e="ws">WebSocket</button></div>
+        <pre id="codigo" class="codigo"></pre>
+        <button class="btn" data-copiar="codigo">Copiar ejemplo</button>
+      </div>
+      <div class="tarjeta"><h3>Rutas</h3><div id="rutas" class="rutas"></div>
+        <p class="nota">Más: <a href="/panel" target="_blank">panel de pruebas</a> · <a href="/comandos" target="_blank">todos los comandos</a> · <a href="/" target="_blank">ayuda JSON</a>.</p></div>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/ajustes/ajustes.js"></script>
+</body>
+</html>
