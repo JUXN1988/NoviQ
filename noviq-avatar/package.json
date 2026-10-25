@@ -5,7 +5,7 @@
   "description": "Asistente de escritorio independiente: avatar flotante con su propia mente, memoria, voz, oído, herramientas y API (HTTP, WebSocket, OpenAI y MCP). Se conecta solo con Noviq para usar sus herramientas.",
   "main": "main.js",
   "author": "Gabriel",
-  "license": "SEE LICENSE IN LICENSE.md",
+  "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "start": "electron .",

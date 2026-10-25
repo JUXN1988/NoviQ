@@ -9,6 +9,8 @@ Señales de atasco (se suman puntos; al llegar al umbral se escala):
   • terminó sin usar herramientas cuando aún había trabajo ............... 1
   • las pruebas finales siguen fallando con el mismo error ............... 2
   • respuesta vacía ....................................................... 1
+  • repitió el mismo texto/informe en vez de avanzar ...................... 2
+  • la propia IA pidió relevo (pedir_relevo) ............................ se escala enseguida
 
 La IA elegida es la de mayor «cerebro» del catálogo (inteligencia + razonamiento + programación + herramientas)
 entre los proveedores ACTIVOS, que no esté bloqueada (sin clave, sin crédito, 404) ni en pausa por límite (429),
@@ -20,7 +22,8 @@ import time
 from .config import CONFIG
 
 DEFAULTS = {"activo": True, "umbral": 5, "max_escalados": 2, "permitir_pago": True}
-PESOS = {"guardian": 3, "bucle": 2, "fallo_repetido": 2, "error": 1, "sin_herramientas": 1, "pruebas": 2, "vacia": 1}
+PESOS = {"guardian": 3, "bucle": 2, "fallo_repetido": 2, "error": 1, "sin_herramientas": 1, "pruebas": 2, "vacia": 1,
+         "repite": 2, "relevo": 100}  # relevo: la propia IA pidió que otra más capaz continúe (pedir_relevo)
 
 
 def cfg():
@@ -82,9 +85,11 @@ def _limitado(model_id):
     return bool(st and st.get("kind") in salud.BLOQUEA | {"limite"})
 
 
-def candidatos(actual, excluir=(), need_tools=True):
-    """Modelos habilitados, ordenados de más a menos capaz, que se pueden usar ahora (con cuota)."""
+def candidatos(actual, excluir=(), need_tools=True, tipo="general"):
+    """Modelos habilitados, ordenados de más a menos capaz, que se pueden usar ahora (con cuota).
+    El orden lo da el 🏆 evaluador: catálogo + lo que cada IA demostró en este tipo de tarea + 👍/👎 del usuario."""
     from . import catalogo as K
+    from . import evaluador as EV
     try:
         infos = K.all_infos()
     except Exception:
@@ -92,7 +97,7 @@ def candidatos(actual, excluir=(), need_tools=True):
     c = cfg()
     pool = []
     for m, i in infos.items():
-        if m == actual or m in excluir or i.get("cerebro", -1) < 0 or _limitado(m):
+        if m == actual or m in excluir or i.get("cerebro", -1) < 0 or _limitado(m) or EV.fuera(m):
             continue
         if need_tools and i.get("tools") is False:
             continue
@@ -102,42 +107,45 @@ def candidatos(actual, excluir=(), need_tools=True):
             continue
         if str(i.get("cabe", "")).startswith("❌"):
             continue
-        pool.append((m, i))
+        pool.append((m, dict(i)))
     # también los de respaldo configurados por el usuario, aunque su lista no esté en caché
     for m in CONFIG.get("fallback_models") or []:
-        if m and m != actual and m not in excluir and m not in infos and not _limitado(m):
+        if m and m != actual and m not in excluir and m not in infos and not _limitado(m) and not EV.fuera(m):
             try:
                 pool.append((m, K.info(m)))
             except Exception:
                 pass
-    pool.sort(key=lambda x: (bool(x[1].get("verificado")), x[1].get("cerebro", 0), x[1].get("tools") is True,
-                             x[1].get("prog", 0)), reverse=True)
+    for m, i in pool:
+        i["_ev"] = EV.puntaje(m, tipo, i)
+    pool.sort(key=lambda x: (x[1]["_ev"], bool(x[1].get("verificado")), x[1].get("tools") is True), reverse=True)
     return pool
 
 
-def mejor(actual, excluir=()):
-    """(modelo, info) de la IA a la que conviene escalar, o (None, motivo) si no hay una mejor."""
+def mejor(actual, excluir=(), tipo="general"):
+    """(modelo, info) de la IA a la que conviene escalar, o (None, motivo) si no hay una mejor.
+    «Mejor» = mayor puntaje del evaluador para este tipo de tarea (no solo el catálogo: cuenta lo que cada IA
+    demostró de verdad en este PC, sus fallos recientes y las calificaciones del usuario)."""
     from . import catalogo as K
+    from . import evaluador as EV
     try:
         cur = K.info(actual)
     except Exception:
         cur = {"cerebro": 0}
-    cur_score = cur.get("cerebro", 0) if cur.get("cerebro", -1) >= 0 else 0
+    cur_score = EV.puntaje(actual, tipo, cur)
+    cur_score = 0 if cur_score < 0 else cur_score
     if cur.get("local"):
-        cur_score = min(cur_score, 18)  # los locales pequeños se quedan cortos en depuración difícil
-    pool = candidatos(actual, excluir)
+        cur_score = min(cur_score, 45)  # los locales pequeños se quedan cortos en depuración difícil
+    pool = candidatos(actual, excluir, tipo=tipo)
     if not pool:
         return None, "no hay otra IA habilitada con cuota disponible"
-    # la lista viene ordenada: primero las verificadas con tus claves, luego por capacidad
     for m, i in pool:
-        if i.get("cerebro", 0) > cur_score:
+        if i["_ev"] > cur_score:
             return m, i
-    # otra IA igual de capaz o casi (otra «mente») también sirve para destrabar un trabajo
-    for cond in (lambda c, v: c == cur_score and v, lambda c, v: c == cur_score, lambda c, v: c >= cur_score - 2):
-        for m, i in pool:
-            if cond(i.get("cerebro", 0), bool(i.get("verificado"))):
-                return m, i
-    return None, f"{actual.split('::')[-1]} ya es la IA más capaz que tienes habilitada"
+    # otra IA casi igual de capaz (otra «mente») también sirve para destrabar un trabajo atascado
+    for m, i in pool:
+        if i["_ev"] >= cur_score - 8:
+            return m, i
+    return None, f"{actual.split('::')[-1]} ya es la IA mejor valorada que tienes habilitada"
 
 
 class Registro:

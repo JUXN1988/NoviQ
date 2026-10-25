@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Tareas programadas de NoviQ: la IA hace un trabajo sola a una hora (una vez, cada día, ciertos días
+"""Tareas programadas de Noviq: la IA hace un trabajo sola a una hora (una vez, cada día, ciertos días
 o cada N minutos) — revisar algo, generar un informe, abrir programas, probar un proyecto…
-Funcionan mientras NoviQ está abierto (activa «Iniciar NoviQ con Windows» para que siempre lo esté).
-Si el PC estaba apagado a la hora programada, la tarea se hace al abrir NoviQ (si «recuperar» está activo)."""
+Funcionan mientras Noviq está abierto (activa «Iniciar Noviq con Windows» para que siempre lo esté).
+Si el PC estaba apagado a la hora programada, la tarea se hace al abrir Noviq (si «recuperar» está activo)."""
 import json
+import re
 import threading
 import time
 import uuid
@@ -98,6 +99,45 @@ def crear(nombre, instruccion, cuando, proyecto=None, modelo=None, autonomo=True
         return t
 
 
+def anotar_resultado(tid, conv_id, resultado, error=False):
+    """Resultado resumido de la última ejecución (lo ve la agenda y llega a Telegram)."""
+    with _lock:
+        ts = _load()
+        for t in ts:
+            if t["id"] == tid:
+                h = t.get("historial") or []
+                if h and h[-1].get("conv") == conv_id:
+                    h[-1]["resultado"] = ("❌ " if error else "✔ ") + resultado[:400]
+                    h[-1]["fin"] = time.time()
+                else:
+                    h.append({"t": time.time(), "resultado": ("❌ " if error else "✔ ") + resultado[:400], "conv": conv_id, "fin": time.time()})
+                t["historial"] = h[-20:]
+        _save(ts)
+
+
+def _dias(v):
+    """[0, 2, 3] | «lunes, miércoles y jueves» | «L,X,J» → lista de días (0 = lunes)."""
+    if not v:
+        return None
+    if isinstance(v, str):
+        from .agenda import DIA_RX, _n
+        t = _n(v)
+        por_nombre = sorted({k for k, rx in DIA_RX.items() if re.search(r"\b(" + rx + r")", t)})
+        if por_nombre:
+            return por_nombre
+        letras = {"l": 0, "m": 1, "x": 2, "j": 3, "v": 4, "s": 5, "d": 6}
+        out = [letras[x] for x in re.findall(r"\b([lmxjvsd])\b", v.lower()) if x in letras]
+        return sorted(set(out)) or None
+    out = []
+    for x in v:
+        if isinstance(x, int) or str(x).isdigit():
+            out.append(int(x) % 7)
+        else:
+            d = _dias(str(x))
+            out += d or []
+    return sorted(set(out)) or None
+
+
 def eliminar(tid):
     with _lock:
         ts = [t for t in _load() if t["id"] != tid]
@@ -189,21 +229,35 @@ def tool(a, ctx):
             activar(a.get("id", ""), acc == "reanudar")
             return f"Tarea {a.get('id')} {'reanudada' if acc == 'reanudar' else 'pausada'}."
         if acc == "crear":
-            tipo = a.get("tipo") or ("una_vez" if a.get("fecha") else "diario")
-            cuando = {"tipo": tipo}
-            if tipo == "una_vez":
-                cuando["fecha"] = a.get("fecha")
-            elif tipo == "intervalo":
-                cuando["cada_min"] = int(a.get("cada_min") or 60)
-            else:
-                cuando["hora"] = a.get("hora") or "08:00"
-                if a.get("dias"):
-                    cuando["dias"] = [int(x) for x in a["dias"]]
+            cuando = None
+            if a.get("cuando"):  # texto libre: «lunes, miércoles y jueves a las 9», «cada 2 horas», «mañana a las 10»
+                from .agenda import interpretar
+                cuando = interpretar(str(a["cuando"]))
+                if not cuando and not (a.get("tipo") or a.get("fecha") or a.get("hora") or a.get("dias")):
+                    return (f"ERROR: no entendí «{a['cuando']}». Ejemplos: «lunes, miércoles y jueves a las 9», «todos los días a las 8», "
+                            "«cada 30 minutos», «mañana a las 10», «el 5 de octubre a las 9».")
+            if not cuando:
+                tipo = a.get("tipo") or ("una_vez" if a.get("fecha") else "semanal" if a.get("dias") else "diario")
+                cuando = {"tipo": tipo}
+                if tipo == "una_vez":
+                    cuando["fecha"] = a.get("fecha")
+                elif tipo == "intervalo":
+                    cuando["cada_min"] = int(a.get("cada_min") or 60)
+                else:
+                    cuando["hora"] = a.get("hora") or "08:00"
+                    d = _dias(a.get("dias"))
+                    if d and len(d) < 7:
+                        cuando["dias"] = d
             t = crear(a.get("nombre"), a.get("instruccion") or "", cuando, a.get("proyecto") or ctx.conv.get("project"),
                       ctx.conv.get("model"), autonomo=a.get("autonomo", True))
+            try:
+                from . import agenda
+                agenda.nota(f"📅 Programé «{t['nombre']}»: {describe(t)}", tipo="nota", tarea=t["id"], conv=ctx.conv.get("id"))
+            except Exception:
+                pass
             return (f"✔ Tarea programada [{t['id']}] «{t['nombre']}»: {describe(t)}. Próxima: "
-                    f"{datetime.fromtimestamp(t['proxima']):%Y-%m-%d %H:%M}. (Se ejecuta mientras NoviQ esté abierto; "
-                    "el usuario la ve en 🖥 PC y tareas.)")
+                    f"{datetime.fromtimestamp(t['proxima']):%Y-%m-%d %H:%M}. (Se ejecuta mientras Noviq esté abierto; "
+                    "el usuario la ve en la 📅 Agenda de 🖥 PC y tareas y el resultado le llega por Telegram si lo vinculó.)")
         return "ERROR: accion debe ser crear, listar, eliminar, pausar o reanudar."
     except Exception as e:
         return f"ERROR: {e}"
@@ -211,14 +265,15 @@ def tool(a, ctx):
 
 TOOL_DEF = {"type": "function", "function": {
     "name": "programar_tarea",
-    "description": "Programa un trabajo para que NoviQ lo haga solo más tarde o de forma repetida (una vez, diario, ciertos días o cada N minutos). También lista, pausa, reanuda o elimina tareas programadas.",
+    "description": "Programa un trabajo para que Noviq lo haga solo más tarde o de forma repetida y queda en la Agenda (🖥 PC y tareas). ÚSALA SIEMPRE que el usuario diga cuándo repetir algo («los lunes, miércoles y jueves», «todos los días a las 8», «cada 2 horas», «mañana a las 10»): pasa ese texto en 'cuando' tal cual. También lista, pausa, reanuda o elimina.",
     "parameters": {"type": "object", "properties": {
         "accion": {"type": "string", "enum": ["crear", "listar", "eliminar", "pausar", "reanudar"]},
         "nombre": {"type": "string"}, "instruccion": {"type": "string", "description": "Qué debe hacer la IA cuando se ejecute (instrucción completa)"},
+        "cuando": {"type": "string", "description": "Cuándo, en palabras del usuario: «lunes, miércoles y jueves a las 9», «cada 30 minutos», «mañana a las 10»"},
         "tipo": {"type": "string", "enum": ["una_vez", "diario", "semanal", "intervalo"]},
         "fecha": {"type": "string", "description": "Para una_vez: AAAA-MM-DDTHH:MM (hora local)"},
         "hora": {"type": "string", "description": "Para diario/semanal: HH:MM"},
-        "dias": {"type": "array", "items": {"type": "integer"}, "description": "0=lunes … 6=domingo"},
+        "dias": {"type": "array", "items": {"type": "integer"}, "description": "0=lunes, 1=martes, 2=miércoles, 3=jueves, 4=viernes, 5=sábado, 6=domingo"},
         "cada_min": {"type": "integer"}, "proyecto": {"type": "string"}, "id": {"type": "string"},
         "autonomo": {"type": "boolean", "description": "Ejecutar sin pedir permisos (por defecto true)"}},
         "required": ["accion"]}}}

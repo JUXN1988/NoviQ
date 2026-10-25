@@ -345,9 +345,14 @@ class Sesion:
         if not IS_WINDOWS and hasattr(os, "geteuid") and os.geteuid() == 0:
             args.insert(1, "--no-sandbox")
         extra = (os.environ.get("NOVIQ_NAV_ARGS") or "").split()
-        if extra:
-            args[1:1] = extra
-        self.proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+        from . import recursos as R
+        p_ = R.perfil()
+        args[1:1] = R.args_navegador() + extra  # memoria de JS limitada, pocos procesos y GPU si hay
+        # el navegador y todas sus pestañas quedan dentro de un límite de memoria/CPU: una página con fuga de memoria
+        # (ej. un juego 3D que crea objetos en cada fotograma) se cierra sola en vez de colapsar la PC
+        self.mem_mb = max(1536, int(p_["js_mb"]) * 2 + 512)
+        self.proc = R.popen_limitado(args, nombre="navegador de pruebas", mem_mb=self.mem_mb, cpu_pct=max(50, int(p_["cpu_pct"])),
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
                                      creationflags=NO_WINDOW)
         port_file = Path(self.dir) / "DevToolsActivePort"
         t0 = time.time()
@@ -374,8 +379,31 @@ class Sesion:
             self.close()
             raise RuntimeError("No pude conectarme a la pestaña del navegador de pruebas.")
         self.cdp = CDP(ws_url)
-        for m in ("Runtime.enable", "Log.enable", "Network.enable", "Page.enable"):
-            self.cdp.call(m)
+        for m in ("Runtime.enable", "Log.enable", "Network.enable", "Page.enable", "Performance.enable"):
+            try:
+                self.cdp.call(m)
+            except Exception:
+                pass
+        try:  # cuenta los búferes/texturas de la tarjeta gráfica que la página crea y libera (detector de fugas de WebGL)
+            self.cdp.call("Page.addScriptToEvaluateOnNewDocument", {"source": GL_CONTADOR})
+        except Exception:
+            pass
+
+    def memoria(self):
+        """(MB de JavaScript retenidos tras limpiar la basura, info 3D de three.js si hay, nodos del DOM)."""
+        try:
+            self.cdp.call("HeapProfiler.collectGarbage", timeout=10)
+        except Exception:
+            pass
+        heap = nodos = None
+        try:
+            mets = {m["name"]: m["value"] for m in (self.cdp.call("Performance.getMetrics", timeout=5).get("metrics") or [])}
+            heap = mets.get("JSHeapUsedSize")
+            nodos = mets.get("Nodes")
+        except Exception:
+            pass
+        three, _ = self.js(THREE_INFO, timeout=5)
+        return (heap / 1048576 if heap else None), (three if isinstance(three, dict) else None), nodos
 
     def navegar(self, url, espera_ms=2500, timeout=25):
         t0 = time.time()
@@ -549,6 +577,58 @@ def _eventos(events, cwd=None):
     return errores, cargas, consola
 
 
+# Se inyecta en cada página de prueba: cuenta búferes y texturas de WebGL vivos (creados − liberados)
+GL_CONTADOR = r"""(()=>{const c={b:0,t:0};Object.defineProperty(window,'__noviqGL',{value:c});
+ for(const P of [window.WebGLRenderingContext,window.WebGL2RenderingContext]){if(!P)continue;const p=P.prototype;
+  const cb=p.createBuffer,db=p.deleteBuffer,ct=p.createTexture,dt=p.deleteTexture;
+  p.createBuffer=function(){c.b++;return cb.apply(this,arguments)};p.deleteBuffer=function(x){if(x)c.b--;return db.apply(this,arguments)};
+  p.createTexture=function(){c.t++;return ct.apply(this,arguments)};p.deleteTexture=function(x){if(x)c.t--;return dt.apply(this,arguments)};}})()"""
+# Búferes de GPU vivos y, si el renderer de three.js es global, sus geometrías/texturas
+THREE_INFO = r"""(()=>{const r={};try{const g=window.__noviqGL;if(g){r.buffers=g.b;r.texturas_gl=g.t;}
+ const look=o=>o&&typeof o==='object'&&o.info&&o.info.memory&&typeof o.render==='function';
+ for(const k of Object.getOwnPropertyNames(window)){let v;try{v=window[k]}catch(e){continue}
+  if(look(v)){r.geometrias=v.info.memory.geometries;r.texturas=v.info.memory.textures;r.var=k;break;}}
+ }catch(e){}return Object.keys(r).length?r:null;})()"""
+
+
+def medir_fuga(s, segundos=3.0):
+    """Mide si la página «se come» la memoria mientras corre (fuga): compara memoria de JS retenida y geometrías 3D
+    antes y después de dejarla funcionar unos segundos. Devuelve dict o None si no hay fuga."""
+    h1, t1, n1 = s.memoria()
+    s.cdp.pump(segundos)
+    h2, t2, n2 = s.memoria()
+    out = {"heap_ini_mb": round(h1, 1) if h1 else None, "heap_fin_mb": round(h2, 1) if h2 else None, "segundos": segundos}
+    motivos = []
+    if t1 and t2 and t2.get("geometrias") is not None and t1.get("geometrias") is not None:
+        dg = (t2["geometrias"] or 0) - (t1["geometrias"] or 0)
+        out.update(geom_ini=t1["geometrias"], geom_fin=t2["geometrias"], tex_fin=t2.get("texturas"), renderer=t1.get("var"))
+        if dg >= 15:
+            motivos.append(f"las geometrías 3D vivas pasaron de {t1['geometrias']} a {t2['geometrias']} en {segundos:g} s "
+                           f"(+{dg / segundos:.0f}/s)")
+    if t1 and t2 and t2.get("buffers") is not None and t1.get("buffers") is not None:
+        db = t2["buffers"] - t1["buffers"]
+        out.update(gpu_buffers_ini=t1["buffers"], gpu_buffers_fin=t2["buffers"])
+        if db >= 60:
+            motivos.append(f"los búferes en la TARJETA GRÁFICA pasaron de {t1['buffers']} a {t2['buffers']} en {segundos:g} s "
+                           f"(+{db / segundos:.0f}/s: nunca se liberan)")
+    if h1 and h2 and h2 - h1 > 12 and (h2 - h1) / max(h1, 1) > 0.15:
+        motivos.append(f"la memoria de JavaScript creció {h2 - h1:.0f} MB en {segundos:g} s (de {h1:.0f} a {h2:.0f} MB)")
+    if n1 and n2 and n2 - n1 > 2000:
+        motivos.append(f"el DOM creció {int(n2 - n1)} nodos en {segundos:g} s")
+    if not motivos:
+        out["ok"] = True
+        return out
+    out.update(ok=False, motivos=motivos)
+    return out
+
+
+FUGA_PISTA = ("FUGA DE MEMORIA: se crean objetos en cada fotograma y nunca se liberan; en pocos minutos llena la RAM y la "
+              "memoria de video y puede COLGAR LA PC. Arreglo: crea geometrías y materiales UNA sola vez (fuera del bucle "
+              "requestAnimationFrame) y reutilízalos (una BoxGeometry compartida, materiales en caché por color); en el bucle "
+              "solo cambia posiciones/visibilidad. Si quitas objetos de la escena llama geometry.dispose() y material.dispose(). "
+              "Mejor aún: vuelve a dibujar el tablero solo cuando cambia, no en cada fotograma.")
+
+
 PAGE_INFO = r"""(()=>{const b=document.body;const cs=[...document.querySelectorAll('canvas')].map(c=>({id:c.id||'',w:c.width,h:c.height,
  vis:c.getBoundingClientRect().width>0}));const txt=(b&&b.innerText||'').replace(/\s+/g,' ').trim();
  return {title:document.title,text:txt.slice(0,600),canvas:cs,n:document.querySelectorAll('*').length,
@@ -565,6 +645,12 @@ def probar(target, cwd=None, acciones=None, evaluar="", captura=True, espera_ms=
     if p is not None and not p.exists():
         out["fatal"] = f"No existe el archivo {p}"
         return out
+    from . import recursos as R
+    with R.trabajo_pesado("navegador"):
+        return _probar(out, url, cwd, acciones, evaluar, captura, espera_ms, width, height)
+
+
+def _probar(out, url, cwd, acciones, evaluar, captura, espera_ms, width, height):
     s = Sesion(width, height)
     out["navegador"] = browser_name(s.exe)
     try:
@@ -622,6 +708,10 @@ def probar(target, cwd=None, acciones=None, evaluar="", captura=True, espera_ms=
                 before = after
             nuevos = len([e for e in s.cdp.events[n_ev:] if e.get("method") in ("Runtime.exceptionThrown",)])
             out["acciones"].append({"n": i, "desc": desc, "nota": nota, "cambio": cambio, "errores_nuevos": nuevos})
+        try:  # ¿la página se come la memoria mientras corre? (juegos que crean objetos en cada fotograma)
+            out["memoria"] = medir_fuga(s, 3.0)
+        except Exception:
+            out["memoria"] = None
         info, _ = s.js(PAGE_INFO)
         out["info"] = info or {}
         if evaluar:
@@ -637,8 +727,16 @@ def probar(target, cwd=None, acciones=None, evaluar="", captura=True, espera_ms=
                 out["casi_vacia"] = 0.0003 <= st < 0.004
                 out["zona"] = "canvas" if box else "pantalla"
         out["errores"], out["cargas"], out["consola"] = _eventos(s.cdp.events, cwd)
-        out["ok"] = not out["errores"] and not out["cargas"]
+        out["fuga"] = (out.get("memoria") or {}).get("motivos") or []
+        out["ok"] = not out["errores"] and not out["cargas"] and not out["fuga"]
         return out
+    except Exception as e:
+        if s.proc.poll() is not None:  # el navegador murió: casi siempre por el límite de memoria (fuga en la página)
+            out["fatal"] = (f"El navegador de pruebas se cerró: la página llegó al límite de memoria que Noviq le da "
+                            f"({getattr(s, 'mem_mb', 0)} MB) para no colapsar la PC. " + FUGA_PISTA)
+            out["fuga"] = ["la página superó el límite de memoria"]
+            return out
+        raise e
     finally:
         s.close()
 
@@ -660,6 +758,13 @@ def reporte(r, max_items=6):
         L.append(f"\n❌ {len(r['cargas'])} ARCHIVO(S) NO CARGARON:")
         for c in r["cargas"][:max_items]:
             L.append(f"- {c['archivo']} ({c['motivo']})")
+    if r.get("fuga"):
+        L.append("\n❌ " + "; ".join(r["fuga"]) + ".\n   " + FUGA_PISTA)
+    elif (r.get("memoria") or {}).get("ok"):
+        mm = r["memoria"]
+        L.append(f"\n🧠 Memoria estable mientras corre ({mm.get('heap_fin_mb')} MB de JavaScript"
+                 + (f", {mm.get('geom_fin')} geometrías 3D" if mm.get("geom_fin") is not None else "")
+                 + (f", {mm.get('gpu_buffers_fin')} búferes de GPU" if mm.get("gpu_buffers_fin") else "") + ").")
     if not r["errores"] and not r["cargas"]:
         L.append("\n✅ Sin errores de JavaScript ni archivos que fallen al cargar.")
     info = r.get("info") or {}

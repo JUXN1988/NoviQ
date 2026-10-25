@@ -1,0 +1,15 @@
+📁 Carpeta estándar de modelos 3D de Noviq
+============================================
+
+Todo lo que pongas aquí lo usa el 🎮 Estudio de juegos (y la IA del chat) según el juego que quieras hacer.
+
+• Formatos: .glb o .gltf (los que usa el motor). Los .zip con .glb/.gltf se descomprimen solos.
+  Los .fbx / .obj / .blend se ignoran: si un paquete solo trae esos, expórtalo a .glb con Blender (Archivo → Exportar → glTF 2.0).
+• Organiza por paquete: una subcarpeta por paquete (ej. «Toon Shooter Game Kit», «Halloween Bits», «City Pack»).
+• Los nombres de archivo importan: «Tree.glb», «Character Soldier.glb», «Gravestone.glb»… así Noviq sabe qué es cada modelo
+  (árbol, personaje, lápida…) y en qué juegos encaja.
+• Opcional: un archivo _info.json dentro de cada paquete con el autor y la licencia, por ejemplo:
+  {"autor": "Quaternius", "licencia": "CC0", "fuente": "poly.pizza", "url": "https://poly.pizza", "temas": ["zombies"]}
+• Después de agregar modelos pulsa «🔄 Volver a escanear» en el Estudio (o simplemente vuelve a abrirlo).
+
+Galerías gratuitas recomendadas (CC0): kenney.nl · quaternius.com · kaylousberg.itch.io · poly.pizza

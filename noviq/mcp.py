@@ -22,7 +22,7 @@ from .config import IS_WINDOWS, MCP_FILE, NO_WINDOW
 
 MODERN = "2026-07-28"
 LEGACY = "2025-06-18"
-CLIENT_INFO = {"name": "NoviQ", "version": "4.0"}
+CLIENT_INFO = {"name": "Noviq", "version": "4.0"}
 
 EXAMPLE = {
     "mcpServers": {
@@ -35,17 +35,66 @@ EXAMPLE = {
 }
 
 
-# Servidores listos para activar con un clic (requieren Node.js 18+)
-PRESETS = {
-    "navegador_chrome": {"command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome"]},
-    "navegador_edge": {"command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "msedge"]},
-    # Windows-MCP (CursorTouch): controla el escritorio de Windows con el mismo esquema que el navegador:
-    # Snapshot (lee la ventana y sus elementos) → Click/Type/Shortcut → verificar. Se instala solo con uvx.
-    "control_pc": {"command": "uvx", "args": ["windows-mcp", "serve"],
-                   "env": {"WINDOWS_MCP_EXCLUDE_TOOLS": "PowerShell,Registry,FileSystem", "ANONYMIZED_TELEMETRY": "false",
-                           "WINDOWS_MCP_SCREENSHOT_SCALE": "0.5"}},
+# ───────────── Catálogo de servidores MCP (los más usados, listos con un clic) ─────────────
+# modo: «pc» (los usa el agente del PC), «navegador» (los usa el agente navegador), «agente» (se usan con la herramienta
+# agente_mcp: la IA principal no recibe sus decenas de herramientas en cada mensaje → ahorra tokens) o «directo» (pocas
+# herramientas útiles siempre). {CARPETAS} se reemplaza por tus carpetas reales (Escritorio, Documentos, Descargas…).
+CATALOGO = {
+    "control_pc": {"nombre": "🖥 Windows-MCP (escritorio completo)", "cat": "Windows", "req": "uv", "modo": "pc",
+                   "desc": "Maneja ventanas, clics, escritura, atajos y lee la pantalla como texto (menos capturas = menos tokens).",
+                   "cfg": {"command": "uvx", "args": ["windows-mcp", "serve"],
+                           "env": {"WINDOWS_MCP_EXCLUDE_TOOLS": "PowerShell,Registry,FileSystem", "ANONYMIZED_TELEMETRY": "false",
+                                   "WINDOWS_MCP_SCREENSHOT_SCALE": "0.5"}}},
+    "navegador_chrome": {"nombre": "🌐 Navegador automático (Chrome)", "cat": "Navegador", "req": "node", "modo": "navegador",
+                         "desc": "Playwright: abre páginas, hace clic, llena formularios y lee datos en un Chrome aparte.",
+                         "cfg": {"command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome"]}},
+    "navegador_edge": {"nombre": "🌐 Navegador automático (Edge)", "cat": "Navegador", "req": "node", "modo": "navegador",
+                       "desc": "Lo mismo con Microsoft Edge (viene con Windows).",
+                       "cfg": {"command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "msedge"]}},
+    "chrome_real": {"nombre": "🧭 Tu Chrome abierto (con tus sesiones)", "cat": "Navegador", "req": "node", "modo": "navegador",
+                    "desc": "Chrome DevTools MCP: usa el Chrome que ya tienes abierto (Gmail, Hotmail, bancos… con tu sesión). "
+                            "Requiere Chrome 144+ y activar chrome://inspect/#remote-debugging; Chrome te pide «Permitir».",
+                    "cfg": {"command": "npx", "args": ["-y", "chrome-devtools-mcp@latest", "--autoConnect"]}},
+    "archivos": {"nombre": "📁 Archivos (tus carpetas)", "cat": "Windows", "req": "node", "modo": "agente",
+                 "desc": "Leer, buscar, mover y organizar archivos en Escritorio, Documentos y Descargas.",
+                 "cfg": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "{CARPETAS}"]}},
+    "desktop_commander": {"nombre": "⌨ Desktop Commander", "cat": "Windows", "req": "node", "modo": "agente",
+                          "desc": "Terminal y archivos con búsqueda y edición avanzada (muy usado con Claude Desktop).",
+                          "cfg": {"command": "npx", "args": ["-y", "@wonderwhy-er/desktop-commander@latest"]}},
+    "excel": {"nombre": "📊 Excel", "cat": "Office", "req": "uv", "modo": "agente",
+              "desc": "Crea y edita libros de Excel (hojas, fórmulas, formatos, gráficos) sin abrir Excel.",
+              "cfg": {"command": "uvx", "args": ["excel-mcp-server", "stdio"], "env": {"EXCEL_FILES_PATH": "{CARPETAS;}"}}},
+    "gmail_oauth": {"nombre": "✉ Gmail (OAuth, avanzado)", "cat": "Correo", "req": "node", "modo": "agente",
+                    "desc": "Leer, buscar, etiquetar y enviar con la API de Gmail. Necesita un gcp-oauth.keys.json en "
+                            "%USERPROFILE%\\.gmail-mcp y ejecutar una vez: npx @gongrzhe/server-gmail-autoauth-mcp auth. "
+                            "(Para enviar basta el correo integrado de ⚙ Ajustes → Telegram y correo).",
+                    "cfg": {"command": "npx", "args": ["-y", "@gongrzhe/server-gmail-autoauth-mcp"]}},
+    "buscar_web": {"nombre": "🔎 Búsqueda web (DuckDuckGo)", "cat": "Internet", "req": "uv", "modo": "directo",
+                   "desc": "Busca en internet y lee páginas sin clave.", "cfg": {"command": "uvx", "args": ["duckduckgo-mcp-server"]}},
+    "fetch": {"nombre": "🌍 Leer páginas (Fetch)", "cat": "Internet", "req": "uv", "modo": "directo",
+              "desc": "Descarga una página y la convierte a texto (oficial de MCP).", "cfg": {"command": "uvx", "args": ["mcp-server-fetch"]}},
+    "pensamiento": {"nombre": "🧠 Sequential Thinking", "cat": "IA", "req": "node", "modo": "directo",
+                    "desc": "Ayuda a las IAs pequeñas a pensar paso a paso problemas difíciles.",
+                    "cfg": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]}},
+    "memoria_grafo": {"nombre": "🗂 Memoria (grafo de conocimiento)", "cat": "IA", "req": "node", "modo": "agente",
+                      "desc": "Recuerda personas, proyectos y datos entre conversaciones.",
+                      "cfg": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"]}},
+    "context7": {"nombre": "📚 Context7 (documentación de programación)", "cat": "Programación", "req": "node", "modo": "directo",
+                 "desc": "Documentación actualizada de librerías para programar sin errores de versión.",
+                 "cfg": {"command": "npx", "args": ["-y", "@upstash/context7-mcp"]}},
 }
+PRESETS = {k: v["cfg"] for k, v in CATALOGO.items()}
 PC_SERVERS = {"control_pc"}  # sus herramientas se delegan al agente del PC (no se envían en cada mensaje)
+RECOMENDADOS = ["control_pc", "navegador_chrome", "archivos", "buscar_web"]  # «Conectar todo lo recomendado»
+
+
+def modo_de(nombre, cfg=None):
+    cfg = cfg or {}
+    if isinstance(cfg.get("noviq"), dict) and cfg["noviq"].get("modo"):
+        return cfg["noviq"]["modo"]
+    if nombre in CATALOGO:
+        return CATALOGO[nombre]["modo"]
+    return "directo"
 
 
 class MCPError(Exception):
@@ -153,8 +202,8 @@ class MCPServer:
     def _handshake(self):
         # 1) sondeo moderno
         self.modern, self.version = True, MODERN
-        try:
-            res = self.request("server/discover", {}, timeout=6)
+        try:  # (con uvx/npx la primera vez se instala el paquete: se espera un poco más)
+            res = self.request("server/discover", {}, timeout=15 if self.cfg.get("command") in ("uvx", "npx") else 6)
             vers = res.get("supportedVersions") or [MODERN]
             self.version = MODERN if MODERN in vers else vers[0]
             return
@@ -166,9 +215,25 @@ class MCPServer:
                     return
         # 2) servidor clásico → initialize
         self.modern, self.version = False, LEGACY
-        res = self.request("initialize", {"protocolVersion": LEGACY, "capabilities": {},
-                                          "clientInfo": CLIENT_INFO},
-                                         timeout=240 if self.cfg.get("command") in ("uvx", "npx") else 60)
+        try:
+            res = self.request("initialize", {"protocolVersion": LEGACY, "capabilities": {},
+                                              "clientInfo": CLIENT_INFO},
+                                             timeout=240 if self.cfg.get("command") in ("uvx", "npx") else 60)
+        except MCPError as e:
+            # Servidor moderno (2026-07-28, sin handshake) que tardó en arrancar (uvx/npx instalando la 1.ª vez) y no
+            # contestó el sondeo a tiempo: rechaza initialize con -32022 («connection is serving the 2026-07-28 protocol»).
+            txt = str(e)
+            if getattr(e, "code", None) == -32022 or MODERN in txt or "not accepted" in txt:
+                sup = (getattr(e, "data", None) or {}).get("supported") or []
+                self.modern, self.version = True, (MODERN if not sup or MODERN in sup else sup[0])
+                try:  # ya está en marcha: el sondeo contesta enseguida
+                    res = self.request("server/discover", {}, timeout=60)
+                    vers = res.get("supportedVersions") or [self.version]
+                    self.version = MODERN if MODERN in vers else vers[0]
+                except MCPError:
+                    pass
+                return
+            raise
         self.version = res.get("protocolVersion", LEGACY)
         self._send({"jsonrpc": "2.0", "method": "notifications/initialized"})
 
@@ -233,6 +298,7 @@ class MCPManager:
         MCP_FILE.write_text(text, encoding="utf-8")
 
     def reload(self):
+        rutas_extra()
         for s in self.servers.values():
             s.stop()
         self.servers = {}
@@ -250,12 +316,17 @@ class MCPManager:
             threading.Thread(target=s.start, daemon=True).start()
 
     def status(self):
-        return [{"name": n, "status": s.status, "error": s.error, "tools": [t.get("name") for t in s.tools]}
+        return [{"name": n, "status": s.status, "error": s.error, "tools": [t.get("name") for t in s.tools],
+                 "modo": modo_de(n, getattr(s, "cfg", {})), "nombre": (CATALOGO.get(n) or {}).get("nombre", n)}
                 for n, s in self.servers.items()]
 
+    def modo(self, n):
+        s = self.servers.get(n)
+        return modo_de(n, getattr(s, "cfg", {}) if s else {})
+
     def tool_defs(self, include_browser=None):
-        """Herramientas MCP. Las del navegador (browser_*) se delegan al subagente navegador salvo que
-        la configuración pida exponerlas directamente (ahorra muchos tokens por mensaje)."""
+        """Herramientas MCP. Las del navegador, del PC y de los servidores «agente» se delegan a subagentes salvo que
+        se pidan todas (include_browser=True): la IA principal no recibe decenas de herramientas en cada mensaje."""
         from .config import CONFIG
         if include_browser is None:
             include_browser = bool(CONFIG.get("navegador_directo"))
@@ -263,12 +334,9 @@ class MCPManager:
         for n, s in self.servers.items():
             if getattr(s, "status", "") != "conectado":
                 continue
+            modo = self.modo(n)
             for t in s.tools:
-                if n in PC_SERVERS and not include_browser:
-                    fname = f"mcp__{_safe(n)}__{_safe(t['name'])}"[:64]
-                    self._map[fname] = (n, t["name"])
-                    continue
-                if not include_browser and t["name"].startswith("browser_"):
+                if not include_browser and (modo in ("pc", "navegador", "agente") or t["name"].startswith("browser_")):
                     fname = f"mcp__{_safe(n)}__{_safe(t['name'])}"[:64]
                     self._map[fname] = (n, t["name"])
                     continue
@@ -282,8 +350,41 @@ class MCPManager:
         return out
 
     def has_browser(self):
-        return any(getattr(s, "status", "") == "conectado" and any(t["name"].startswith("browser_") for t in s.tools)
-                   for s in self.servers.values())
+        return any(getattr(s, "status", "") == "conectado" and (self.modo(n) == "navegador" or any(t["name"].startswith("browser_") for t in s.tools))
+                   for n, s in self.servers.items())
+
+    def conectados(self, modo=None):
+        return [n for n, s in self.servers.items() if getattr(s, "status", "") == "conectado" and (modo is None or self.modo(n) == modo)]
+
+    def server_tools(self, n):
+        """Definiciones de las herramientas de UN servidor (para un subagente)."""
+        s = self.servers.get(n)
+        if not s or getattr(s, "status", "") != "conectado":
+            return []
+        self._map = getattr(self, "_map", {})
+        out = []
+        for t in s.tools:
+            fname = f"mcp__{_safe(n)}__{_safe(t['name'])}"[:64]
+            self._map[fname] = (n, t["name"])
+            schema = {k: v for k, v in (t.get("inputSchema") or {"type": "object", "properties": {}}).items() if k != "$schema"}
+            out.append({"type": "function", "function": {"name": fname, "description": (t.get("description") or t["name"])[:700],
+                                                          "parameters": schema}})
+        return out
+
+    def navegador_preferido(self):
+        """Servidor de navegador a usar: tu Chrome real (con tus sesiones) si está conectado y así se eligió, si no Playwright."""
+        from .config import CONFIG
+        navs = self.conectados("navegador") or [n for n, s in self.servers.items() if getattr(s, "status", "") == "conectado"
+                                                  and any(t["name"].startswith("browser_") for t in s.tools)]
+        if not navs:
+            return None
+        pref = (CONFIG.get("pc") or {}).get("navegador", "auto")
+        if pref == "real" and "chrome_real" in navs:
+            return "chrome_real"
+        otros = [n for n in navs if n != "chrome_real"]
+        if pref == "automatico" and otros:
+            return otros[0]
+        return otros[0] if otros else navs[0]
 
     def has_pc(self):
         return any(n in PC_SERVERS and getattr(s, "status", "") == "conectado" for n, s in self.servers.items())
@@ -300,12 +401,32 @@ class MCPManager:
                                                                   "parameters": schema}})
         return out
 
-    def add_preset(self, key):
+    def add_preset(self, key, reiniciar=True):
         from .config import DATA_DIR
         cfg = json.loads(self.load_config_text())
         work = DATA_DIR / "navegador"
         work.mkdir(exist_ok=True)
-        cfg.setdefault("mcpServers", {})[key] = dict(PRESETS[key], cwd=str(work))
+        c = json.loads(json.dumps(PRESETS[key]))
+        if any("{CARPETAS" in str(x) for x in list(c.get("args", [])) + list((c.get("env") or {}).values())):
+            try:
+                from .perfil_windows import carpetas_usuario
+                dirs = [str(p) for p in carpetas_usuario().values()]
+            except Exception:
+                dirs = []
+            dirs = dirs or [str(os.path.expanduser("~"))]
+            args = []
+            for a in c.get("args", []):
+                args += dirs if a == "{CARPETAS}" else [a]
+            c["args"] = args
+            c["env"] = {k: (os.pathsep.join(dirs) if v == "{CARPETAS;}" else v) for k, v in (c.get("env") or {}).items()}
+        cfg.setdefault("mcpServers", {})[key] = dict(c, cwd=str(work))
+        self.save_config_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+        if reiniciar:
+            self.reload()
+
+    def quitar(self, key):
+        cfg = json.loads(self.load_config_text())
+        cfg.get("mcpServers", {}).pop(key, None)
         self.save_config_text(json.dumps(cfg, indent=2, ensure_ascii=False))
         self.reload()
 
@@ -319,3 +440,88 @@ class MCPManager:
 
 
 MANAGER = MCPManager()
+
+
+# ───────────── Requisitos (Node.js para npx, uv para uvx) e instalación con un clic ─────────────
+def rutas_extra():
+    """Carpetas donde quedan node/npx y uv/uvx al instalarlos (para usarlos sin reiniciar Noviq)."""
+    la, pf, ad = os.environ.get("LOCALAPPDATA", ""), os.environ.get("ProgramFiles", ""), os.environ.get("APPDATA", "")
+    extra = [os.path.join(pf, "nodejs") if pf else "", os.path.join(la, "Microsoft", "WinGet", "Links") if la else "",
+             os.path.join(ad, "npm") if ad else "", os.path.expanduser(os.path.join("~", ".local", "bin")),
+             os.path.expanduser(os.path.join("~", ".cargo", "bin"))]
+    actual = os.environ.get("PATH", "")
+    for d in extra:
+        if d and os.path.isdir(d) and d.lower() not in actual.lower():
+            actual = d + os.pathsep + actual
+    os.environ["PATH"] = actual
+
+
+def requisitos():
+    rutas_extra()
+    return {"node": bool(shutil.which("npx")), "uv": bool(shutil.which("uvx")), "winget": bool(shutil.which("winget")),
+            "windows": IS_WINDOWS}
+
+
+def instalar_requisito(req, log):
+    """Instala Node.js (winget) o uv (pip o winget). Devuelve True si quedó disponible."""
+    rutas_extra()
+    if req == "node" and not shutil.which("npx"):
+        if not shutil.which("winget"):
+            log.append("✖ Falta Node.js y no hay winget: instálalo desde https://nodejs.org (versión LTS).")
+            return False
+        log.append("⬇ Instalando Node.js LTS con winget (1-3 min)…")
+        r = subprocess.run(["winget", "install", "-e", "--id", "OpenJS.NodeJS.LTS", "--silent", "--accept-source-agreements",
+                            "--accept-package-agreements"], capture_output=True, text=True, timeout=900, creationflags=NO_WINDOW)
+        ult = [ln for ln in (r.stdout or r.stderr or "").strip().splitlines() if ln.strip()][-1:]
+        log.append("   " + (ult[0][:160] if ult else "listo"))
+    if req == "uv" and not shutil.which("uvx"):
+        from .config import python_exe
+        py = python_exe()
+        if py:
+            log.append("⬇ Instalando uv con pip…")
+            r = subprocess.run([py, "-m", "pip", "install", "--upgrade", "uv"], capture_output=True, text=True, timeout=600,
+                               creationflags=NO_WINDOW)
+            scripts = os.path.join(os.path.dirname(py), "Scripts" if IS_WINDOWS else "")
+            if os.path.isdir(scripts):
+                os.environ["PATH"] = scripts + os.pathsep + os.environ.get("PATH", "")
+            if r.returncode != 0:
+                log.append("   pip falló: " + r.stderr[-200:])
+        if not shutil.which("uvx") and shutil.which("winget"):
+            log.append("⬇ Instalando uv con winget…")
+            subprocess.run(["winget", "install", "-e", "--id", "astral-sh.uv", "--silent", "--accept-source-agreements",
+                            "--accept-package-agreements"], capture_output=True, text=True, timeout=900, creationflags=NO_WINDOW)
+    rutas_extra()
+    ok = bool(shutil.which("npx" if req == "node" else "uvx"))
+    log.append(("✔ " if ok else "✖ ") + ("Node.js" if req == "node" else "uv") + (" listo." if ok else " no quedó instalado."))
+    return ok
+
+
+def conectar(claves, log=None):
+    """Instala lo que falte y agrega los servidores del catálogo (se reinician una sola vez)."""
+    log = log if log is not None else []
+    hechos = []
+    for k in claves:
+        if k not in CATALOGO:
+            continue
+        req = CATALOGO[k].get("req")
+        if req and not instalar_requisito(req, log):
+            log.append(f"✖ {CATALOGO[k]['nombre']}: falta {req}.")
+            continue
+        MANAGER.add_preset(k, reiniciar=False)
+        hechos.append(k)
+        log.append(f"✔ {CATALOGO[k]['nombre']} agregado.")
+    if hechos:
+        MANAGER.reload()
+    return hechos
+
+
+def catalogo_publico():
+    est = {x["name"]: x for x in MANAGER.status()}
+    try:
+        cfg = json.loads(MANAGER.load_config_text()).get("mcpServers", {})
+    except Exception:
+        cfg = {}
+    return [{"key": k, "nombre": v["nombre"], "cat": v["cat"], "desc": v["desc"], "req": v.get("req"), "modo": v["modo"],
+             "agregado": k in cfg and not cfg[k].get("disabled"), "estado": (est.get(k) or {}).get("status"),
+             "error": (est.get(k) or {}).get("error", ""), "herramientas": len((est.get(k) or {}).get("tools") or []),
+             "recomendado": k in RECOMENDADOS} for k, v in CATALOGO.items()]

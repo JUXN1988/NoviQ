@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*-
 """Punto de entrada del programa (Windows .exe, macOS .app, Linux).
-NoviQ se abre en su PROPIA VENTANA de escritorio (no en el navegador):
+Noviq se abre en su PROPIA VENTANA de escritorio (no en el navegador):
   1. Ventana nativa con pywebview (Windows: WebView2 de Edge · macOS: WebKit · Linux: GTK/Qt si están).
   2. Si no se puede, una ventana de aplicación sin barras de navegador (Edge/Chrome/Chromium en modo --app).
   3. Último recurso: el navegador predeterminado.
-Al cerrar la ventana, NoviQ se apaga. Con --bandeja se queda en segundo plano (icono junto al reloj) para las
+Al cerrar la ventana, Noviq se apaga. Con --bandeja se queda en segundo plano (icono junto al reloj) para las
 tareas programadas.
 Opciones:  --bandeja  --no-browser  --stop  --version  --elegir-carpeta (uso interno)"""
 import os
 import sys
+
+
+def _guardar_pendiente():
+    """Antes de os._exit (que no corre atexit): estadísticas del evaluador y 🪙 contabilidad de tokens."""
+    try:
+        from noviq import evaluador as EV
+        EV.flush()
+    except Exception:
+        pass
+    try:
+        from noviq import avatar_agente as AV
+        AV.apagar()  # 🤖 el avatar se despide y se cierra (si lo abrió Noviq)
+    except Exception:
+        pass
 
 
 def _elegir_carpeta():
@@ -28,9 +42,9 @@ def _stop():
         req = urllib.request.Request("http://127.0.0.1:7860/api/apagar", data=b"{}", method="POST",
                                      headers={"X-Token": tok, "Content-Type": "application/json"})
         urllib.request.urlopen(req, timeout=5)
-        print("NoviQ se apagó.")
+        print("Noviq se apagó.")
     except Exception as e:
-        print("NoviQ no estaba abierto:", e)
+        print("Noviq no estaba abierto:", e)
 
 
 def _log_si_no_hay_consola():
@@ -56,10 +70,11 @@ def _bandeja(url):
 
         def apagar(icon, item):
             icon.stop()
+            _guardar_pendiente()
             os._exit(0)
-        icon = pystray.Icon("NoviQ", img, "NoviQ — agente de IA",
-                            menu=pystray.Menu(pystray.MenuItem("Abrir NoviQ", abrir, default=True),
-                                              pystray.MenuItem("Apagar NoviQ", apagar)))
+        icon = pystray.Icon("Noviq", img, "Noviq — agente de IA",
+                            menu=pystray.Menu(pystray.MenuItem("Abrir Noviq", abrir, default=True),
+                                              pystray.MenuItem("Apagar Noviq", apagar)))
         icon.run()  # bloquea (en macOS debe ser el hilo principal)
         return True
     except Exception as e:
@@ -79,7 +94,8 @@ def ventana_nativa(url):
     try:
         import webview
     except Exception as e:
-        print("pywebview no disponible:", e)
+        print("pywebview no disponible:", e, "→ se abre en el navegador. Para la ventana nativa: "
+              f'"{sys.executable}" -m pip install pywebview  (o usa iniciar.bat, que lo instala solo)')
         return False
     try:
         from noviq.config import DATA_DIR
@@ -88,7 +104,13 @@ def ventana_nativa(url):
             webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
         except Exception:
             pass
-        webview.create_window("NoviQ", url, width=1380, height=880, min_size=(900, 600), js_api=ApiVentana(),
+        if sys.platform == "win32" and not os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"):
+            try:  # tope de memoria de JavaScript y de contextos WebGL para la ventana (una vista previa con fuga llegó a 21 GB)
+                from noviq import recursos as R
+                os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = R.args_ventana()
+            except Exception:
+                pass
+        webview.create_window("Noviq", url, width=1380, height=880, min_size=(900, 600), js_api=ApiVentana(),
                               text_select=True, background_color="#0a0f14")
         webview.start(private_mode=False, storage_path=str(DATA_DIR / "ventana"))  # bloquea hasta cerrar la ventana
         return True
@@ -124,7 +146,7 @@ def ventana_app(url):
     from noviq.config import DATA_DIR
     try:
         p = subprocess.Popen([exe, f"--app={url}", f"--user-data-dir={DATA_DIR / 'ventana_app'}", "--no-first-run",
-                              "--no-default-browser-check", "--window-size=1380,880", "--class=NoviQ"])
+                              "--no-default-browser-check", "--window-size=1380,880", "--class=Noviq"])
         p.wait()
         return True
     except Exception as e:
@@ -138,7 +160,7 @@ def main():
         return _elegir_carpeta()
     if "--version" in args:
         from noviq.config import VERSION
-        return print("NoviQ", VERSION)
+        return print("Noviq", VERSION)
     if "--stop" in args:
         return _stop()
     _log_si_no_hay_consola()
@@ -149,7 +171,8 @@ def main():
         return
     if not en_segundo_plano:
         if ventana_nativa(url) or ventana_app(url):
-            os._exit(0)  # se cerró la ventana: se apaga NoviQ
+            _guardar_pendiente()
+            os._exit(0)  # se cerró la ventana: se apaga Noviq
         import webbrowser
         webbrowser.open(url)
     if "--sin-bandeja" in args or not _bandeja(url):

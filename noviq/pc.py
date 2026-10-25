@@ -148,9 +148,30 @@ def _xy(a, ctx):
         if not r:
             raise RuntimeError(f"No existe la referencia {ref}. Vuelve a leer la ventana con accion='elementos'.")
         return r["x"], r["y"], f"{r['tipo']} «{r['nombre']}»"
+    if a.get("texto_objetivo"):
+        from . import pantalla
+        pos = pantalla.buscar_texto(ctx, a["texto_objetivo"], a.get("zona") or "ventana")
+        if not pos:
+            raise RuntimeError(f"No encontré «{a['texto_objetivo']}» en la pantalla (OCR). Usa accion='leer_texto' para ver qué hay.")
+        return pos[0], pos[1], f"«{pos[2]}»"
     if a.get("x") is None or a.get("y") is None:
-        raise RuntimeError("Indica ref (de 'elementos') o coordenadas x, y.")
+        raise RuntimeError("Indica ref (de 'elementos'), texto_objetivo (texto visible) o coordenadas x, y.")
+    if (a.get("origen") or "") == "captura":
+        from . import pantalla
+        x, y = pantalla.a_pantalla(ctx, float(a["x"]), float(a["y"]))
+        return x, y, f"({a['x']},{a['y']}) de la captura → ({x},{y}) en pantalla"
     return int(a["x"]), int(a["y"]), f"({a['x']},{a['y']})"
+
+
+def _abrir_objetivo(obj):
+    """«excel», «whatsapp», «bloc de notas» → el acceso del menú Inicio que corresponde (perfil de Windows)."""
+    if re.search(r"^[a-zA-Z]:\\|^\\\\|^https?://|^shell:|^ms-[a-z-]+:|\.(exe|lnk|url|bat|cmd)$", obj, re.I) or "\\" in obj or "/" in obj:
+        return obj
+    try:
+        from . import perfil_windows
+        return perfil_windows.buscar_app(obj) or obj
+    except Exception:
+        return obj
 
 
 def control_pc(a, ctx):
@@ -167,9 +188,10 @@ def control_pc(a, ctx):
             obj = (a.get("objetivo") or a.get("texto") or "").strip()
             if not obj:
                 return "ERROR: indica objetivo (programa, ruta o URL). Ej.: notepad, calc, excel, C:\\ruta\\archivo.xlsx, https://…"
-            _ps(f"Start-Process {_q(obj)}" + (f" -ArgumentList {_q(a['argumentos'])}" if a.get("argumentos") else ""), timeout=30)
+            real = _abrir_objetivo(obj)
+            _ps(f"Start-Process {_q(real)}" + (f" -ArgumentList {_q(a['argumentos'])}" if a.get("argumentos") else ""), timeout=30)
             time.sleep(float(a.get("esperar") or 2))
-            return f"Abierto: {obj}. Lee la ventana con accion='elementos' para continuar."
+            return f"Abierto: {obj}" + (f" ({real})" if real != obj else "") + ". Lee la ventana con accion='elementos' (o 'leer_texto') para continuar."
         if acc == "enfocar":
             t = (a.get("objetivo") or a.get("texto") or "").strip()
             out = _ps(f"$ws = New-Object -ComObject WScript.Shell; $ws.AppActivate({_q(t)})")
@@ -209,10 +231,42 @@ def control_pc(a, ctx):
             time.sleep(s)
             return f"Esperé {s:g} s."
         if acc == "captura":
-            from .tools import t_captura_pantalla
-            return t_captura_pantalla({}, ctx)
-        return ("ERROR: acción desconocida. Usa: ventanas, elementos, abrir, enfocar, clic, doble_clic, clic_derecho, "
-                "escribir, teclas, esperar, captura.")
+            from . import pantalla
+            r = pantalla.captura(ctx, a.get("zona") or "ventana", bool(a.get("marcas")))
+            return {"text": r["text"], "images": r["images"]}
+        if acc == "leer_texto":
+            from . import pantalla
+            return pantalla.leer_texto(ctx, a.get("zona") or "ventana")
+        if acc == "clic_texto":
+            a = dict(a, texto_objetivo=a.get("texto_objetivo") or a.get("texto"))
+            return control_pc(dict(a, accion="doble_clic" if a.get("doble") else "clic"), ctx)
+        if acc == "desplazar":
+            n = int(a.get("cantidad") or 3) * (-120 if (a.get("direccion") or "abajo") in ("abajo", "down") else 120)
+            pre = ""
+            if a.get("ref") or a.get("x") is not None or a.get("texto_objetivo"):
+                x, y, _ = _xy(a, ctx)
+                pre = f"[NvW]::SetCursorPos({x},{y}) | Out-Null; Start-Sleep -Milliseconds 100; "
+            _ps(pre + f"[NvW]::mouse_event(0x0800,0,0,{n},[UIntPtr]::Zero)")
+            time.sleep(0.4)
+            return f"Desplazado {a.get('direccion') or 'abajo'}."
+        if acc == "arrastrar":
+            x, y, what = _xy(a, ctx)
+            b = {"x": a.get("x2"), "y": a.get("y2"), "origen": a.get("origen")}
+            x2, y2, _ = _xy(b, ctx)
+            _ps(f"[NvW]::SetCursorPos({x},{y}) | Out-Null; [NvW]::mouse_event(2,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 150; "
+                + "".join(f"[NvW]::SetCursorPos({int(x + (x2 - x) * k / 8)},{int(y + (y2 - y) * k / 8)}) | Out-Null; Start-Sleep -Milliseconds 30; " for k in range(1, 9))
+                + "[NvW]::mouse_event(4,0,0,0,[UIntPtr]::Zero)")
+            return f"Arrastrado desde {what} hasta ({x2},{y2})."
+        if acc == "portapapeles":
+            if a.get("texto"):
+                _ps(f"Set-Clipboard -Value {_q(a['texto'])}")
+                return "Texto copiado al portapapeles."
+            return "Portapapeles: " + (_ps("Get-Clipboard -Raw") or "(vacío)")[:4000]
+        if acc in ("maximizar", "minimizar"):
+            _ps(f"[NvW]::ShowWindow([NvW]::GetForegroundWindow(), {3 if acc == 'maximizar' else 6}) | Out-Null")
+            return f"Ventana {acc}da."
+        return ("ERROR: acción desconocida. Usa: ventanas, elementos, leer_texto, clic_texto, abrir, enfocar, clic, doble_clic, "
+                "clic_derecho, escribir, teclas, desplazar, arrastrar, portapapeles, maximizar, minimizar, esperar, captura.")
     except subprocess.TimeoutExpired:
         return "ERROR: Windows tardó demasiado en responder (la ventana puede estar ocupada). Espera y vuelve a intentar."
     except Exception as e:
@@ -221,23 +275,33 @@ def control_pc(a, ctx):
 
 PC_SYSTEM = """Eres un agente experto en manejar el escritorio de Windows del usuario con herramientas.
 Completa la TAREA de forma autónoma con el mismo método que un navegador:
-1. LEER: mira qué hay (control_pc accion='ventanas' o 'elementos'; con Windows-MCP usa Snapshot). Cada control tiene una ref [eN].
-2. ACTUAR: abre programas (accion='abrir', objetivo='notepad' / 'excel' / ruta / URL), enfoca ventanas, haz clic por ref,
-   escribe (accion='escribir' con ref del campo), usa atajos (accion='teclas', teclas='ctrl+s').
-3. VERIFICAR: después de cada acción importante vuelve a leer 'elementos' para comprobar el resultado.
-- Si no hay controles legibles, usa accion='captura' y decide con la imagen (o coordenadas x,y).
+1. LEER SIN IMÁGENES (ahorra tokens): control_pc accion='ventanas' o 'elementos' (cada control tiene ref [eN]); si la app
+   no expone controles (juegos, webs dentro de apps, PDF), accion='leer_texto' (OCR de Windows: cada texto con su @(x,y)).
+   Con Windows-MCP usa su Snapshot.
+2. ACTUAR: abre programas por su nombre (accion='abrir', objetivo='excel' / 'whatsapp' / ruta / URL), enfoca ventanas, clic
+   por ref o por texto visible (accion='clic_texto', texto='Guardar'), escribe (accion='escribir' con ref del campo), atajos
+   (accion='teclas', teclas='ctrl+s'), desplazar, arrastrar.
+3. VERIFICAR: después de cada acción importante vuelve a leer ('elementos' o 'leer_texto').
+- Solo si con texto no alcanza, accion='captura' (ventana activa reducida; marcas=true numera los controles) y haz clic con
+  x,y de la imagen y origen='captura'. Usa las rutas reales del usuario (Escritorio, Documentos, Descargas) que te dan.
 - No cierres ni borres nada que el usuario no haya pedido. No toques contraseñas ni pagos.
 - Si algo requiere al usuario (iniciar sesión, un permiso de Windows), DETENTE y explícalo en tu resumen.
 Al terminar responde SOLO con un RESUMEN en español: qué hiciste, qué quedó abierto y qué falló si algo falló."""
 
 TOOL_DEF = {"type": "function", "function": {
     "name": "control_pc",
-    "description": "Maneja el escritorio de Windows: leer ventanas/controles, abrir programas, clic, escribir, atajos de teclado, captura.",
+    "description": "Maneja el escritorio de Windows: leer ventanas/controles o el texto de la pantalla (OCR, sin imagen), abrir programas por nombre, clic (por ref, texto o x,y), escribir, atajos, desplazar, arrastrar, captura reducida.",
     "parameters": {"type": "object", "properties": {
-        "accion": {"type": "string", "enum": ["ventanas", "elementos", "abrir", "enfocar", "clic", "doble_clic", "clic_derecho",
-                                              "escribir", "teclas", "esperar", "captura"]},
+        "accion": {"type": "string", "enum": ["ventanas", "elementos", "leer_texto", "clic_texto", "abrir", "enfocar", "clic", "doble_clic",
+                                              "clic_derecho", "escribir", "teclas", "desplazar", "arrastrar", "portapapeles",
+                                              "maximizar", "minimizar", "esperar", "captura"]},
         "ref": {"type": "string", "description": "Referencia eN obtenida con 'elementos'"},
-        "x": {"type": "integer"}, "y": {"type": "integer"},
+        "texto_objetivo": {"type": "string", "description": "Texto visible donde hacer clic (se busca con OCR)"},
+        "x": {"type": "number"}, "y": {"type": "number"}, "x2": {"type": "number"}, "y2": {"type": "number"},
+        "origen": {"type": "string", "enum": ["pantalla", "captura"], "description": "'captura' si x,y salen de la última captura reducida"},
+        "zona": {"type": "string", "enum": ["ventana", "pantalla", "todas"], "description": "Qué leer/capturar (def. ventana activa)"},
+        "marcas": {"type": "boolean", "description": "captura: dibujar los controles [eN] encima"},
+        "direccion": {"type": "string", "enum": ["arriba", "abajo"]}, "cantidad": {"type": "integer"},
         "objetivo": {"type": "string", "description": "Programa/ruta/URL para 'abrir' o título de ventana para 'enfocar'"},
         "argumentos": {"type": "string"},
         "texto": {"type": "string", "description": "Texto a escribir"},

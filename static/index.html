@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NoviQ</title>
+<title>Noviq</title>
 <link rel="icon" type="image/png" href="/static/favicon.png">
 <link rel="stylesheet" href="/static/lib/github-dark.min.css">
 <link rel="stylesheet" href="/static/app.css">
@@ -18,7 +18,7 @@
 <body>
 <div id="app">
   <aside id="side">
-    <div id="brand"><img src="/static/noviq_icon.png" alt="" class="logo"><div>NoviQ<br><small>agente de IA · v4.2</small></div></div>
+    <div id="brand"><img src="/static/noviq_icon.png" alt="" class="logo"><div>Noviq<br><small>agente de IA · v4.2</small></div></div>
     <button class="sbtn primary" id="newChat">＋ Nueva conversación</button>
     <div class="shead"><span>Proyectos</span><span><button id="allProjs" title="Ver todos los proyectos">▦</button><button id="newProj" title="Nuevo proyecto">＋</button></span></div>
     <div id="projects"></div>
@@ -27,14 +27,16 @@
     <div id="sidefoot">
       <button class="sbtn gift" id="openGratis">🎁 IA gratis: conecta modelos sin pagar</button>
       <div class="sgrid">
+        <button class="sbtn" id="openGame" title="Estudio de juegos: describe tu idea y la IA crea el videojuego según tu PC (NVIDIA, galerías 3D libres)">🎮 Juegos</button>
         <button class="sbtn" id="openPc" title="Control del PC y tareas programadas">🖥 PC y tareas</button>
         <button class="sbtn" id="openApr" title="Aprendizaje de los agentes">🧬 Aprendizaje</button>
+        <button class="sbtn" id="openRank" title="Qué IA trabaja mejor en cada tipo de tarea (evaluador automático + tus 👍/👎)">🏆 Ranking IAs</button>
         <button class="sbtn" id="openMem" title="Memoria">🧠 Memoria</button>
         <button class="sbtn" id="openMcp" title="Servidores MCP">🔌 MCP</button>
         <button class="sbtn" id="openFolder" title="Abrir carpeta">📁 Carpeta</button>
         <button class="sbtn" id="openCfg" title="Ajustes">⚙ Ajustes</button>
       </div>
-      <button class="sbtn off" id="apagarBtn" title="Cierra NoviQ por completo">⏻ Apagar NoviQ</button>
+      <button class="sbtn off" id="apagarBtn" title="Cierra Noviq por completo">⏻ Apagar Noviq</button>
     </div>
   </aside>
   <main id="main">
@@ -71,17 +73,34 @@
           <div id="fase" class="fase" style="display:none"></div>
           <div id="tasks"></div>
           <div id="att"></div>
+          <div id="gameHint" style="display:none"></div>
+          <div id="ptools">
+            <button data-pa="corregir" title="Corrige ortografía, tildes, gramática y sintaxis sin cambiar lo que pides (Ctrl+Alt+C)">🔤 Corregir<b id="ptN"></b></button>
+            <button data-pa="profesional" title="Convierte tu texto en un prompt profesional: rol, objetivo, contexto, requisitos, restricciones, entregables y criterios de aceptación (Ctrl+Alt+M)">✨ Profesional</button>
+            <button data-pa="estructurar" title="Ordena lo que escribiste en objetivo + pasos numerados">🧱 Estructurar</button>
+            <button data-pa="especifico" title="Concreta lo vago (cantidades, tecnologías, formato, cómo probar) y marca las suposiciones">🎯 Más específico</button>
+            <button data-pa="ingles" title="Traduce al inglés (útil para modelos de imágenes y algunas IAs)">🌐 Inglés</button>
+            <button data-pa="juego" id="ptJuego" title="Convierte tu idea en un prompt profesional de videojuego" style="display:none">🎮 Prompt de juego</button>
+            <button id="ptPlant" title="Plantillas de prompts profesionales listas para rellenar">📋 Plantillas ▾</button>
+            <button id="ptPiezas" title="Agrega piezas típicas de un buen prompt con un clic">＋ Piezas ▾</button>
+            <span class="grow"></span>
+            <span id="ptCal" title="Calidad del prompt"></span>
+            <button id="ptUndo" title="Volver al texto anterior (también Ctrl+Z)" style="display:none">↩ Deshacer</button>
+          </div>
+          <div id="ptPop"></div>
+          <div id="ptMsg" class="small"></div>
           <div id="box">
             <button class="ibtn" id="attBtn" title="Adjuntar imágenes o archivos (también puedes pegar o arrastrar)">📎</button>
             <input type="file" id="file" multiple hidden>
-            <textarea id="inp" rows="1" placeholder="Pide lo que quieras: un programa, una imagen, revisar tu PC…  (Enter envía · Shift+Enter nueva línea)"></textarea>
+            <textarea id="inp" rows="1" spellcheck="true" lang="es" placeholder="Pide lo que quieras: un programa, un videojuego, una imagen, revisar tu PC…  (Enter envía · Shift+Enter nueva línea)"></textarea>
+            <button class="ibtn" id="avMic" title="🎙 Háblale a Noviq (usa el micrófono del avatar · Ctrl+Alt+Espacio)">🎙</button>
             <button id="send">Enviar</button>
           </div>
-          <div class="hint"><span id="hint"></span> <span id="ctxMeter" title="Contexto usado en la última petición / ventana del modelo"></span></div>
+          <div class="hint"><span id="hint"></span> <span id="ctxMeter" title="Contexto usado en la última petición / ventana del modelo"></span> <span id="recChip" class="rechip"></span></div>
         </div></div>
       </div>
       <section id="preview">
-        <div id="pvSwitch"><button data-pv="files" class="on">📁 Archivos</button><button data-pv="view">👁 Vista / Editor</button><button data-pv="live" id="pvLiveBtn">✍ En vivo</button><button data-pv="plan" id="pvPlanBtn">🧠 Plan</button><span class="grow"></span><button class="ib" id="pvClose" title="Cerrar panel">✕</button></div>
+        <div id="pvSwitch"><button data-pv="files" class="on">📁 Archivos</button><button data-pv="view">👁 Vista / Editor</button><button data-pv="live" id="pvLiveBtn">✍ En vivo</button><button data-pv="plan" id="pvPlanBtn">🧠 Plan</button><button data-pv="game" id="pvGameBtn" title="Estudio de juegos">🎮 Estudio</button><span class="grow"></span><button class="ib" id="pvClose" title="Cerrar panel">✕</button></div>
         <div id="pvFiles">
           <div id="ftBar"><span id="ftRoot" class="small"></span><span class="grow"></span>
             <button class="ib" id="ftNewFile" title="Nuevo archivo">＋📄</button><button class="ib" id="ftNewDir" title="Nueva carpeta">＋📁</button>
@@ -90,6 +109,7 @@
           <div class="small" style="padding:6px 10px">Arrastra archivos a otra carpeta para moverlos · clic derecho para más opciones · doble clic para abrir</div>
         </div>
         <div id="pvLive" style="display:none"><div id="liveHead" class="small">Aquí verás en vivo lo que la IA va escribiendo en los archivos.</div><pre id="liveBody"></pre></div>
+        <div id="pvGame" style="display:none"><div id="gameBody"></div></div>
         <div id="pvPlan" style="display:none"><div id="planBody" class="md"><div class="small">Aquí verás el plan mientras la IA lo diseña, y podrás editarlo antes de aprobarlo.</div></div></div>
         <div id="pvView" style="display:none">
           <div id="pvHead"><span id="pvName">Vista previa</span>
@@ -111,8 +131,9 @@
   <div class="cfghead"><h2>⚙ Ajustes</h2><label class="langsel">🌐 <select id="langSel" data-noi18n><option value="auto">Auto / Automático</option><option value="es">Español</option><option value="en">English</option></select></label></div>
   <div class="tabs" data-tabs="cfg">
     <button data-tab="t-prov" class="on">Proveedores y claves</button><button data-tab="t-fb">Respaldo</button><button data-tab="t-gen">Modelo y respuestas</button><button data-tab="t-agents">Agentes</button><button data-tab="t-local">IA local</button>
-    <button data-tab="t-tools">Herramientas</button><button data-tab="t-adv">Avanzado</button>
+    <button data-tab="t-rend">Rendimiento</button><button data-tab="t-tg">📱 Telegram y correo</button><button data-tab="t-avatar">🤖 Avatar</button><button data-tab="t-juegos">🎮 Juegos y NVIDIA</button><button data-tab="t-tools">Herramientas</button><button data-tab="t-adv">Avanzado</button>
   </div>
+  <div id="cfgAvisos" class="small"></div>
   <div class="tabpane on" id="t-prov">
     <div class="small">🔐 Tus API keys se guardan en una bóveda cifrada (<span id="vaultInfo"></span>), nunca en texto plano. Puedes poner varias claves por proveedor (una por línea): si una llega al límite, se usa la siguiente.</div>
     <div id="provList"></div>
@@ -163,7 +184,7 @@
     <datalist id="allModels"></datalist>
   </div>
   <div class="tabpane" id="t-local">
-    <div class="small">Optimiza Ollama y LM Studio para tu equipo. NoviQ calcula el contexto ideal según la VRAM, la RAM y el tamaño de cada modelo, y hace que la IA trabaje paso a paso para que no pierda el hilo.</div>
+    <div class="small">Optimiza Ollama y LM Studio para tu equipo. Noviq calcula el contexto ideal según la VRAM, la RAM y el tamaño de cada modelo, y hace que la IA trabaje paso a paso para que no pierda el hilo.</div>
     <div class="row">
       <div><label>VRAM de tu tarjeta (GB)</label><input id="l-vram" type="number" min="2" max="192"></div>
       <div><label>RAM del sistema (GB)</label><input id="l-ram" type="number" min="4" max="1024"></div>
@@ -181,6 +202,115 @@
     <div class="small" id="l-optout" style="white-space:pre-wrap;margin-top:6px"></div>
     <div class="small" style="margin-top:8px">Con 16 GB de VRAM y 32 GB de RAM te recomendamos: <b>qwen3-coder:30b</b> (el mejor para programar en local), <b>gpt-oss:20b</b> o <b>devstral</b> como alternativas, y <b>qwen3-vl:4b</b> como ayudante de visión.</div>
   </div>
+  <div class="tabpane" id="t-rend">
+    <div class="small">Noviq mide tu PC y usa solo la memoria <b>LIBRE</b>, dejando siempre una reserva para Windows y tus otros programas. Lo pesado (máquina virtual Linux, Docker, navegador de pruebas, programas en prueba, IA local, vista previa de juegos) trabaja dentro de ese presupuesto, y si la memoria baja, espera o se detiene en vez de colapsar la PC.</div>
+    <div id="rdPc" class="rdpc"><span class="spin"></span> Midiendo tu PC…</div>
+    <div class="btns" style="margin:8px 0"><button class="btn ok" id="rd-analizar" type="button">🔍 Analizar mi PC y recomendar</button><button class="btn" id="rd-test" type="button">🧪 Probar que los límites funcionan</button></div>
+    <div class="row">
+      <div><label>Perfil de recursos</label><select id="rd-perfil"><option value="auto">Automático: según la RAM libre (recomendado)</option><option value="basico">Básico: PC con poca memoria</option><option value="equilibrado">Equilibrado</option><option value="potente">Potente: PC con mucha memoria</option><option value="personalizado">Personalizado</option></select></div>
+      <div><label>Reserva para la PC (GB; 0 = automático, 20 % de la RAM)</label><input id="rd-reserva" type="number" min="0" max="64" step="0.5"></div>
+    </div>
+    <div id="rd-custom">
+      <div class="row">
+        <div><label>Máquina virtual: memoria (GB)</label><input id="rd-vmgb" type="number" min="1" max="128" step="0.5"></div>
+        <div><label>Máquina virtual: núcleos</label><input id="rd-vmcpu" type="number" min="1" max="64"></div>
+        <div><label>Máquina virtual: swap (GB)</label><input id="rd-swap" type="number" min="0" max="64" step="0.5"></div>
+      </div>
+      <div class="row">
+        <div><label>Programas en prueba: memoria máx. (MB)</label><input id="rd-procmb" type="number" min="256" max="131072" step="256"></div>
+        <div><label>Programas en prueba: CPU máx. (%)</label><input id="rd-cpu" type="number" min="10" max="100" step="5"></div>
+        <div><label>Navegadores de prueba a la vez</label><input id="rd-navs" type="number" min="1" max="4"></div>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="rd-nativo"> Ejecutar y probar NATIVO en Windows cuando se pueda (sin encender la máquina virtual: más rápido y liviano)</label>
+    <label class="chk"><input type="checkbox" id="rd-procs"> Limitar la memoria y la CPU de los programas que se ejecutan y prueban (como un contenedor, pero nativo)</label>
+    <label class="chk"><input type="checkbox" id="rd-wsl"> Limitar la máquina virtual Linux (WSL) y Docker (archivo .wslconfig de Windows)</label>
+    <div class="btns" style="margin:4px 0 10px"><button class="btn" id="rd-wsl-apply" type="button">🐧 Aplicar los límites a WSL ahora (reinicia Linux)</button></div>
+    <div class="row">
+      <div><label>Usar la tarjeta gráfica (GPU) en pruebas, contenedores e IA local</label><select id="rd-gpu"><option value="auto">Automático (si hay GPU)</option><option value="si">Sí</option><option value="no">No</option></select></div>
+      <div><label>Detener la vista previa si la ventana de Noviq pasa de (GB)</label><input id="rd-vistamax" type="number" min="0.5" max="32" step="0.5"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="rd-vista"> Ejecutar la vista previa de páginas y juegos automáticamente (solo si sobra memoria)</label>
+    <pre id="rd-out" class="small" style="white-space:pre-wrap;margin-top:8px"></pre>
+  </div>
+  <div class="tabpane" id="t-tg">
+    <h3>📱 Telegram: manda órdenes y aprueba desde el celular</h3>
+    <ol class="small tgpasos">
+      <li>En Telegram abre <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, escribe <code>/newbot</code>, ponle un nombre y copia el <b>token</b> que te da (se parece a <code>123456789:AA…</code>).</li>
+      <li>Pégalo aquí y pulsa <b>Guardar y conectar</b> (se guarda cifrado en tu PC).</li>
+      <li>Abre tu bot en Telegram y mándale el <b>código de 6 dígitos</b> que aparece abajo. Listo: solo tu chat podrá darle órdenes.</li>
+    </ol>
+    <div id="tgEstado" class="small"></div>
+    <div class="row"><div><label>Token del bot</label><input id="tg-token" type="password" autocomplete="off" spellcheck="false" placeholder="123456789:AA…"></div>
+      <div class="btns" style="flex:0 0 auto;align-self:flex-end"><button class="btn ok" id="tg-guardar" type="button">Guardar y conectar</button></div></div>
+    <div id="tgCodigo"></div>
+    <div id="tgAvisos" class="row2 wrap"></div>
+    <div class="btns" style="margin:8px 0"><button class="btn" id="tg-probar" type="button">📨 Enviar mensaje de prueba</button><button class="btn" id="tg-desv" type="button">Desvincular chat</button><label class="chk"><input type="checkbox" id="tg-activo"> Bot activo</label></div>
+    <h3 style="margin-top:14px">✉ Correo que usa la IA</h3>
+    <div id="coList"></div>
+    <div class="row"><div><label>Tipo</label><select id="co-tipo"><option value="gmail">Gmail</option><option value="hotmail">Hotmail / Outlook.com</option><option value="outlook_app">Outlook de escritorio</option><option value="smtp">Correo de empresa (SMTP)</option></select></div>
+      <div><label>Correo</label><input id="co-correo" autocomplete="off" placeholder="tu@gmail.com"></div><div><label>Nombre que se muestra</label><input id="co-nombre" placeholder="Gabriel"></div></div>
+    <div class="row" id="co-claveRow"><div><label id="co-claveLbl">Contraseña de aplicación</label><input id="co-clave" type="password" autocomplete="new-password" placeholder="(se guarda cifrada)"></div></div>
+    <div class="row" id="co-smtpRow" style="display:none"><div><label>Servidor SMTP</label><input id="co-smtp" placeholder="mail.empresa.com"></div><div><label>Puerto</label><input id="co-psmtp" type="number" value="587"></div>
+      <div><label>Seguridad</label><select id="co-seg"><option value="starttls">STARTTLS (587)</option><option value="ssl">SSL (465)</option><option value="ninguna">Ninguna</option></select></div>
+      <div><label>Servidor IMAP (leer)</label><input id="co-imap" placeholder="mail.empresa.com"></div><div><label>Usuario (si no es el correo)</label><input id="co-usuario"></div></div>
+    <div id="coAyuda" class="small"></div>
+    <div class="btns" style="margin:8px 0"><button class="btn ok" id="co-guardar" type="button">Guardar cuenta</button></div>
+    <pre id="coOut" class="small" style="white-space:pre-wrap"></pre>
+    <h3 style="margin-top:14px">🛡 Aprobaciones (aunque esté en ⚡ Todo automático)</h3>
+    <div class="small">Estas acciones SIEMPRE esperan tu ✅ en Noviq o en Telegram. Todo lo demás se aprueba solo según el modo de permisos.</div>
+    <div id="gdCats" class="row2 wrap"></div>
+    <div class="row2"><label class="small">Si no respondes en <input id="gd-espera" type="number" min="1" max="1440" style="width:70px"> minutos, se cancela.</label></div>
+    <div class="small" style="margin-top:8px">Permisos que ya diste con «Permitir siempre» (se recuerdan en todas las conversaciones):</div>
+    <div id="gdPermisos" class="small"></div>
+  </div>
+  <div class="tabpane" id="t-avatar">
+    <h3>🤖 Avatar: tu asistente independiente</h3>
+    <div class="small">Un robot flotante que queda encima de tus programas, con <b>su propia mente, memoria, voz, oído, herramientas y API</b>. Sus ajustes son suyos: los cambias aquí abajo, en su propia ventana (clic derecho en el robot → ⚙ Ajustes) o en su página <code>http://127.0.0.1:7777/ajustes</code>, y funciona aunque Noviq esté cerrado o desde otras aplicaciones. Con Noviq abierto se conecta solo: usa todas las herramientas y agentes de Noviq y te avisa de sus trabajos («¡Ya terminé!», «Necesito tu permiso…»). Llámalo por su nombre: <b>«Noviq, …»</b>.</div>
+    <div id="avEstado" class="small" style="margin-top:8px"></div>
+    <div class="btns" style="margin:8px 0">
+      <button class="btn ok" id="av-abrir" type="button">▶ Abrir avatar</button>
+      <button class="btn" id="av-probar" type="button">🔊 Probar</button>
+      <button class="btn" id="av-hablar" type="button">🎙 Háblale ahora</button>
+      <button class="btn" id="av-ventana" type="button">⚙ Sus ajustes en ventana</button>
+      <button class="btn" id="av-reparar" type="button">🛠 Reparar / descargar su motor</button>
+      <button class="btn" id="av-cerrar" type="button">⏹ Cerrar</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="avActivo"> Abrirlo con Noviq (y cuando Noviq trabaje)</label>
+    <div id="avCerrado" class="small" style="margin:10px 0;padding:12px;border:1px dashed var(--border);border-radius:10px">El avatar está cerrado. Ábrelo para ver y cambiar sus ajustes aquí (también puedes abrirlo con <b>noviq-avatar\iniciar.bat</b>).</div>
+    <div id="avMarco" style="display:none;margin-top:10px">
+      <iframe id="avIframe" title="Ajustes del avatar" src="about:blank" style="width:100%;height:78vh;min-height:520px;border:1px solid var(--border);border-radius:12px;background:#060d1a"></iframe>
+    </div>
+    <h3 style="margin-top:14px">🎙 Lo que Noviq le presta</h3>
+    <div class="small">Si el avatar usa el motor «Noviq» para oír o hablar, estos son los de Noviq (faster-whisper funciona sin internet; Piper son voces sin internet):</div>
+    <div id="avMotores" class="small"></div>
+    <div class="btns" style="margin:6px 0"><button class="btn" id="av-inst-local" type="button">⬇ Oído sin internet (faster-whisper)</button><button class="btn" id="av-inst-nvidia" type="button">⬇ Cliente de NVIDIA</button><button class="btn" id="av-inst-piper" type="button">⬇ Voces Piper (sin internet)</button></div>
+    <pre id="avOut" class="small" style="white-space:pre-wrap"></pre>
+  </div>
+  <div class="tabpane" id="t-juegos">
+    <h3>🎮 Estudio de juegos</h3>
+    <label>Detector de videojuegos (cuando escribes «juego», «game», «jogo», «jeu», «Spiel», «игра», «游戏»…)</label>
+    <select id="jg-detector"><option value="auto">Automático: abrir el Estudio de juegos al enviar</option><option value="preguntar">Solo sugerirlo</option><option value="apagado">Apagado</option></select>
+    <label class="chk"><input type="checkbox" id="jg-cc0"> Usar solo recursos de dominio público (CC0: sin obligación de dar crédito)</label>
+    <label class="chk"><input type="checkbox" id="jg-auto"> Al crear un juego, descargar solos los modelos 3D que mejor encajan con la idea</label>
+    <h3 style="margin-top:14px">📁 Carpeta de modelos 3D</h3>
+    <div class="small">Pon aquí tus paquetes de modelos (.glb / .gltf, o .zip con ellos). El Estudio los usa primero, según el juego que quieras hacer. Vacío = la carpeta estándar (docs\3D dentro de Noviq).</div>
+    <div class="row"><div><input id="jg-carpeta3d" autocomplete="off" spellcheck="false" placeholder="(carpeta estándar)"></div>
+      <div class="btns" style="flex:0 0 auto"><button class="btn" id="jg-carpeta3d-elegir" type="button">📁 Elegir…</button><button class="btn" id="jg-carpeta3d-abrir" type="button">📂 Abrir</button></div></div>
+    <h3 style="margin-top:14px">🧱 Galerías 3D (opcional)</h3>
+    <div class="small">Poly Haven y ambientCG funcionan sin clave. Para más modelos pega tus claves gratuitas (se guardan cifradas):</div>
+    <div class="row">
+      <div><label>Sketchfab API token (para descargar) — <a href="https://sketchfab.com/settings/password" target="_blank">obtener</a></label><input id="jg-sketchfab" autocomplete="off" spellcheck="false" placeholder="(opcional)"></div>
+      <div><label>Poly Pizza API key (low poly) — <a href="https://poly.pizza/settings/api" target="_blank">obtener</a></label><input id="jg-polypizza" autocomplete="off" spellcheck="false" placeholder="(opcional)"></div>
+    </div>
+    <div class="btns" style="margin:8px 0"><button class="btn" id="jg-probar" type="button">🧪 Probar galerías</button><button class="btn" id="jg-gpu" type="button">🟩 Analizar mi GPU NVIDIA</button></div>
+    <pre id="jg-out" class="small" style="white-space:pre-wrap"></pre>
+    <h3 style="margin-top:14px">✍ Taller de prompts</h3>
+    <label class="chk"><input type="checkbox" id="pt-barra"> Mostrar la barra de herramientas de prompts (corregir, profesional, plantillas…) sobre la caja de mensaje</label>
+    <label class="chk"><input type="checkbox" id="pt-local"> Avisar mientras escribo cuántas faltas típicas hay (corrección local, sin internet)</label>
+    <label>IA para las tareas rápidas (corregir y mejorar prompts, diseñar juegos) — vacío = la más rápida del 🧪 banco de pruebas</label>
+    <input id="pt-modelo" list="allModels" placeholder="automático">
+  </div>
   <div class="tabpane" id="t-tools">
     <label>Modo de herramientas</label>
     <select id="c-toolmode">
@@ -192,6 +322,7 @@
     <label>Máximo de pasos autónomos por mensaje</label><input id="c-steps" type="number" min="1" max="200">
     <label>Carpeta de proyectos (vacío = Documentos\Noviq_Proyectos)</label><input id="c-projdir">
     <div class="small" id="c-projroot"></div>
+    <label class="chk"><input type="checkbox" id="en-auto"> 📦 Al terminar un trabajo con las pruebas OK, guardar un ZIP de la versión estable en la carpeta <code>entregas</code> del proyecto (se guardan las últimas 10)</label>
     <label>Herramientas disponibles</label><div id="toolList" class="small" style="max-height:220px;overflow:auto"></div>
   </div>
   <div class="tabpane" id="t-adv">
@@ -223,7 +354,8 @@
   <h2 id="pe-title">Proyecto</h2>
   <label>Descripción</label><input id="pe-desc">
   <label>Instrucciones para la IA en este proyecto</label><textarea id="pe-inst" rows="6"></textarea>
-  <div class="foot"><button class="btn" id="pe-open">📁 Abrir carpeta</button><span class="grow"></span><button class="btn" data-close>Cancelar</button><button class="btn ok" id="pe-ok">Guardar</button></div>
+  <div class="small" id="pe-zipout" style="margin-top:8px"></div>
+  <div class="foot"><button class="btn" id="pe-open">📁 Abrir carpeta</button><button class="btn" id="pe-zip" title="ZIP limpio de la versión actual en la carpeta entregas del proyecto">📦 Crear ZIP de entrega</button><span class="grow"></span><button class="btn" data-close>Cancelar</button><button class="btn ok" id="pe-ok">Guardar</button></div>
 </div></div>
 
 <!-- Proyectos -->
@@ -232,7 +364,7 @@
   <div id="projsBar">
     <input id="pjSearch" placeholder="Buscar por nombre, tipo o carpeta…">
     <select id="pjSort"><option value="recientes">Más recientes</option><option value="nombre">Nombre A-Z</option><option value="tipo">Tipo</option></select>
-    <select id="pjFilter"><option value="">Todos</option><option value="propios">Creados en NoviQ</option><option value="externos">Existentes en mi PC</option><option value="trabajando">Trabajando ahora</option></select>
+    <select id="pjFilter"><option value="">Todos</option><option value="propios">Creados en Noviq</option><option value="externos">Existentes en mi PC</option><option value="trabajando">Trabajando ahora</option></select>
     <select id="pjView"><option value="grid">▦ Tarjetas</option><option value="list">☰ Lista</option></select>
     <button class="btn" id="pjImport">📂 Abrir proyecto existente</button>
     <button class="btn ok" id="pjNew">＋ Nuevo proyecto</button>
@@ -243,11 +375,11 @@
 <!-- Importar proyecto existente -->
 <div class="modal" id="importModal"><div class="card">
   <h2>📂 Abrir un proyecto que ya tienes</h2>
-  <div class="small">Elige la carpeta raíz del proyecto. NoviQ detecta su tipo y la IA podrá leerlo, revisarlo, probarlo y corregirlo como si lo hubiera creado aquí. Tus archivos no se mueven.</div>
+  <div class="small">Elige la carpeta raíz del proyecto. Noviq detecta su tipo y la IA podrá leerlo, revisarlo, probarlo y corregirlo como si lo hubiera creado aquí. Tus archivos no se mueven.</div>
   <label>Carpeta raíz</label>
   <div class="row"><div style="flex:4"><input id="imPath" placeholder="C:\Users\tu_usuario\Proyectos\mi_app"></div>
     <div style="flex:1"><button class="btn" id="imPick" style="width:100%">Elegir…</button></div></div>
-  <label>Nombre en NoviQ (opcional)</label><input id="imName" placeholder="(el nombre de la carpeta)">
+  <label>Nombre en Noviq (opcional)</label><input id="imName" placeholder="(el nombre de la carpeta)">
   <div class="small" id="imOut" style="margin-top:8px"></div>
   <div class="foot"><button class="btn" data-close>Cancelar</button><button class="btn ok" id="imOk">Abrir proyecto</button></div>
 </div></div>
@@ -255,10 +387,10 @@
 <!-- IA gratis -->
 <div class="modal" id="gratisModal"><div class="card wide">
   <h2>🎁 IA gratis</h2>
-  <div class="small">Estos proveedores dan acceso <b>gratis y legal</b> a modelos potentes con su plan gratuito oficial. Crea la cuenta en su web (1 minuto, casi todos sin tarjeta), pega la clave y listo: NoviQ la guarda cifrada y la prueba. Si activas varios, cuando uno llega a su límite diario el <b>respaldo automático</b> continúa con otro sin perder el trabajo.</div>
+  <div class="small">Estos proveedores dan acceso <b>gratis y legal</b> a modelos potentes con su plan gratuito oficial. Crea la cuenta en su web (1 minuto, casi todos sin tarjeta), pega la clave y listo: Noviq la guarda cifrada y la prueba. Si activas varios, cuando uno llega a su límite diario el <b>respaldo automático</b> continúa con otro sin perder el trabajo.</div>
   <div class="vgbox">
     <h3>🧠 Modo vanguardia</h3>
-    <div class="small">NoviQ usa siempre los modelos <b>gratuitos más inteligentes</b> (los que más razonan) que tengas conectados. Antes de construir un programa, el <b>cerebro</b> (el más inteligente) diseña el plan completo con razonamiento alto y luego la IA de trabajo lo ejecuta paso a paso. Si uno falla o se agota, sigue el siguiente sin perder nada.</div>
+    <div class="small">Noviq usa siempre los modelos <b>gratuitos más inteligentes</b> (los que más razonan) que tengas conectados. Antes de construir un programa, el <b>cerebro</b> (el más inteligente) diseña el plan completo con razonamiento alto y luego la IA de trabajo lo ejecuta paso a paso. Si uno falla o se agota, sigue el siguiente sin perder nada.</div>
     <div class="row2"><button class="btn ok" id="vgApply2">🧠 Elegir y probar los mejores ahora</button>
       <label class="chk"><input type="checkbox" id="vgPlan"> El cerebro planifica antes de construir</label>
       <label class="chk"><input type="checkbox" id="vgAuto"> Respaldo automático con los mejores gratis</label></div>
@@ -266,45 +398,107 @@
     <div id="vgOut" class="small"></div>
   </div>
   <div id="gratisGrid"></div>
-  <div class="small" style="margin-top:8px">Los límites gratuitos los fija cada proveedor y pueden cambiar. NoviQ no usa las webs de chat de pago (ChatGPT, Claude.ai…) porque va contra sus condiciones y podrían bloquear tus cuentas.</div>
+  <div class="small" style="margin-top:8px">Los límites gratuitos los fija cada proveedor y pueden cambiar. Noviq no usa las webs de chat de pago (ChatGPT, Claude.ai…) porque va contra sus condiciones y podrían bloquear tus cuentas.</div>
   <div class="foot"><button class="btn" data-close>Cerrar</button></div>
 </div></div>
 
 <!-- PC y tareas programadas -->
 <div class="modal" id="pcModal"><div class="card wide">
-  <h2>🖥 Control del PC y tareas programadas</h2>
-  <div class="pcgrid">
-    <div class="gcard">
-      <h3>🖱 Control del PC</h3>
-      <div class="gt">La IA puede abrir programas, hacer clic, escribir y usar atajos en tu escritorio con el <b>mismo método que usa en el navegador</b>: lee la ventana (cada botón/campo tiene una referencia), actúa y verifica. Pídeselo en el chat, ej.: «abre Excel y crea una tabla de gastos». Por seguridad te pide permiso antes de actuar (salvo en ⚡ Todo automático).</div>
-      <div id="pcState" class="small"></div>
-      <div class="row2"><button class="btn" id="pcTest">🩺 Probar control integrado</button><button class="btn ok" id="pcMcp">⬆ Activar Windows-MCP (más completo)</button></div>
-      <div id="pcOut" class="small"></div>
-      <label class="chk"><input type="checkbox" id="pcStartup"> Iniciar NoviQ con Windows (para que las tareas programadas siempre se ejecuten)</label>
+  <h2>🖥 PC, agenda y MCP</h2>
+  <div class="tabs" data-tabs="pc">
+    <button data-tab="pc-agenda" class="on">📅 Agenda</button><button data-tab="pc-control">🖱 Control del PC</button><button data-tab="pc-mcp">🔌 MCP con un clic</button>
+  </div>
+  <div class="tabpane on" id="pc-agenda">
+    <div class="small">Lo que la IA hará sola los próximos 7 días. Pídeselo en el chat o por Telegram («cada lunes, miércoles y jueves a las 8 revisa mis correos») o créala aquí. El resultado de cada ejecución queda en las notas y te llega por Telegram.</div>
+    <div id="agSemana" class="agsem"></div>
+    <div class="pcgrid">
+      <div class="gcard">
+        <h3>⏰ Nueva tarea programada</h3>
+        <input id="tpName" placeholder="Nombre (ej. Informe diario de ventas)">
+        <textarea id="tpText" rows="3" placeholder="Qué debe hacer la IA (ej. Revisa la carpeta Descargas y ordénala por tipo; luego hazme un resumen)"></textarea>
+        <input id="tpCuando" placeholder="Cuándo, en palabras: «lunes, miércoles y jueves a las 9», «cada 2 horas», «mañana a las 10»">
+        <div id="tpCuandoOut" class="small"></div>
+        <div class="row2"><select id="tpTipo"><option value="diario">Cada día / ciertos días</option><option value="una_vez">Una sola vez</option><option value="intervalo">Cada N minutos</option></select>
+          <input id="tpHora" type="time" value="08:00"><input id="tpFecha" type="datetime-local" style="display:none"><input id="tpCada" type="number" min="5" value="60" style="display:none;width:90px"></div>
+        <div class="row2" id="tpDias"></div>
+        <div class="row2"><select id="tpProj"></select><label class="chk"><input type="checkbox" id="tpAuto" checked> Sin pedir permisos (lo sensible igual se aprueba por Telegram)</label></div>
+        <button class="btn ok" id="tpSave">＋ Programar</button><div id="tpOut" class="small"></div>
+      </div>
+      <div class="gcard">
+        <h3>📝 Notas importantes</h3>
+        <div class="small">Resultados de las tareas, aprobaciones y lo que la IA anota. Las marcadas ⭐ te llegan por Telegram.</div>
+        <div class="row2"><input id="agNota" placeholder="Escribe una nota…"><label class="chk"><input type="checkbox" id="agImp"> ⭐</label><button class="btn" id="agNotaAdd">＋</button></div>
+        <div id="agNotas" class="agnotas"></div>
+      </div>
     </div>
-    <div class="gcard">
-      <h3>⏰ Nueva tarea programada</h3>
-      <input id="tpName" placeholder="Nombre (ej. Informe diario de ventas)">
-      <textarea id="tpText" rows="3" placeholder="Qué debe hacer la IA (ej. Revisa la carpeta Descargas y ordénala por tipo; luego hazme un resumen)"></textarea>
-      <div class="row2"><select id="tpTipo"><option value="diario">Cada día / ciertos días</option><option value="una_vez">Una sola vez</option><option value="intervalo">Cada N minutos</option></select>
-        <input id="tpHora" type="time" value="08:00"><input id="tpFecha" type="datetime-local" style="display:none"><input id="tpCada" type="number" min="5" value="60" style="display:none;width:90px"></div>
-      <div class="row2" id="tpDias"></div>
-      <div class="row2"><select id="tpProj"></select><label class="chk"><input type="checkbox" id="tpAuto" checked> Sin pedir permisos</label></div>
-      <button class="btn ok" id="tpSave">＋ Programar</button><div id="tpOut" class="small"></div>
+    <h3 style="margin:14px 0 6px">Tareas programadas</h3>
+    <div id="tpList"></div>
+  </div>
+  <div class="tabpane" id="pc-control">
+    <div class="pcgrid">
+      <div class="gcard">
+        <h3>🖱 Control del PC</h3>
+        <div class="gt">La IA maneja tu escritorio gastando pocos tokens: primero LEE como texto (controles de la ventana con UI Automation y el OCR que trae Windows), hace clic por nombre o por el texto que ve, y solo si hace falta mira una captura reducida (como Claude Desktop). Pídeselo en el chat o por Telegram. Enviar, borrar, instalar y pagar siempre te piden aprobación.</div>
+        <div id="pcState" class="small"></div>
+        <div class="row2"><button class="btn" id="pcTest">🩺 Probar control integrado</button><button class="btn" id="pcOcr">👁 Probar lectura de pantalla (OCR)</button></div>
+        <div class="row2"><button class="btn ok" id="pcMcp">⬆ Activar Windows-MCP (más completo)</button></div>
+        <div id="pcOut" class="small"></div>
+        <label class="chk"><input type="checkbox" id="pcStartup"> Iniciar Noviq con Windows (para que las tareas programadas y Telegram siempre funcionen)</label>
+      </div>
+      <div class="gcard">
+        <h3>🪪 Tu Windows (lo que ya sabe la IA)</h3>
+        <div class="gt">Usuario, carpetas reales (aunque OneDrive las mueva), navegadores, Office y programas del menú Inicio. Así la IA usa tus rutas y abre los programas por su nombre sin buscar ni hacer capturas.</div>
+        <pre id="pcPerfil" class="small" style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre>
+        <div class="row2"><button class="btn" id="pcPerfilR">🔄 Volver a averiguar</button>
+          <label class="small" style="display:flex;gap:6px;align-items:center">Navegador del agente <select id="pcNav"><option value="auto">Automático (Playwright)</option><option value="real">Tu Chrome abierto (con tus sesiones)</option><option value="automatico">Siempre el automático</option></select></label></div>
+      </div>
     </div>
   </div>
-  <h3 style="margin:14px 0 6px">Tareas programadas</h3>
-  <div id="tpList"></div>
+  <div class="tabpane" id="pc-mcp">
+    <div class="small">Los servidores MCP más usados, listos con un clic (se instala Node.js o uv si falta). Los de «agente» no se mandan en cada mensaje: la IA los usa con un subagente, así gasta menos tokens.</div>
+    <div id="mcpReq" class="small" style="margin:6px 0"></div>
+    <div class="row2"><button class="btn ok" id="mcpRec">⚡ Conectar todo lo recomendado</button><span id="mcpCatOut" class="small"></span></div>
+    <div id="mcpCat" class="mcpcat"></div>
+  </div>
   <div class="foot"><button class="btn" data-close>Cerrar</button></div>
 </div></div>
 
 <!-- Aprendizaje -->
 <div class="modal" id="aprModal"><div class="card wide">
   <h2>🧬 Aprendizaje de los agentes</h2>
-  <div class="small">Los agentes de NoviQ aprenden solos: cuando algo falla y luego la IA lo arregla, se guarda <b>qué error era y qué lo solucionó</b>. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA) NoviQ le pasa la solución que ya funcionó. También aprende qué paquete instalar para cada módulo y qué modelos no están operativos.</div>
+  <div class="small">Los agentes de Noviq aprenden solos: cuando algo falla y luego la IA lo arregla, se guarda <b>qué error era y qué lo solucionó</b>. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA) Noviq le pasa la solución que ya funcionó. También aprende qué paquete instalar para cada módulo y qué modelos no están operativos.</div>
   <div class="row2" style="margin:10px 0"><label class="chk"><input type="checkbox" id="aprOn"> Aprendizaje activo</label><span id="aprStats" class="small"></span><span class="grow"></span><button class="btn" id="aprClear">🗑 Olvidar todo lo aprendido</button></div>
   <div id="aprHealth"></div>
   <div id="aprList"></div>
+  <div class="foot"><button class="btn" data-close>Cerrar</button></div>
+</div></div>
+
+<!-- Ranking de IAs (agente evaluador) y director -->
+<div class="modal" id="rankModal"><div class="card wide">
+  <h2>🏆 Ranking de IAs</h2>
+  <div class="small" id="rkDesc" data-noi18n></div>
+  <div class="row2" style="margin:10px 0;gap:14px;flex-wrap:wrap">
+    <label class="chk"><input type="checkbox" id="rkOn"> Evaluador activo</label>
+    <label class="small">Al empezar un trabajo: <select id="rkIni"><option value="si_falla">usar mi IA, salvo que esté fallando o rinda mucho peor</option><option value="siempre">usar siempre la mejor del ranking</option><option value="nunca">usar siempre mi IA</option></select></label>
+  </div>
+  <div class="row2" style="margin:0 0 8px;gap:14px;flex-wrap:wrap">
+    <label class="chk"><input type="checkbox" id="dirOn"> 🧭 Director: continuar solo los trabajos que quedan a medias</label>
+    <label class="small">Máx. continuaciones por pedido <input type="number" id="dirMax" min="0" max="20" style="width:60px"></label>
+    <span class="grow"></span><button class="btn" id="rkClear">🗑 Borrar estadísticas</button>
+  </div>
+  <div class="bench">
+    <div class="row2" style="gap:10px;flex-wrap:wrap;align-items:center"><h3 style="margin:0">🧪 Banco de pruebas</h3>
+      <span class="small">Preguntas y respuestas reales con tus claves: obedecer, cálculo, código (se ejecuta), usar una herramienta y explicar. Mide aciertos, tiempo y respuestas vacías, y actualiza el ranking.</span>
+      <span class="grow"></span><button class="btn ok" id="bnRun">▶ Probar mi IA y el respaldo</button></div>
+    <div id="bnOut" class="small"></div>
+  </div>
+  <div class="rk-tabs" id="rkTabs"></div>
+  <div id="rkList"></div>
+  <h3>🪙 Tokens: lo que gasta y lo que le queda a cada proveedor</h3>
+  <div class="small">Se cuenta cada respuesta (lo que informa el servidor o, si no lo dice, una estimación). Los límites que mandan los proveedores y los «429 por día» se leen solos: una IA sin cuota baja al final de la lista hasta que se renueve. Si tu plan tiene un tope diario, ponlo aquí.</div>
+  <div id="rkTok"></div>
+  <h3>📜 Últimos eventos</h3>
+  <div id="rkEv"></div>
   <div class="foot"><button class="btn" data-close>Cerrar</button></div>
 </div></div>
 
@@ -322,7 +516,7 @@
   <div class="small">Mismo formato que Claude Desktop (<code>claude_desktop_config.json</code>). Cada servidor añade herramientas nuevas a la IA. Pon <code>"disabled": true</code> para desactivar uno.</div>
   <div class="prov"><h3>🌐 Control del navegador</h3>
     <div class="small">Permite que la IA abra páginas, haga clic, llene formularios y lea datos en Chrome o Edge (Playwright MCP).</div>
-    <div class="btns"><button class="btn ok" id="presetChrome">Activar Google Chrome</button><button class="btn ok" id="presetEdge">Activar Microsoft Edge</button></div>
+    <div class="btns"><button class="btn ok" id="presetChrome">Activar Google Chrome</button><button class="btn ok" id="presetEdge">Activar Microsoft Edge</button><button class="btn" id="mcpVerCat">📦 Más MCP con un clic (catálogo)</button></div>
     <div class="small" id="mcpSys" style="margin-top:6px"></div></div>
   <div id="mcpStatus" style="margin:10px 0"></div>
   <textarea id="mcpText" rows="16" spellcheck="false"></textarea>
@@ -334,6 +528,9 @@
 <div id="ctxMenu"></div>
 <div id="drop">Suelta aquí imágenes o archivos</div>
 <script src="/static/app.js"></script>
+<script src="/static/estudio.js"></script>
+<script src="/static/windows.js"></script>
+<script src="/static/avatar.js"></script>
 <div id="toasts"></div>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* NoviQ 4.0 — interfaz */
+/* Noviq 4.0 — interfaz */
 "use strict";
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -20,6 +20,17 @@ function api(url, opts = {}) {
 const jget = u => api(u).then(r => r.json());
 const jpost = (u, b) => api(u, {method: "POST", body: JSON.stringify(b || {})}).then(async r => {
   try { return await r.json(); } catch (e) { return {ok: false, error: r.status === 403 ? "Solo se puede modificar dentro de tus proyectos" : r.status + " " + r.statusText}; } });
+/* Guarda ajustes y SOLO reemplaza CFG si el servidor devolvió una configuración válida. Antes, si el guardado fallaba,
+   CFG quedaba como {ok:false,…}: la ventana de ajustes se rompía y los siguientes guardados mandaban datos vacíos. */
+async function saveCfg(patch, {silencioso = false} = {}) {
+  let r;
+  try { r = await jpost("/api/config", patch); } catch (e) { r = {ok: false, error: String(e)}; }
+  if (r && r.providers) { CFG = r; return r; }
+  if (!silencioso) toast("✖ No se guardaron los ajustes: " + ((r && r.error) || "error desconocido"));
+  return null;
+}
+const numOr = (v, def) => { const x = parseFloat(v); return Number.isFinite(x) ? x : def; };  // 0 es un valor válido
+const intOr = (v, def) => { const x = parseInt(v, 10); return Number.isFinite(x) ? x : def; };
 const fileUrl = (p, dl) => `/f?p=${encodeURIComponent(p)}&t=${TOKEN}${dl ? "&d=1" : ""}`;
 const rawUrl = p => `/raw/${TOKEN}/` + p.replace(/\\/g, "/").replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/");
 const openInFolder = p => jpost("/api/abrir", {ruta: p});
@@ -68,9 +79,9 @@ const thread = $("#thread"), msgsEl = $("#msgs");
 function scrollEnd(force) { const near = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 200; if (force || near) msgsEl.scrollTop = msgsEl.scrollHeight; }
 function userMsg(it) {
   const d = document.createElement("div"); d.className = "msg user";
-  d.innerHTML = `<div class="av">${window.NOVIQ_LANG === "en" ? "You" : "Tú"}</div><div class="body"></div>`;
+  d.innerHTML = `<div class="av">Tú</div><div class="body"></div>`;
   const b = d.querySelector(".body");
-  if (it.images?.length) { const u = document.createElement("div"); u.className = "uimgs"; it.images.forEach(src => { const i = new Image(); i.src = src; i.onclick = () => lightbox(src); u.append(i); }); b.append(u); }
+  if (it.images?.length) { const u = document.createElement("div"); u.className = "uimgs"; it.images.forEach(src => { const i = new Image(); i.loading = "lazy"; i.decoding = "async"; i.src = src; i.onclick = () => lightbox(src); u.append(i); }); b.append(u); }
   b.append(document.createTextNode(it.text || ""));
   if (it.files?.length) { const f = document.createElement("div"); f.className = "files"; f.textContent = "📎 " + it.files.map(x => x.split(/[\\/]/).pop()).join(", "); b.append(f); }
   thread.append(d); return d;
@@ -95,7 +106,7 @@ function fileCard(f, live) {
   d.querySelector("[data-a=pv]").onclick = () => openPreview(f.path);
   d.querySelector("[data-a=fo]").onclick = () => openInFolder(f.path);
   if (live) {
-    if (PV.current === f.path) loadPreview(f.path);
+    if (PV.current === f.path && (!["html", "htm"].includes(extOf(f.name)) || HP.running)) loadPreview(f.path);
     else if (["html", "htm", "svg"].includes(extOf(f.name)) && f.action !== "editado" && !Renderer.autoPreviewed) { Renderer.autoPreviewed = true; openPreview(f.path); }
   }
   return d;
@@ -103,7 +114,7 @@ function fileCard(f, live) {
 function imageCard(f) {
   const d = document.createElement("div"); d.className = "genimg";
   const u = fileUrl(f.path);
-  d.innerHTML = `<img src="${u}" alt=""><div class="cap">${esc(f.name)} · <a href="${fileUrl(f.path, 1)}">Descargar</a> · <a href="#" data-a="fo">Mostrar en carpeta</a></div>`;
+  d.innerHTML = `<img src="${u}" alt="" loading="lazy" decoding="async"><div class="cap">${esc(f.name)} · <a href="${fileUrl(f.path, 1)}">Descargar</a> · <a href="#" data-a="fo">Mostrar en carpeta</a></div>`;
   d.querySelector("img").onclick = () => lightbox(u);
   d.querySelector("img").onload = () => scrollEnd();
   d.querySelector("[data-a=fo]").onclick = e => { e.preventDefault(); openInFolder(f.path); };
@@ -122,7 +133,7 @@ function argSummary(name, a) {
     (a.tareas ? a.tareas.length + " tareas" : "") || JSON.stringify(a).slice(0, 140);
 }
 function toolCard(p) {
-  const d = document.createElement("details"); d.className = "tool";
+  const d = document.createElement("details"); d.className = "tool"; d.dataset.name = p.name || "";
   const a = p.args || {};
   const code = a.comando || a.codigo || "";
   let extra = "";
@@ -137,6 +148,8 @@ function finishTool(card, result) {
   const bad = /^(ERROR|El usuario RECHAZÓ|Cancelado)/.test(result) || /^Código de salida: [1-9]/.test(result) || /^TIEMPO AGOTADO/.test(result);
   st.innerHTML = bad ? "⚠ revisar" : "✔";
   st.style.color = bad ? "var(--warn)" : "var(--accent2)";
+  card.dataset.done = "1"; if (bad) card.dataset.bad = "1";
+  const g = card.closest("details.tgroup"); if (g) tgSummary(g);
   const live = card.querySelector(".live"); if (live) live.style.display = "none";
   const r = card.querySelector(".res"); r.style.display = "block"; r.textContent = result;
   if (bad) card.open = false;
@@ -145,7 +158,7 @@ function confirmCard(p) {
   const d = document.createElement("div"); d.className = "confirm";
   const a = p.args || {};
   const body = a.comando || a.codigo || (a.contenido != null ? `${a.ruta}\n\n${a.contenido.slice(0, 3000)}` : JSON.stringify(a, null, 2));
-  const rz = p.riesgo ? `<span class="badge ${p.riesgo === "alto" ? "r" : p.riesgo === "medio" ? "c" : "g"}" title="Evaluado por ${p.fuente_riesgo === "jev" ? "Jev (TypeSafe)" : "las reglas de seguridad de NoviQ"}">riesgo ${esc(p.riesgo)}</span>` : "";
+  const rz = p.riesgo ? `<span class="badge ${p.riesgo === "alto" ? "r" : p.riesgo === "medio" ? "c" : "g"}" title="Evaluado por ${p.fuente_riesgo === "jev" ? "Jev (TypeSafe)" : "las reglas de seguridad de Noviq"}">riesgo ${esc(p.riesgo)}</span>` : "";
   if (p.riesgo === "alto") d.classList.add("alto");
   d.innerHTML = `<b>⚠ La IA quiere usar: ${esc(p.label)}</b> ${rz}${p.riesgo === "alto" ? `<div class="bad-t small">Esta acción puede borrar datos o cambiar el sistema: se pregunta siempre, aunque esté en modo automático.</div>` : ""}<div class="small" style="margin:4px 0">${esc(a.explicacion || argSummary(p.name, a))}</div><pre>${esc(body)}</pre>
     <div class="btns"><button class="btn ok" data-a="1">✔ Permitir</button>${p.riesgo === "alto" ? "" : `<button class="btn" data-a="2">✔ Permitir siempre en esta conversación</button>`}<button class="btn no" data-a="0">✖ Rechazar</button></div>`;
@@ -183,18 +196,58 @@ function lightbox(src) { const l = $("#lightbox"); l.querySelector("img").src = 
 $("#lightbox").onclick = () => $("#lightbox").style.display = "none";
 
 /* ───────────── Renderizador de respuestas (en vivo e historial) ───────────── */
+/* Herramientas agrupadas como en Claude: «Se usaron 14 herramientas · leyó 12 · editó 2…» (plegable) */
+const TG_KIND = {leer_archivo: "leer", listar_directorio: "buscar", buscar_archivos: "buscar", buscar_en_archivos: "buscar", mapa_codigo: "buscar",
+  localizar_error: "buscar", escribir_archivo: "editar", editar_archivo: "editar", deshacer_cambio: "editar", mover_o_copiar: "editar", eliminar: "editar",
+  ejecutar_powershell: "ejecutar", ejecutar_python: "ejecutar", ejecutar_linux: "ejecutar", contenedor: "ejecutar", procesos: "ejecutar",
+  instalar_herramienta: "ejecutar", entorno: "ejecutar", probar_proyecto: "probar", probar_web: "probar", diagnosticar: "probar",
+  buscar_en_internet: "web", leer_pagina_web: "web", peticion_http: "web", descargar_archivo: "web", actualizar_tareas: "tareas", marcar_tarea: "tareas"};
+function tgSummary(g) {
+  const cards = [...g.querySelectorAll(":scope > .tgb > details.tool")];
+  const c = {}; let err = 0, run = 0;
+  cards.forEach(x => { const k = TG_KIND[x.dataset.name] || "otra"; c[k] = (c[k] || 0) + 1; if (x.dataset.bad) err++; if (!x.dataset.done) run++; });
+  const s = (n, a, b) => n === 1 ? a : b;
+  const parts = [`${s(cards.length, "Se usó 1 herramienta", `Se usaron ${cards.length} herramientas`)}`];
+  if (c.leer) parts.push(`leyó ${c.leer} ${s(c.leer, "archivo", "archivos")}`);
+  if (c.buscar) parts.push(`${c.buscar} ${s(c.buscar, "búsqueda", "búsquedas")}`);
+  if (c.editar) parts.push(`editó ${c.editar} ${s(c.editar, "archivo", "archivos")}`);
+  if (c.ejecutar) parts.push(`ejecutó ${c.ejecutar} ${s(c.ejecutar, "comando", "comandos")}`);
+  if (c.probar) parts.push(`${c.probar} ${s(c.probar, "prueba", "pruebas")}`);
+  if (c.web) parts.push(`${c.web} en internet`);
+  if (c.tareas) parts.push("tareas actualizadas");
+  if (err) parts.push(`⚠ ${err} con error`);
+  g.querySelector(":scope > summary .tgt").textContent = parts.join(" · ");
+  g.querySelector(":scope > summary .tgs").innerHTML = run ? `<span class="spin"></span>` : "";
+}
 class Renderer {
   constructor(body, live) {
     this.body = body; this.live = live; this.tools = {}; this.pending = false;
-    this.status = null;
+    this.status = null; this.group = null;
     if (live) { this.status = document.createElement("div"); this.status.className = "small"; this.setStatus("Pensando…"); body.append(this.status); }
     this.seg();
   }
   seg() { this.mdEl = null; this.text = ""; this.thinkEl = null; this.thinkText = ""; }
-  place(el) { this.status ? this.body.insertBefore(el, this.status) : this.body.append(el); }
+  closeGroup() {
+    const g = this.group; if (!g) return; this.group = null;
+    tgSummary(g); if (!g.querySelector("details.tool[data-bad]")) g.open = false;
+  }
+  place(el, keepGroup) {
+    if (!keepGroup) this.closeGroup();
+    const tgt = keepGroup && this.group ? this.group.querySelector(".tgb") : null;
+    if (tgt) { tgt.append(el); return; }
+    this.status ? this.body.insertBefore(el, this.status) : this.body.append(el);
+  }
+  placeTool(card) {
+    if (!this.group) {
+      const g = document.createElement("details"); g.className = "tgroup"; g.open = !!this.live;
+      g.innerHTML = `<summary><span class="tgt"></span><span class="tgs"></span></summary><div class="tgb"></div>`;
+      this.place(g); this.group = g;
+    }
+    this.group.querySelector(".tgb").append(card); tgSummary(this.group);
+  }
   setStatus(t, spin = true) { if (this.status) this.status.innerHTML = (spin ? `<span class="spin"></span> ` : "") + esc(t); }
   reasoning(t) {
-    if (!this.thinkEl) { this.thinkEl = document.createElement("details"); this.thinkEl.className = "think"; this.thinkEl.innerHTML = `<summary>💭 Razonando…</summary><div class="t"></div>`; this.place(this.thinkEl); }
+    if (!this.thinkEl) { this.thinkEl = document.createElement("details"); this.thinkEl.className = "think"; this.thinkEl.innerHTML = `<summary>💭 Razonando…</summary><div class="t"></div>`; this.place(this.thinkEl, true); }
     this.thinkText += t; this.thinkEl.querySelector(".t").textContent = this.thinkText; this.setStatus("Razonando…"); scrollEnd();
   }
   token(t) {
@@ -210,7 +263,7 @@ class Renderer {
   assistant(it) { if (it.reasoning) { this.reasoning(it.reasoning); this.thinkEl.querySelector("summary").textContent = "💭 Razonamiento"; } if (it.text) { this.token(it.text); this.render(true); } this.seg(); }
   resetSeg() { if (this.mdEl) this.mdEl.remove(); if (this.thinkEl) this.thinkEl.remove(); this.seg(); }
   brk() { this.render(true); if (this.thinkEl) this.thinkEl.querySelector("summary").textContent = "💭 Razonamiento"; this.seg(); }
-  toolStart(p) { const c = toolCard(p); this.tools[p.id] = c; this.place(c); this.setStatus(p.label + "…"); scrollEnd(); }
+  toolStart(p) { const c = toolCard(p); this.tools[p.id] = c; this.placeTool(c); this.setStatus(p.label + "…"); scrollEnd(); }
   toolOutput(p) { const c = this.tools[p.id]; if (!c) return; const l = c.querySelector(".live"); l.style.display = "block"; l.textContent += p.text; l.scrollTop = l.scrollHeight; c.open = true; scrollEnd(); }
   toolResult(p) { finishTool(this.tools[p.id] || [...Object.values(this.tools)].pop(), p.result); this.setStatus("Pensando…"); }
   confirm(p) { this.place(confirmCard(p)); this.setStatus("Esperando tu permiso…", false); scrollEnd(true); }
@@ -221,6 +274,7 @@ class Renderer {
   project(p) { const n = document.createElement("div"); n.className = "projnote"; n.innerHTML = `🗂 Proyecto activo: <b>${esc(p.name)}</b> <span class="small">${esc(p.path || "")}</span>`; this.place(n); }
   error(p) { const e = document.createElement("div"); e.className = "err"; e.textContent = p.text; this.place(e); scrollEnd(true); }
   finish() {
+    this.closeGroup();
     this.render(true);
     if (this.thinkEl) this.thinkEl.querySelector("summary").textContent = "💭 Razonamiento";
     if (this.status) this.status.remove(); this.status = null;
@@ -247,18 +301,30 @@ async function showEstado() {
   $("#pvName").textContent = "📋 Estado del trabajo";
   $("#pvBody").innerHTML = `<div class="md">${md(r.text)}</div>`;
 }
-function addMsgActions(body) {
+function addMsgActions(body, calif) {
   $$(".msgacts").forEach(x => x.remove());
   const a = document.createElement("div"); a.className = "msgacts";
-  a.innerHTML = `<button data-a="copy">Copiar</button><button data-a="regen">↻ Regenerar</button>`;
+  a.innerHTML = `<button data-a="copy">Copiar</button><button data-a="regen">↻ Regenerar</button>` +
+    `<button data-a="up" class="${calif === 1 ? "on" : ""}" title="Buena respuesta: el 🏆 evaluador preferirá esta IA para este tipo de tarea">👍</button>` +
+    `<button data-a="down" class="${calif === -1 ? "on" : ""}" title="Mala respuesta: el 🏆 evaluador usará menos esta IA para este tipo de tarea">👎</button>`;
   a.querySelector("[data-a=copy]").onclick = () => navigator.clipboard.writeText([...body.querySelectorAll(".md")].map(x => x.innerText).join("\n\n"));
   a.querySelector("[data-a=regen]").onclick = () => send({regenerate: true});
+  const rate = async v => {
+    if (!convId) return;
+    const r = await jpost("/api/calificar", {conversation_id: convId, valor: v});
+    if (!r.ok) { toast(r.error || "No se pudo calificar"); return; }
+    a.querySelector("[data-a=up]").classList.toggle("on", v === 1); a.querySelector("[data-a=down]").classList.toggle("on", v === -1);
+    const who = (r.modelos || []).map(m => m.split("::").pop()).join(", ") || L("la IA", "the AI");
+    toast(`${v > 0 ? "👍" : "👎"} ` + L(`Anotado para ${who}: el 🏆 evaluador lo tendrá en cuenta.`, `Noted for ${who}: the 🏆 evaluator will take it into account.`));
+  };
+  a.querySelector("[data-a=up]").onclick = () => rate(1);
+  a.querySelector("[data-a=down]").onclick = () => rate(-1);
   body.append(a);
 }
 
 /* ───────────── Pantalla inicial ───────────── */
 function showEmpty() {
-  thread.innerHTML = `<div id="empty"><img src="/static/noviq_icon.png" alt="NoviQ" class="hero"><h1>¿Qué construimos hoy?</h1><div>NVIDIA, Gemini, OpenAI, Ollama, LM Studio… con herramientas reales en tu PC, equipo de agentes y respaldo automático.</div>
+  thread.innerHTML = `<div id="empty"><img src="/static/noviq_icon.png" alt="Noviq" class="hero"><h1>¿Qué construimos hoy?</h1><div>NVIDIA, Gemini, OpenAI, Ollama, LM Studio… con herramientas reales en tu PC, equipo de agentes y respaldo automático.</div>
   <div class="sugs">
     <button class="sug">🐍 Crea un programa en Python con interfaz que organice mi carpeta de Descargas por tipo de archivo</button>
     <button class="sug">🌐 Crea una página web de portafolio moderna y ábrela en el navegador</button>
@@ -266,6 +332,7 @@ function showEmpty() {
     <button class="sug">⚡ Revisa mi PC: RAM, disco libre, procesador y los 5 procesos que más memoria usan</button>
     <button class="sug">🔎 Busca las noticias más recientes sobre NVIDIA y hazme un resumen</button>
     <button class="sug">📊 Crea un Excel con un presupuesto mensual con fórmulas y un gráfico</button>
+    <button class="sug">🎮 Crea un videojuego de aventura en los Andes donde recojo gemas y me persiguen cóndores</button>
   </div></div>`;
   thread.querySelectorAll(".sug").forEach(b => b.onclick = () => { $("#inp").value = b.textContent.replace(/^\S+\s/, ""); send(); });
   renderTasks([]);
@@ -319,18 +386,32 @@ function setProjectChip(name) {
   updateHint();
 }
 function newChat() {
-  detachView(); FT.custom = null; HOME = null;
+  document.dispatchEvent(new CustomEvent("noviq:conv", {detail: null}));
+  detachView(); FT.custom = null; HOME = null; stopHtmlPreview("", true);
   convId = null; setProjectChip(curProject); showEmpty(); loadConvs(); $("#inp").focus(); $("#side").classList.remove("open");
 }
 async function openConv(id) {
-  detachView(); FT.custom = null; HOME = null;
+  document.dispatchEvent(new CustomEvent("noviq:conv", {detail: id}));
+  detachView(); FT.custom = null; HOME = null; stopHtmlPreview("", true);
   const c = await jget("/api/conversations/" + id);
   convId = id; $("#side").classList.remove("open");
   setProjectChip(c.project);
   if (c.model) selectModel(c.model);
   thread.innerHTML = "";
   let r = null, lastBody = null;
-  for (const it of c.display) {
+  // Conversaciones muy largas (cientos de pasos y capturas): se dibujan los últimos 160 elementos; el resto, a pedido.
+  let desde = 0;
+  if (c.display.length > 160 && !OPEN_ALL.has(id)) {
+    desde = c.display.length - 160;
+    while (desde > 0 && c.display[desde].type !== "user") desde--;
+    if (desde > 0) {
+      const more = document.createElement("div"); more.className = "contbar";
+      more.innerHTML = `<span>⬆ ${desde} elementos anteriores ocultos (para que Noviq use menos memoria)</span><button class="btn">Mostrar todo</button>`;
+      more.querySelector("button").onclick = () => { OPEN_ALL.add(id); openConv(id); };
+      thread.append(more);
+    }
+  }
+  for (const it of c.display.slice(desde)) {
     if (it.type === "user") { userMsg(it); r = null; continue; }
     if (!r) { lastBody = aiMsg(); r = new Renderer(lastBody, false); }
     switch (it.type) {
@@ -347,9 +428,10 @@ async function openConv(id) {
   renderTasks(c.tasks || []);
   loadConvs(); scrollEnd(true);
   if (c.running) { attachStream(id); return; }
-  if (lastBody) addMsgActions(lastBody);
+  if (lastBody) addMsgActions(lastBody, c.calif);
   showContinue(!!c.en_progreso && !c.running);
 }
+const OPEN_ALL = new Set();
 /* ───────────── Escritura en vivo: lo que la IA va escribiendo en los archivos ───────────── */
 const LIVE = {bufs: {}, names: {}, key: null, shown: false, t: 0};
 function jsonStrField(buf, field) {  // extrae (aunque esté incompleto) el valor de un campo string de un JSON parcial
@@ -440,6 +522,7 @@ async function send(opts = {}) {
   showContinue(false);
   if (!hasAnyProvider()) { openSettings(); return; }
   const payload = {conversation_id: convId, model: $("#modelSel").value, project: convId ? undefined : curProject, idioma: window.NOVIQ_LANG || "es"};
+  if (window.estudioAlEnviar && !opts.regenerate && !opts.continuar) { try { Object.assign(payload, window.estudioAlEnviar(text) || {}); } catch (e) { console.warn(e); } }
   if (opts.regenerate) {
     payload.regenerate = true;
     const users = $$(".msg.user"); const last = users[users.length - 1];
@@ -468,35 +551,61 @@ async function attachStream(cid) {  // volver a un chat que sigue trabajando: se
 async function runStream(url, init, r, body) {
   detachView(); const seq = viewSeq; viewCtrl = new AbortController();
   setBusy(true);
-  let aborted = false;
-  try {
-    const res = await api(url, Object.assign({signal: viewCtrl.signal}, init));
-    if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || res.statusText); }
-    const reader = res.body.getReader(), dec = new TextDecoder();
-    let buf = "";
-    for (;;) {
-      const {value, done} = await reader.read();
-      if (seq !== viewSeq) { aborted = true; try { reader.cancel(); } catch (e) {} break; }
-      if (done) break;
-      buf += dec.decode(value, {stream: true});
-      let i;
-      while ((i = buf.indexOf("\n\n")) >= 0) {
-        const raw = buf.slice(0, i); buf = buf.slice(i + 2);
-        let ev = "message", data = "";
-        raw.split("\n").forEach(l => { if (l.startsWith("event:")) ev = l.slice(6).trim(); else if (l.startsWith("data:")) data += l.slice(5).trim(); });
-        if (!data) continue;
-        const p = JSON.parse(data);
-        handleEvent(ev, p, r);
+  let aborted = false, lastId = 0, tries = 0;
+  for (;;) {
+    let lost = null, gotDone = false;
+    try {
+      const res = await api(url, Object.assign({signal: viewCtrl.signal}, init));
+      if (!res.ok) { const j = await res.json().catch(() => ({})); const er = new Error(j.error || res.statusText); er.http = res.status; throw er; }
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const {value, done} = await reader.read();
+        if (seq !== viewSeq) { aborted = true; try { reader.cancel(); } catch (e) {} break; }
+        if (done) break;
+        buf += dec.decode(value, {stream: true});
+        let i;
+        while ((i = buf.indexOf("\n\n")) >= 0) {
+          const raw = buf.slice(0, i); buf = buf.slice(i + 2);
+          let ev = "message", data = "", id = null;
+          raw.split("\n").forEach(l => { if (l.startsWith("event:")) ev = l.slice(6).trim(); else if (l.startsWith("data:")) data += l.slice(5).trim(); else if (l.startsWith("id:")) id = +l.slice(3).trim(); });
+          if (id !== null && !isNaN(id)) lastId = id;
+          if (ev === "done") gotDone = true;
+          if (!data) continue;
+          const p = JSON.parse(data);
+          handleEvent(ev, p, r);
+          tries = 0;
+        }
       }
+      if (!aborted && !gotDone) lost = new Error("la conexión se cerró antes de terminar");
+    } catch (e) {
+      if (e.name === "AbortError" || seq !== viewSeq) aborted = true;
+      else if (e.http === 404 && tries > 0 && convId) { viewCtrl = null; setBusy(false); clearFase(); openConv(convId); return; }
+      else if (e.http) r.error({text: "Error: " + e.message});
+      else lost = e;
     }
-  } catch (e) {
-    if (e.name === "AbortError" || seq !== viewSeq) aborted = true;
-    else r.error({text: "Error: " + e.message + " (¿sigue abierta la ventana del programa?)"});
+    if (aborted || seq !== viewSeq || !lost) break;
+    // 🔌 Se cortó la conexión con el programa (antes salía «network error» y el trabajo parecía perdido).
+    // El trabajo sigue en el programa: la ventana se reengancha sola desde el último evento recibido.
+    if (!convId || tries >= 40) {
+      r.error({text: "Se perdió la conexión con Noviq (" + lost.message + ") y no pude reconectar. Si cerraste el programa, ábrelo de nuevo: todo lo hecho está guardado."});
+      break;
+    }
+    tries++;
+    r.setStatus(`🔌 Se cortó la conexión con el programa; reconectando… (${tries})`);
+    await new Promise(ok => setTimeout(ok, Math.min(800 * tries, 5000)));
+    if (seq !== viewSeq) { aborted = true; break; }
+    let c = null;
+    try { c = await jget("/api/conversations/" + convId); } catch (e) { continue; }
+    if (!c.running) { viewCtrl = null; setBusy(false); clearFase(); openConv(convId); return; }  // ya terminó: se muestra el resultado guardado
+    url = `/api/chat/${convId}/stream?since=${lastId}`; init = {};
+    viewCtrl = new AbortController();
   }
   if (aborted || seq !== viewSeq) return;  // el usuario cambió de chat: el trabajo sigue en segundo plano
   r.finish(); clearFase(); addMsgActions(body); setBusy(false); viewCtrl = null; loadConvs(); refreshContinue();
 }
 function handleEvent(ev, p, r) {
+  if (window.estudioEvento) { try { window.estudioEvento(ev, p); } catch (e) { console.warn(e); } }
   switch (ev) {
     case "meta": convId = p.conversation_id; setProjectChip(p.project); loadConvs(); break;
     case "reasoning": r.reasoning(p.text); break;
@@ -677,7 +786,7 @@ function renderModelPop() {
     if (p.ok) g.innerHTML = `${esc(p.name)} <span class="hid">· ${ms.length} modelos${!local && nOk ? ` · ✅ ${nOk} probados` : ""}${!local && ms.length - nOk ? ` · ❔ ${ms.length - nOk} sin probar` : ""}${hidden.length ? ` · <a class="showhid" title="Mostrar también los que no funcionan">${hidden.length} ocultos porque no funcionan con tu cuenta (ver)</a>` : ""}</span>`;
     else { g.innerHTML = `<b>⛔ ${esc(p.name)} no está funcionando</b><span>${esc(p.error || "no disponible")}</span>`; g.title = "Pulsa para arreglarlo"; g.onclick = () => { closeModelPop(); openFix(p); }; }
     if (!p.ok && q) return;
-    const sh = g.querySelector(".showhid"); if (sh) sh.onclick = e => { e.stopPropagation(); CFG.solo_operativos = false; jpost("/api/config", {solo_operativos: false}); renderModelPop(); };
+    const sh = g.querySelector(".showhid"); if (sh) sh.onclick = e => { e.stopPropagation(); CFG.solo_operativos = false; saveCfg({solo_operativos: false}); renderModelPop(); };
     box.append(g);
     if (p.ok && !ms.length && local) { const e = document.createElement("div"); e.className = "small mempty"; e.textContent = p.id === "ollama" ? "Ollama está abierto pero no tiene modelos descargados (ej.: ollama pull qwen3-coder:30b)." : "LM Studio no tiene modelos cargados/descargados."; box.append(e); }
     ms.forEach(m => box.append(modelItem(p.id + "::" + m, CATALOG.modelos[p.id + "::" + m] || {}, cur, false)));
@@ -735,7 +844,7 @@ function showBubble(el, id) {
     <div class="rows"><span>💻 Programación</span><span>${bar(i.prog)}</span><span>🧠 Inteligencia</span><span>${bar(i.intel)}</span>
     <span>🧩 Razonamiento</span><span>${bar(i.razona)}</span>
     <span>⚡ Velocidad</span><span>${bar(i.vel)}</span><span>💲 Costo</span><span>${i.gratis ? "🆓 Gratis" : "De pago por uso"}</span><span>🪙 Consumo</span><span>${esc(i.tokens || "")}</span>
-    <span>🛠 Herramientas</span><span>${tl}</span><span>👁 Visión</span><span>${i.vision ? "✅ Ve imágenes" : "No (NoviQ usa un ayudante visual)"}</span>
+    <span>🛠 Herramientas</span><span>${tl}</span><span>👁 Visión</span><span>${i.vision ? "✅ Ve imágenes" : "No (Noviq usa un ayudante visual)"}</span>
     ${i.tamano_gb ? `<span>💾 Tamaño</span><span>${i.tamano_gb} GB</span>` : ""}${i.contexto ? `<span>📏 Contexto</span><span>${i.contexto} tokens</span>` : ""}</div>
     ${i.estado ? `<div class="warn"><b>${i.estado.icono} ${i.estado.bloqueado ? "No operativo" : "En pausa"}:</b> ${esc(i.estado.motivo)}<br>💡 ${esc(i.estado.solucion)}</div>` : ""}
     ${i.vanguardia ? `<div class="tip">🚀 De vanguardia: de los modelos más inteligentes disponibles${i.gratis ? " y gratis" : ""}.</div>` : ""}
@@ -754,7 +863,7 @@ function closeModelPop() { $("#modelPop").classList.remove("show"); hideBubble()
 $("#searchClear").onclick = e => { e.stopPropagation(); $("#modelSearch").value = ""; renderModelPop(); $("#modelSearch").focus(); };
 $("#modelBtn").onclick = e => { e.stopPropagation(); const p = $("#modelPop"); p.classList.toggle("show"); if (p.classList.contains("show")) { $("#modelSearch").value = ""; renderModelPop(); setTimeout(() => { $("#modelSearch").value = ""; renderModelPop(); }, 60); pollVerif();
   if (!GRATIS_LIST.length) jget("/api/gratis").then(l => { GRATIS_LIST = l; renderModelPop(); }); } else hideBubble(); };
-$("#soloOk").onchange = e => { e.stopPropagation(); CFG.solo_operativos = $("#soloOk").checked; jpost("/api/config", {solo_operativos: CFG.solo_operativos}); renderModelPop(); };
+$("#soloOk").onchange = e => { e.stopPropagation(); CFG.solo_operativos = $("#soloOk").checked; saveCfg({solo_operativos: CFG.solo_operativos}); renderModelPop(); };
 $("#verifNow").onclick = async e => { e.stopPropagation(); await jpost("/api/verificador", {forzar: true}); setTimeout(pollVerif, 1500); };
 $("#modelSearch").oninput = renderModelPop;
 // composedPath: aunque el elemento pulsado se redibuje (y salga del DOM), sabemos que el clic fue DENTRO de la lista
@@ -775,12 +884,12 @@ $("#modelSel").onchange = async e => {
     selectModel(v);
   }
   $("#modelSel").dataset.want = v;
-  CFG = await jpost("/api/config", {model: v});
+  await saveCfg({model: v});
   if (convId) jpost("/api/conversations/" + convId, {model: v});
   updateHint();
 };
 $("#refreshModels").onclick = () => loadModels(true);
-$("#permSel").onchange = async e => { CFG = await jpost("/api/config", {permission_mode: e.target.value}); updateHint(); };
+$("#permSel").onchange = async e => { await saveCfg({permission_mode: e.target.value}); updateHint(); };
 let LAST_USAGE = null;
 function showCtx(p) {
   const pct = Math.min(100, Math.round(p.usado / p.limite * 100));
@@ -802,12 +911,15 @@ const CM_MODE = {py:"python",js:"javascript",mjs:"javascript",cjs:"javascript",j
   ino:"text/x-c++src",go:"go",rs:"rust",php:"application/x-httpd-php",dart:"dart"};
 function showPanel(which) {
   $("#preview").classList.add("show");
+  if (which !== "view" && HP.running) stopHtmlPreview("Vista previa detenida al cambiar de pestaña.");
   $$("#pvSwitch [data-pv]").forEach(b => b.classList.toggle("on", b.dataset.pv === which));
   $("#pvFiles").style.display = which === "files" ? "flex" : "none";
   $("#pvView").style.display = which === "view" ? "flex" : "none";
   $("#pvLive").style.display = which === "live" ? "flex" : "none";
   $("#pvPlan").style.display = which === "plan" ? "flex" : "none";
+  $("#pvGame").style.display = which === "game" ? "flex" : "none";
   if (which === "files") loadTree();
+  if (which === "game" && window.estudioMostrar) window.estudioMostrar();
 }
 $$("#pvSwitch [data-pv]").forEach(b => b.onclick = () => showPanel(b.dataset.pv));
 function openPreview(path) {
@@ -828,10 +940,12 @@ function setEditing(on) {
 }
 async function loadPreview(path) {
   setEditing(false);
+  const wasRunning = HP.running && HP.path === path;
+  if (HP.running && HP.path !== path) stopHtmlPreview("", true);
   const b = $("#pvBody"), name = path.split(/[\\/]/).pop(), ext = extOf(name);
   $("#pvName").textContent = name; $("#pvName").title = path;
   $("#pvEdit").style.display = TEXT_EXT.has(ext) || !name.includes(".") ? "" : "none";
-  if (["html", "htm"].includes(ext)) { b.innerHTML = `<iframe sandbox="allow-scripts allow-forms allow-modals allow-popups" src="${rawUrl(path)}?v=${Date.now()}"></iframe>`; return; }
+  if (["html", "htm"].includes(ext)) { htmlPreview(path, b, wasRunning); return; }
   if (["svg", "pdf"].includes(ext)) { b.innerHTML = `<iframe src="${rawUrl(path)}?v=${Date.now()}"></iframe>`; return; }
   if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico"].includes(ext)) { b.innerHTML = `<img src="${fileUrl(path)}&v=${Date.now()}">`; return; }
   if (["xlsx", "docx", "pptx", "zip", "exe", "mp3", "mp4", "dll", "7z", "rar"].includes(ext)) { b.innerHTML = `<div class="md">Este tipo de archivo no se puede previsualizar aquí. <a href="${fileUrl(path, 1)}">Descargar</a> o ábrelo desde 📂.</div>`; return; }
@@ -845,6 +959,64 @@ async function loadPreview(path) {
   try { hljs.highlightElement(code); } catch (e) {}
   b.querySelector("pre").style.cssText = "padding:14px;font:13px/1.5 Consolas,monospace;margin:0";
 }
+/* Vista previa de páginas y juegos: NO se ejecutan solos (un juego con fuga de memoria dentro de la ventana de Noviq
+   llegó a usar 21 GB y colapsó la PC). Corren en OTRO proceso (otro origen) y se detienen al ocultar el panel, al
+   cambiar de conversación, al minimizar Noviq o si el vigilante de recursos detecta que la memoria se dispara. */
+const HP = {path: null, running: false, t0: 0};
+function aislado(u) {  // otro «sitio» (localhost ↔ 127.0.0.1) = otro proceso: si la página revienta, Noviq sigue vivo
+  const h = location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+  return `${location.protocol}//${h}:${location.port}${u}`;
+}
+function htmlPreview(path, b, run) {
+  HP.path = path; b = b || $("#pvBody");
+  const auto = run || (RES.perfil && RES.perfil.vista_auto && RES.nivel === "ok");
+  if (!auto) {
+    stopHtmlPreview("", true);
+    b.innerHTML = `<div class="pvstop"><div class="big">▶</div><div><b>${esc(path.split(/[\\/]/).pop())}</b></div>
+      <div class="small">Las páginas y juegos no se ejecutan solos dentro de Noviq para no gastar memoria.${RES.medicion ? ` RAM libre: ${RES.medicion.ram_libre_gb} GB.` : ""}</div>
+      <div class="btns"><button class="btn ok" data-a="run">▶ Ejecutar vista previa</button><button class="btn" data-a="ext">↗ Abrir en el navegador</button></div></div>`;
+    b.querySelector("[data-a=run]").onclick = () => htmlPreview(path, b, true);
+    b.querySelector("[data-a=ext]").onclick = () => window.open(rawUrl(path), "_blank");
+    return;
+  }
+  b.innerHTML = `<div class="pvbar"><span class="small">▶ Ejecutándose · se detiene sola si gasta demasiada memoria</span><button class="linkbtn" data-a="stop">⏹ Detener</button></div>
+    <iframe sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock" allow="autoplay; gamepad" src="${aislado(rawUrl(path))}?v=${Date.now()}"></iframe>`;
+  b.querySelector("[data-a=stop]").onclick = () => stopHtmlPreview("Vista previa detenida.");
+  HP.running = true; HP.t0 = Date.now(); pollRecursos();
+}
+function stopHtmlPreview(motivo, silencioso) {
+  const b = $("#pvBody"); const fr = b && b.querySelector("iframe");
+  if (fr && HP.running) { try { fr.src = "about:blank"; } catch (e) {} fr.remove(); }
+  const estaba = HP.running; HP.running = false;
+  if (!silencioso && estaba && HP.path && b) {
+    const p = HP.path;
+    b.innerHTML = `<div class="pvstop"><div class="big">⏹</div><div>${esc(motivo || "Vista previa detenida.")}</div>
+      <div class="btns"><button class="btn ok" data-a="run">▶ Volver a ejecutar</button></div></div>`;
+    b.querySelector("[data-a=run]").onclick = () => htmlPreview(p, b, true);
+  }
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden && HP.running) stopHtmlPreview("Se detuvo al minimizar Noviq (para no gastar memoria en segundo plano)."); });
+
+/* ⚙ Recursos de la PC: indicador y vigilante */
+function abrirRendimiento() { openSettings(); const b = document.querySelector('[data-tab="t-rend"]'); if (b) b.click(); }
+let RES = {}, RES_T = null;
+async function pollRecursos() {
+  clearTimeout(RES_T);
+  try { RES = await jget("/api/recursos"); } catch (e) { RES_T = setTimeout(pollRecursos, 20000); return; }
+  const m = RES.medicion || {}, chip = $("#recChip");
+  if (chip && m.ram_libre_gb != null) {
+    chip.className = "rechip " + (RES.nivel || "ok");
+    chip.textContent = `${RES.nivel === "critico" ? "🔴" : RES.nivel === "justo" ? "🟡" : "🟢"} RAM libre ${m.ram_libre_gb} GB`;
+    chip.title = `RAM ${m.ram_total_gb} GB · libre ${m.ram_libre_gb} GB · reserva para la PC ${RES.reserva_gb} GB · perfil ${(RES.perfil || {}).nombre || ""}` +
+      ((m.gpus || []).length ? ` · GPU ${m.gpus[0].nombre}` : "") + " (clic: ⚙ Rendimiento)";
+  }
+  if (RES.detener_vista && HP.running) {
+    stopHtmlPreview(`⚠ Detuve la vista previa porque ${RES.detener_vista}. Si es un juego, seguramente crea objetos en cada fotograma sin liberarlos: pídele a la IA «revisa la fuga de memoria con probar_web».`);
+    toast("⏹ Vista previa detenida: " + RES.detener_vista);
+  }
+  RES_T = setTimeout(pollRecursos, HP.running ? 5000 : 15000);
+}
+
 async function startEdit() {
   if (!PV.current || !window.CodeMirror) return;
   const r = await api(`/api/file_text?p=${encodeURIComponent(PV.current)}`);
@@ -865,12 +1037,12 @@ async function saveEdit() {
 }
 $("#pvEdit").onclick = startEdit;
 $("#pvSave").onclick = saveEdit;
-$("#pvClose").onclick = () => { if (confirmDiscard()) $("#preview").classList.remove("show"); };
+$("#pvClose").onclick = () => { if (confirmDiscard()) { stopHtmlPreview("", true); $("#preview").classList.remove("show"); } };
 $("#pvReload").onclick = () => PV.current && confirmDiscard() && loadPreview(PV.current);
 $("#pvExt").onclick = () => PV.current && window.open(["html", "htm", "svg", "pdf"].includes(extOf(PV.current)) ? rawUrl(PV.current) : fileUrl(PV.current), "_blank");
 $("#pvFolder").onclick = () => PV.current && openInFolder(PV.current);
 $("#estadoBtn").onclick = showEstado;
-$("#pvToggle").onclick = () => { if ($("#preview").classList.contains("show")) { if (confirmDiscard()) $("#preview").classList.remove("show"); } else showPanel(PV.current ? "view" : "files"); };
+$("#pvToggle").onclick = () => { if ($("#preview").classList.contains("show")) { if (confirmDiscard()) { stopHtmlPreview("", true); $("#preview").classList.remove("show"); } } else showPanel(PV.current ? "view" : "files"); };
 
 /* Explorador de archivos */
 const FT = {root: null, open: new Set(), sel: null};
@@ -965,14 +1137,14 @@ function renderProjects() {
       <div class="pd">${esc((p.descripcion || "").slice(0, 110))}</div>
       <div class="pp">${esc(p.path)}${p.existe === false ? " — ⚠ la carpeta ya no existe" : ""}</div>
       <div class="small">🕒 ${ago(p.actividad)} · 💬 ${p.conversaciones || 0} chats${p.externo ? " · existente en tu PC" : ""}${p.comandos && p.comandos.ejecutar ? " · ▶ " + esc(p.comandos.ejecutar) : ""}</div>
-      <div class="pa"><button class="go" data-a="chat">💬 Trabajar</button>${p.ultima_conv ? `<button data-a="last">↩ Último chat</button>` : ""}<button data-a="files">📁 Archivos</button><button data-a="test">🧪 Probar</button><button data-a="folder">📂</button><button data-a="edit">✎</button>${p.externo ? `<button data-a="unlink" title="Quitar de NoviQ (no borra archivos)">✖</button>` : ""}</div>`;
+      <div class="pa"><button class="go" data-a="chat">💬 Trabajar</button>${p.ultima_conv ? `<button data-a="last">↩ Último chat</button>` : ""}<button data-a="files">📁 Archivos</button><button data-a="test">🧪 Probar</button><button data-a="folder">📂</button><button data-a="edit">✎</button>${p.externo ? `<button data-a="unlink" title="Quitar de Noviq (no borra archivos)">✖</button>` : ""}</div>`;
     c.querySelector("[data-a=chat]").onclick = () => { $("#projsModal").classList.remove("show"); showProjectHome(p.name); };
     const last = c.querySelector("[data-a=last]"); if (last) last.onclick = () => { $("#projsModal").classList.remove("show"); curProject = p.name; loadProjects(); openConv(p.ultima_conv); };
     c.querySelector("[data-a=files]").onclick = () => { $("#projsModal").classList.remove("show"); curProject = p.name; if (!convId) setProjectChip(p.name); loadProjects(); loadConvs(); FT.root = null; showPanel("files"); };
     c.querySelector("[data-a=test]").onclick = () => { $("#projsModal").classList.remove("show"); curProject = p.name; loadProjects(); newChat(); $("#inp").value = "Revisa todo el proyecto: usa probar_proyecto, analiza los errores y corrígelos uno por uno hasta que las pruebas pasen."; send(); };
     c.querySelector("[data-a=folder]").onclick = () => openInFolder(p.path);
     c.querySelector("[data-a=edit]").onclick = () => editProject(p);
-    const ul = c.querySelector("[data-a=unlink]"); if (ul) ul.onclick = async () => { if (!confirm(`¿Quitar «${p.name}» de NoviQ? Tus archivos NO se borran.`)) return; await jpost(`/api/projects/${encodeURIComponent(p.name)}/quitar`); loadProjects(); };
+    const ul = c.querySelector("[data-a=unlink]"); if (ul) ul.onclick = async () => { if (!confirm(`¿Quitar «${p.name}» de Noviq? Tus archivos NO se borran.`)) return; await jpost(`/api/projects/${encodeURIComponent(p.name)}/quitar`); loadProjects(); };
     g.append(c);
   });
 }
@@ -1011,7 +1183,7 @@ async function renderGratis() {
     const oc = d.querySelector("[data-a=oneclick]");
     if (oc) oc.onclick = async () => {
       const r = await jpost("/api/gratis/openrouter"); window.open(r.url, "_blank");
-      res.innerHTML = `<span class="spin"></span> Inicia sesión en OpenRouter y acepta; NoviQ recibirá la clave automáticamente…`;
+      res.innerHTML = `<span class="spin"></span> Inicia sesión en OpenRouter y acepta; Noviq recibirá la clave automáticamente…`;
       let n = 0; const t = setInterval(async () => { const l = await jget("/api/gratis"); const o = l.find(x => x.id === "openrouter");
         if (o && o.tiene_clave && o.activo) { clearInterval(t); res.innerHTML = `<span class="ok-t">✔ Conectado: ${o.modelos} modelos gratis</span>`; await loadModels(true); renderGratis(); }
         if (++n > 100) clearInterval(t); }, 3000);
@@ -1037,7 +1209,11 @@ $("#imOk").onclick = async () => {
 
 /* ───────────── Modales ───────────── */
 function openModal(id) { $(id).classList.add("show"); }
-$$(".modal").forEach(m => { m.addEventListener("mousedown", e => { if (e.target === m) m.classList.remove("show"); }); m.querySelectorAll("[data-close]").forEach(b => b.onclick = () => m.classList.remove("show")); });
+$$(".modal").forEach(m => {
+  const cerrar = () => m.id === "cfgModal" ? cerrarAjustes() : m.classList.remove("show");
+  m.addEventListener("mousedown", e => { if (e.target === m) cerrar(); });
+  m.querySelectorAll("[data-close]").forEach(b => b.onclick = cerrar);
+});
 $$(".tabs").forEach(t => t.querySelectorAll("button").forEach(b => b.onclick = () => {
   t.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
   const pane = $("#" + b.dataset.tab); pane.parentElement.querySelectorAll(".tabpane").forEach(p => p.classList.toggle("on", p === pane));
@@ -1054,13 +1230,17 @@ function provCard(id, p) {
     ${id.startsWith("custom") ? `<label>Nombre</label><input data-f="name" value="${esc(p.name)}">` : ""}
     <label>URL base (…/v1)</label><input data-f="base_url" value="${esc(p.base_url || "")}">
     ${p.local ? `<div class="small">IA local: no necesita clave. ${id === "ollama" ? "Instala Ollama y descarga un modelo (ej. <code>ollama pull qwen3:8b</code>). Para más contexto define OLLAMA_CONTEXT_LENGTH=32768." : "En LM Studio: pestaña Developer → Start Server y carga un modelo."}</div>`
-      : `<label>API keys — una por línea (puedes poner claves de varias cuentas: NoviQ usa la que funcione con cada modelo)${p.web ? ` · <a href="${esc(p.web)}" target="_blank">obtener clave</a>` : ""}</label><textarea data-f="api_keys" rows="${Math.max(2, (p.api_keys || []).length + 1)}" spellcheck="false" placeholder="pega aquí tu clave">${esc((p.api_keys || []).join("\n"))}</textarea>
+      : `<label>API keys — una por línea (puedes poner claves de varias cuentas: Noviq usa la que funcione con cada modelo)${p.web ? ` · <a href="${esc(p.web)}" target="_blank">obtener clave</a>` : ""}</label><textarea data-f="api_keys" rows="${Math.max(2, (p.api_keys || []).length + 1)}" spellcheck="false" placeholder="pega aquí tu clave">${esc((p.api_keys || []).join("\n"))}</textarea>
       <div class="row2"><span class="small">${(p.api_keys || []).length ? `🔑 ${(p.api_keys || []).length} clave(s) guardada(s)` : "Sin claves"}</span><button class="btn" data-a="testkeys" type="button">🩺 Probar cada clave</button><span class="small kres"></span></div>`}`;
   const tk = d.querySelector("[data-a=testkeys]");
   if (tk) tk.onclick = async () => {
     const out = d.querySelector(".kres"); out.innerHTML = `<span class="spin"></span> Probando…`;
+    if (cfgDirty()) { out.innerHTML = `<span class="spin"></span> Guardando primero las claves nuevas…`; if (!(await guardarAjustes(false))) return; CFG_SNAP = JSON.stringify(collectCfgPatch()); }
+    out.innerHTML = `<span class="spin"></span> Probando cada clave (lista de modelos + un mensaje real)…`;
     const r = await jpost("/api/claves/probar", {pid: id});
-    out.innerHTML = (r.claves || []).map(k => k.ok ? `<span class="ok-t">✔ clave ${k.n} (${esc(k.mask)}) funciona${k.modelos != null ? " · " + k.modelos + " modelos" : ""}</span>` : `<span class="bad-t">✖ clave ${k.n} (${esc(k.mask)}): ${esc(k.error)}</span>`).join("<br>") || esc(r.error || "sin claves");
+    out.innerHTML = (r.claves || []).map(k => k.ok
+      ? `<span class="ok-t">✔ clave ${k.n} (${esc(k.mask)}) funciona${k.modelos != null ? " · " + k.modelos + " modelos" : ""}${k.ms != null ? ` · respondió en ${(k.ms / 1000).toFixed(1)} s con ${esc(k.modelo_prueba || "")}` : ""}${k.nota ? " · " + esc(k.nota) : ""}</span>${k.aviso ? ` <span class="small">⚠ ${esc(k.aviso)}</span>` : ""}`
+      : `<span class="bad-t">✖ clave ${k.n} (${esc(k.mask)}): ${esc(k.error)}</span>`).join("<br>") + (r.nota ? `<br><span class="small">${esc(r.nota)}</span>` : "") || esc(r.error || "sin claves");
   };
   return d;
 }
@@ -1085,14 +1265,22 @@ async function openSettings() {
   const ov = CFG.model_overrides || {};
   $("#ovList").innerHTML = Object.keys(ov).length ? Object.entries(ov).map(([k, v]) => `${esc(k)}: ${esc(JSON.stringify(v))}`).join("<br>") : "(nada aprendido todavía)";
   jget("/api/tools").then(t => $("#toolList").innerHTML = t.map(x => `<div><b>${esc(x.name)}</b> — ${esc(x.desc.slice(0, 140))}</div>`).join(""));
+  if ($("#en-auto")) $("#en-auto").checked = (CFG.entregas || {}).auto !== false;
+  fillRend();
+  if (window.estudioLlenarAjustes) window.estudioLlenarAjustes();
+  if (window.windowsLlenarAjustes) window.windowsLlenarAjustes();
+  const av = CFG.avisos_config || [];
+  $("#cfgAvisos").innerHTML = av.length ? av.map(a => `<div class="bad-t">⚠ ${esc(a)}</div>`).join("") : "";
   openModal("#cfgModal");
+  CFG_SNAP = JSON.stringify(collectCfgPatch());
 }
 function renderFb() {
   const box = $("#fbList");
   box.innerHTML = FB.length ? "" : `<div class="small">(sin respaldo configurado)</div>`;
   FB.forEach((m, i) => {
     const d = document.createElement("div"); d.className = "srv"; d.style.display = "flex"; d.style.gap = "6px"; d.style.alignItems = "center";
-    d.innerHTML = `<b>${i + 1}.</b><span style="flex:1">${esc(m.replace("::", " · "))}</span><button class="ib" data-a="up">▲</button><button class="ib" data-a="dn">▼</button><button class="ib" data-a="rm">✕</button>`;
+    const pv = CFG.providers[m.split("::")[0]] || {}, off = pv.enabled === false;
+    d.innerHTML = `<b>${i + 1}.</b><span style="flex:1${off ? ";opacity:.55" : ""}">${esc(m.replace("::", " · "))}${off ? ` <span class="small bad-t" title="Actívalo en Proveedores y claves o quítalo del respaldo">— ${esc(pv.name || m.split("::")[0])} está desactivado: se salta</span>` : ""}</span><button class="ib" data-a="up">▲</button><button class="ib" data-a="dn">▼</button><button class="ib" data-a="rm">✕</button>`;
     d.querySelector("[data-a=up]").onclick = () => { if (i > 0) { [FB[i - 1], FB[i]] = [FB[i], FB[i - 1]]; renderFb(); } };
     d.querySelector("[data-a=dn]").onclick = () => { if (i < FB.length - 1) { [FB[i + 1], FB[i]] = [FB[i], FB[i + 1]]; renderFb(); } };
     d.querySelector("[data-a=rm]").onclick = () => { FB.splice(i, 1); renderFb(); };
@@ -1114,38 +1302,143 @@ $("#addProv").onclick = () => {
   $("#provList").append(provCard(id, CFG.providers[id]));
 };
 $("#openCfg").onclick = openSettings;
-$("#cfgSave").onclick = async () => {
+function collectCfgPatch() {
   const providers = {};
   $$("#provList .prov").forEach(card => {
     const id = card.dataset.id, o = {};
     card.querySelectorAll("[data-f]").forEach(el => {
       const f = el.dataset.f;
-      o[f] = el.type === "checkbox" ? el.checked : f === "api_keys" ? el.value.split(/\s+/).map(x => x.trim()).filter(Boolean) : el.value.trim();
+      // las claves van UNA POR LÍNEA: el servidor limpia «Bearer », comillas, «clave 2», etc. (antes se partía por
+      // espacios y «Bearer» se guardaba como si fuera otra clave)
+      o[f] = el.type === "checkbox" ? el.checked : f === "api_keys" ? el.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean) : el.value.trim();
     });
     if (o.api_keys && o.api_keys.length && !CFG.providers[id]?.has_key && !CFG.providers[id]?.local) o.enabled = true;
     providers[id] = o;
   });
-  const patch = {
+  return {
     providers,
-    temperature: parseFloat($("#c-temp").value) || 0.6, max_tokens: parseInt($("#c-max").value) || 8192,
+    temperature: numOr($("#c-temp").value, 0.6), max_tokens: intOr($("#c-max").value, 16384),
     reasoning_effort: $("#c-reason").value, image_model: $("#c-img").value.trim(), system_prompt: $("#c-sys").value,
     ejecutor: $("#a-ejec").value, modelo_vision: $("#a-vision").value.trim(), modelo_auxiliar: $("#a-aux").value.trim(),
-    equipo_max: parseInt($("#a-team").value) || 3, navegador_directo: $("#a-navdir").checked,
-    local: Object.assign({}, CFG.local || {}, {vram_gb: parseFloat($("#l-vram").value) || 16, ram_gb: parseFloat($("#l-ram").value) || 32,
-      max_ctx: parseInt($("#l-maxctx").value) || 32768, num_ctx: parseInt($("#l-numctx").value) || 0, modo_compacto: $("#l-compact").value,
-      pensar: $("#l-think").value, max_steps: parseInt($("#l-steps").value) || 150, ollama_nativo: $("#l-native").checked}),
+    equipo_max: intOr($("#a-team").value, 3), navegador_directo: $("#a-navdir").checked,
+    local: Object.assign({}, CFG.local || {}, {vram_gb: numOr($("#l-vram").value, 16), ram_gb: numOr($("#l-ram").value, 32),
+      max_ctx: intOr($("#l-maxctx").value, 32768), num_ctx: intOr($("#l-numctx").value, 0), modo_compacto: $("#l-compact").value,
+      pensar: $("#l-think").value, max_steps: intOr($("#l-steps").value, 150), ollama_nativo: $("#l-native").checked}),
     pruebas_auto: $("#l-tests").checked,
-    tool_mode: $("#c-toolmode").value, max_steps: parseInt($("#c-steps").value) || 40, projects_dir: $("#c-projdir").value.trim(),
-    fallback_enabled: $("#fb-on").checked, fallback_models: FB, read_timeout: parseInt($("#fb-timeout").value) || 240,
+    tool_mode: $("#c-toolmode").value, max_steps: intOr($("#c-steps").value, 40), projects_dir: $("#c-projdir").value.trim(),
+    fallback_enabled: $("#fb-on").checked, fallback_models: FB.slice(), read_timeout: intOr($("#fb-timeout").value, 240),
     escalado: Object.assign({}, CFG.escalado || {}, {activo: $("#esc-on").checked, permitir_pago: $("#esc-pago").checked}),
     guardian: Object.assign({}, CFG.guardian || {}, {activo: $("#gd-on").checked,
-      max_razonamiento: Math.max(3000, parseInt($("#gd-chars").value) || 16000), max_seg_razonamiento: Math.max(30, parseInt($("#gd-secs").value) || 150)}),
+      max_razonamiento: Math.max(3000, intOr($("#gd-chars").value, 16000)), max_seg_razonamiento: Math.max(30, intOr($("#gd-secs").value, 150))}),
     diagnostico_auto: $("#dg-auto").checked,
+    entregas: Object.assign({}, CFG.entregas || {}, {auto: $("#en-auto") ? $("#en-auto").checked : (CFG.entregas || {}).auto !== false}),
+    recursos: Object.assign({}, CFG.recursos || {}, {perfil: $("#rd-perfil").value, reserva_gb: numOr($("#rd-reserva").value, 0),
+      vm_gb: numOr($("#rd-vmgb").value, 4), vm_cpus: intOr($("#rd-vmcpu").value, 2), swap_gb: numOr($("#rd-swap").value, 2),
+      proc_mb: intOr($("#rd-procmb").value, 2048), cpu_pct: intOr($("#rd-cpu").value, 75), navegadores: intOr($("#rd-navs").value, 1),
+      preferir_nativo: $("#rd-nativo").checked, limitar_procesos: $("#rd-procs").checked, limitar_wsl: $("#rd-wsl").checked,
+      usar_gpu: $("#rd-gpu").value, vista_previa_auto: $("#rd-vista").checked, vista_max_gb: numOr($("#rd-vistamax").value, 2.5)}),
+    juegos: Object.assign({}, CFG.juegos || {}, {detector: $("#jg-detector").value, solo_cc0: $("#jg-cc0").checked, buscar_activos: $("#jg-auto").checked,
+      carpeta_3d: $("#jg-carpeta3d") ? $("#jg-carpeta3d").value.trim() : ((CFG.juegos || {}).carpeta_3d || "")}),
+    prompt_tools: Object.assign({}, CFG.prompt_tools || {}, {barra: $("#pt-barra").checked, correccion_local: $("#pt-local").checked}),
+    modelo_rapido: $("#pt-modelo").value.trim(),
   };
-  CFG = await jpost("/api/config", patch);
-  $("#cfgModal").classList.remove("show");
-  await loadModels(true); loadProjects();
+}
+/* ⚙ Rendimiento */
+function fmtRend(e) {
+  const m = e.medicion || {}, p = e.perfil || {}, n = m.noviq || {};
+  const g = (m.gpus || []).map(x => `${esc(x.nombre)}${x.vram_total_gb ? ` · VRAM ${x.vram_libre_gb != null ? x.vram_libre_gb + " libre de " : ""}${x.vram_total_gb} GB` : ""}`).join("<br>") || "no detectada (se usa el procesador)";
+  const lvl = e.nivel === "critico" ? "🔴 memoria crítica" : e.nivel === "justo" ? "🟡 memoria justa" : "🟢 memoria suficiente";
+  return `<div class="rdgrid">
+    <div>💻 <b>${m.nucleos || "?"} núcleos</b>${m.cpu_pct != null ? ` · CPU al ${m.cpu_pct}%` : ""}</div>
+    <div>🧠 RAM <b>${m.ram_total_gb} GB</b> · libre <b>${m.ram_libre_gb} GB</b>${m.ram_uso_pct != null ? ` (uso ${m.ram_uso_pct}%)` : ""} · ${lvl}</div>
+    <div>🛡 Reserva para la PC <b>${e.reserva_gb} GB</b> → Noviq puede usar <b>${p.presupuesto_gb} GB</b></div>
+    <div>🎮 GPU: ${g}</div>
+    <div>💿 Disco libre ${m.disco_libre_gb ?? "?"} GB · Linux (WSL) ${m.wsl ? "✔" : "—"} · Docker ${m.docker ? "✔" : "—"}</div>
+    ${n.ventana_gb != null ? `<div>🪟 Ventana de Noviq ${n.ventana_gb} GB · navegadores de prueba ${n.pruebas_gb || 0} GB · programas ${n.programas_gb || 0} GB${n.wsl_gb ? ` · máquina virtual Linux ${n.wsl_gb} GB` : ""}</div>` : ""}
+    <div>📐 Límites ahora (${esc(p.nombre || "")}): máquina virtual <b>${p.vm_gb} GB / ${p.vm_cpus} núcleos</b> · programas en prueba <b>${p.proc_mb} MB y ${p.cpu_pct}% CPU</b> · ${p.navegadores} navegador(es) de prueba a la vez · agentes locales en paralelo ${p.equipo}${p.gpu ? " · usa GPU" : ""}</div>
+    ${(p.motivo || []).map(x => `<div class="small">${esc(x)}</div>`).join("")}</div>`;
+}
+async function renderRend(full) {
+  const e = await jget("/api/recursos" + (full ? "?completo=1" : "")).catch(() => null);
+  if (!e) { $("#rdPc").textContent = "No se pudo medir la PC."; return; }
+  RES = e; $("#rdPc").innerHTML = fmtRend(e);
+}
+function fillRend() {
+  const R_ = Object.assign({perfil: "auto", reserva_gb: 0, vm_gb: 4, vm_cpus: 2, swap_gb: 2, proc_mb: 2048, cpu_pct: 75, navegadores: 1,
+    preferir_nativo: true, limitar_procesos: true, limitar_wsl: true, usar_gpu: "auto", vista_previa_auto: false, vista_max_gb: 2.5}, CFG.recursos || {});
+  $("#rd-perfil").value = R_.perfil; $("#rd-reserva").value = R_.reserva_gb; $("#rd-vmgb").value = R_.vm_gb; $("#rd-vmcpu").value = R_.vm_cpus;
+  $("#rd-swap").value = R_.swap_gb; $("#rd-procmb").value = R_.proc_mb; $("#rd-cpu").value = R_.cpu_pct; $("#rd-navs").value = R_.navegadores;
+  $("#rd-nativo").checked = R_.preferir_nativo !== false; $("#rd-procs").checked = R_.limitar_procesos !== false; $("#rd-wsl").checked = R_.limitar_wsl !== false;
+  $("#rd-gpu").value = R_.usar_gpu || "auto"; $("#rd-vista").checked = !!R_.vista_previa_auto; $("#rd-vistamax").value = R_.vista_max_gb;
+  $("#rd-custom").style.display = R_.perfil === "personalizado" ? "" : "none";
+  renderRend(true);
+}
+$("#rd-perfil").onchange = () => { $("#rd-custom").style.display = $("#rd-perfil").value === "personalizado" ? "" : "none"; };
+$("#rd-analizar").onclick = async () => {
+  $("#rd-out").innerHTML = `<span class="spin"></span> Analizando tu PC (memoria libre, procesador, GPU, disco y lo que usa Noviq)…`;
+  const e = await jpost("/api/recursos", {analizar: true});
+  RES = e; $("#rdPc").innerHTML = fmtRend(e);
+  const m = e.medicion || {}, rec = m.ram_libre_gb - e.reserva_gb < 3 ? "basico" : m.ram_libre_gb - e.reserva_gb < 8 ? "equilibrado" : "potente";
+  $("#rd-out").textContent = (e.resumen || "") + `\n\nRecomendación: perfil «Automático» (se ajusta solo a la memoria libre de cada momento). Si prefieres uno fijo, para tu PC ahora sería «${rec}».`;
+  $("#rd-perfil").value = "auto"; $("#rd-custom").style.display = "none";
 };
+$("#rd-test").onclick = async () => {
+  $("#rd-out").innerHTML = `<span class="spin"></span> Lanzo un programa que intenta usar 1 GB dentro de un límite de 300 MB…`;
+  const r = await jpost("/api/recursos", {autoprueba: true}); const a = r.autoprueba || {}, j = a.job || {}, nv = a.navegador || {};
+  let txt = typeof j === "string" ? j : j.error ? "✖ " + j.error :
+    (j.funciona ? `✔ Límite de memoria: un programa intentó usar 1 GB con un tope de 300 MB y Windows lo frenó (la PC no se enteró).` :
+      `⚠ El límite no se aplicó (${j.limite_aplicado ? "se creó el límite pero el programa reservó la memoria" : "no se pudo crear el límite"}).`);
+  if (nv.error) txt += "\n✖ Navegador de pruebas: " + nv.error;
+  else if (nv.arranco !== undefined) txt += `\n${nv.arranco ? "✔" : "✖"} Navegador de pruebas dentro de su límite (${nv.seg} s)` +
+    (nv.gpu_webgl ? `\n🎮 Gráficos 3D de las pruebas con: ${nv.gpu_webgl}` : "") +
+    `\n${nv.fuga_detectada ? "✔ Detector de fugas: encontró la fuga de la página de prueba (" + (nv.fuga || []).join("; ") + ")" : "⚠ El detector de fugas no vio la fuga de la página de prueba"}`;
+  $("#rd-out").textContent = txt;
+};
+$("#rd-wsl-apply").onclick = async () => {
+  if (!confirm("Esto guarda los límites en tu archivo .wslconfig (se conserva lo que ya tengas) y REINICIA la máquina virtual Linux: se cierran los programas que estén corriendo en WSL o Docker. ¿Continuar?")) return;
+  await guardarAjustes(false); CFG_SNAP = JSON.stringify(collectCfgPatch());
+  const r = await jpost("/api/recursos", {aplicar_wsl: true, reiniciar_wsl: true}); const w = r.wsl || {};
+  $("#rd-out").textContent = (w.cambio ? "✔ Límites guardados en " : "✔ Los límites ya estaban en ") + (w.archivo || ".wslconfig") + (w.reiniciado ? " y Linux se reinició." : "") + "\n\n" + (w.texto || "");
+};
+let CFG_SNAP = "";
+const cfgDirty = () => $("#cfgModal").classList.contains("show") && CFG_SNAP && JSON.stringify(collectCfgPatch()) !== CFG_SNAP;
+function informeClaves(rep) {
+  const out = [];
+  Object.entries(rep || {}).forEach(([pid, r]) => {
+    const n = (CFG.providers[pid] || {}).name || pid, x = [];
+    x.push(`${r.guardadas} clave(s) guardada(s)`);
+    if (r.nuevas) x.push(`${r.nuevas} nueva(s)`);
+    if (r.quitadas) x.push(`${r.quitadas} quitada(s)`);
+    if (r.duplicadas) x.push(`${r.duplicadas} repetida(s) — era la MISMA clave, se guardó una sola vez`);
+    if (r.limpiadas) x.push(`quité «Bearer», comillas o texto extra de ${r.limpiadas}`);
+    if (r.ignoradas) x.push(`${r.ignoradas} línea(s) sin clave ignoradas`);
+    (r.sospechosas || []).forEach(t => x.push("⚠ " + t));
+    out.push(`🔑 ${n}: ${x.join(" · ")}`);
+  });
+  return out;
+}
+async function guardarAjustes(cerrar = true) {
+  const btn = $("#cfgSave"); btn.disabled = true; const txt0 = btn.textContent; btn.textContent = "Guardando…";
+  try {
+    const r = await saveCfg(collectCfgPatch());
+    if (!r) return false;
+    CFG_SNAP = "";
+    const lineas = ["✔ Ajustes guardados"].concat(informeClaves(r._claves));
+    toast(lineas.join("\n"));
+    if (r._claves) $("#vaultInfo").textContent = (CFG.vault || "") + " · " + informeClaves(r._claves).join(" | ");
+    if (cerrar) $("#cfgModal").classList.remove("show");
+    await loadModels(true); loadProjects();
+    const malas = (PROVIDERS || []).filter(p => p.claves_malas && p.claves_malas.length);
+    if (malas.length) toast("⚠ " + malas.map(p => `${p.name}: la(s) clave(s) ${p.claves_malas.join(", ")} no funcionan (se usa la siguiente)`).join(" · "));
+    return true;
+  } finally { btn.disabled = false; btn.textContent = txt0; }
+}
+$("#cfgSave").onclick = () => guardarAjustes(true);
+// Cerrar sin guardar: si hay cambios, se pregunta (antes un clic fuera de la ventana los perdía sin avisar)
+function cerrarAjustes() {
+  if (cfgDirty() && !confirm("Tienes cambios sin guardar en ⚙ Ajustes. ¿Salir SIN guardarlos?\n(Aceptar = descartar · Cancelar = seguir editando)")) return;
+  CFG_SNAP = ""; $("#cfgModal").classList.remove("show");
+}
 $("#l-opt").onclick = async () => {
   $("#l-optout").textContent = "Aplicando…";
   const r = await jpost("/api/optimizar_ollama");
@@ -1172,11 +1465,17 @@ $("#np-ok").onclick = async () => {
 };
 let editing = null;
 function editProject(p) {
-  editing = p; $("#pe-title").textContent = "🗂 " + p.name; $("#pe-desc").value = p.descripcion || ""; $("#pe-inst").value = p.instrucciones || "";
+  editing = p; $("#pe-title").textContent = "🗂 " + p.name; $("#pe-desc").value = p.descripcion || ""; $("#pe-inst").value = p.instrucciones || ""; $("#pe-zipout").textContent = "";
   openModal("#projEdit");
 }
 $("#pe-ok").onclick = async () => { await jpost("/api/projects/" + encodeURIComponent(editing.name), {descripcion: $("#pe-desc").value, instrucciones: $("#pe-inst").value}); $("#projEdit").classList.remove("show"); loadProjects(); };
 $("#pe-open").onclick = () => openInFolder(editing.path);
+$("#pe-zip").onclick = async () => {
+  const o = $("#pe-zipout"); o.innerHTML = `<span class="spin"></span> Creando el ZIP…`;
+  const r = await jpost("/api/projects/" + encodeURIComponent(editing.name) + "/entrega", {nota: $("#pe-desc").value.slice(0, 60)});
+  o.innerHTML = r.ok ? `<span class="ok-t">✔ ${esc(r.nombre)} (${r.archivos} archivos, ${Math.round(r.bytes / 1024)} KB)</span> <a href="#" id="pe-zipdir">abrir carpeta</a>` : `<span class="bad-t">✖ ${esc(r.error || "no se pudo")}</span>`;
+  const a = $("#pe-zipdir"); if (a) a.onclick = e => { e.preventDefault(); openInFolder(r.carpeta); };
+};
 
 /* Memoria */
 $("#openMem").onclick = async () => { $("#memText").value = (await jget("/api/memoria")).text; openModal("#memModal"); };
@@ -1214,6 +1513,7 @@ $("#mcpSave").onclick = async () => {
 /* ───────────── Inicio ───────────── */
 (async function init() {
   CFG = await jget("/api/config");
+  pollRecursos(); $("#recChip").onclick = abrirRendimiento;
   $("#permSel").value = CFG.permission_mode;
   setProjectChip(null); showEmpty();
   loadProjects(); loadConvs();
@@ -1245,7 +1545,7 @@ async function applyVanguardia(out) {
   const des = Object.entries(r.descartados || {});
   const desc = des.length ? `<details class="small"><summary>${des.length} modelo(s) no se usarán por ahora — ver por qué</summary>${des.map(([m, x]) => `<div>• ${esc(m.split("::").pop())}: ${esc(why(x))}</div>`).join("")}</details>` : "";
   if (!r.ok) { out.innerHTML = `<span class="bad-t">✖ ${esc(r.error || "falló")}</span>` + desc; return; }
-  out.innerHTML = `<div class="ok-t">✔ Listo. Tu IA principal ahora es <b>${esc(r.modelo.split("::").pop())}</b> (probada: funciona con tu cuenta).</div><div class="small">Si se ocupa o falla, NoviQ sigue solo con: ${esc(r.respaldo.map(m => m.split("::").pop()).join(" → ") || "—")}</div>` + desc;
+  out.innerHTML = `<div class="ok-t">✔ Listo. Tu IA principal ahora es <b>${esc(r.modelo.split("::").pop())}</b> (probada: funciona con tu cuenta).</div><div class="small">Si se ocupa o falla, Noviq sigue solo con: ${esc(r.respaldo.map(m => m.split("::").pop()).join(" → ") || "—")}</div>` + desc;
   CFG.model = r.modelo; selectModel(r.modelo); const sel = $("#modelSel"); sel.value = r.modelo; if (convId) jpost("/api/conversations/" + convId, {model: r.modelo});
   loadModels(false);
 }
@@ -1271,7 +1571,7 @@ async function renderVanguardia() {
 }
 $("#vgPlan").onchange = () => jpost("/api/vanguardia", {planificar: $("#vgPlan").checked});
 $("#vgBrain").onchange = () => jpost("/api/vanguardia", {modelo_cerebro: $("#vgBrain").value});
-$("#vgAuto").onchange = () => { CFG.respaldo_auto = $("#vgAuto").checked; jpost("/api/config", {respaldo_auto: CFG.respaldo_auto}); };
+$("#vgAuto").onchange = () => { CFG.respaldo_auto = $("#vgAuto").checked; saveCfg({respaldo_auto: CFG.respaldo_auto}); };
 
 /* ───────────── Salud: IAs no operativas con motivo y solución ───────────── */
 function openFix(p) {
@@ -1329,7 +1629,7 @@ $("#tpSave").onclick = async () => {
   else cuando.cada_min = +$("#tpCada").value || 60;
   const r = await jpost("/api/programadas", {nombre: $("#tpName").value, instruccion: $("#tpText").value, cuando, proyecto: $("#tpProj").value || null, modelo: $("#modelSel").value, autonomo: $("#tpAuto").checked});
   $("#tpOut").innerHTML = r.ok ? `<span class="ok-t">✔ Programada: próxima ${new Date(r.tarea.proxima * 1000).toLocaleString()}</span>` : `<span class="bad-t">✖ ${esc(r.error)}</span>`;
-  if (r.ok) { $("#tpName").value = ""; $("#tpText").value = ""; renderPc(); }
+  if (r.ok) { $("#tpName").value = ""; $("#tpText").value = ""; if ($("#tpCuando")) { $("#tpCuando").value = ""; $("#tpCuandoOut").textContent = ""; } renderPc(); }
 };
 
 /* ───────────── Aprendizaje ───────────── */
@@ -1347,6 +1647,82 @@ async function renderApr() {
 $("#openApr").onclick = () => { openModal("#aprModal"); renderApr(); };
 $("#aprOn").onchange = () => jpost("/api/aprendizaje", {activo: $("#aprOn").checked});
 $("#aprClear").onclick = async () => { if (confirm("¿Olvidar todo lo aprendido? (se conserva el conocimiento base)")) { await jpost("/api/aprendizaje", {borrar: ""}); renderApr(); } };
+
+/* ───────────── 🏆 Ranking de IAs (agente evaluador) + 🧭 director ───────────── */
+const RK = {tipo: "arreglar", data: null};
+const L = (es, en) => (window.NOVIQ_LANG === "en" ? en : es);
+async function renderRank(reload) {
+  if (reload || !RK.data) RK.data = await jget("/api/evaluador");
+  const d = RK.data, cfgE = d.config || {}, cfgD = CFG.director || {};
+  $("#rkDesc").innerHTML = L(`El <b>agente evaluador</b> mide cada IA en tu PC: herramientas que funcionan, tareas completadas, pruebas que pasan, trabajos terminados, y también sus fallos (respuestas vacías, bucles, texto repetido, errores del servidor, imágenes rechazadas, atascos, archivos que rompió) y tus 👍/👎. Con eso ordena el respaldo, elige a quién escalar cuando una IA se atasca y con quién sigue el <b>director</b> cuando un trabajo queda a medias. Con pocos datos manda el catálogo; con muchos, lo medido.`,
+    `The <b>evaluator agent</b> measures every AI on your PC: tools that work, tasks completed, tests passing, jobs finished, and also its failures (empty replies, loops, repeated text, server errors, rejected images, getting stuck, files it broke) plus your 👍/👎. It uses that to order the fallback chain, pick who takes over when an AI gets stuck, and choose who the <b>director</b> continues with when a job stops halfway. With little data the catalog decides; with a lot, the measurements do.`);
+  $("#rkOn").checked = cfgE.activo !== false; $("#rkIni").value = cfgE.elegir_al_inicio || "si_falla";
+  $("#dirOn").checked = cfgD.activo !== false; $("#dirMax").value = cfgD.max_continuaciones ?? 4;
+  $("#rkTabs").innerHTML = Object.entries(d.tipos).map(([k, v]) => `<button data-t="${k}" class="${k === RK.tipo ? "on" : ""}">${esc(v)}</button>`).join("");
+  $("#rkTabs").querySelectorAll("[data-t]").forEach(b => b.onclick = () => { RK.tipo = b.dataset.t; renderRank(); });
+  const rows = d.ranking[RK.tipo] || [];
+  const N = window.NOVIQ_LANG === "en" ? {ok: "tools OK", tarea: "tasks done", prueba_ok: "tests OK", fin: "jobs finished", up: "👍",
+    err: "tool errors", vacia: "empty replies", bucle: "loops", repite: "repeated text", guardian: "guard cuts", api: "server errors",
+    imagen: "rejected images", atasco: "stuck", prueba_mal: "failed tests", dano: "files broken", abandono: "abandoned jobs", down: "👎"} : (d.nombres || {});
+  $("#rkList").innerHTML = rows.length ? rows.map((x, i) => {
+    const st = x.stats_tipo || {}, g = x.stats || {};
+    const buenos = ["tarea", "fin", "prueba_ok", "ok"].filter(k => st[k]).map(k => `${N[k] || k}: ${st[k]}`);
+    const malos = ["vacia", "bucle", "repite", "api", "imagen", "atasco", "dano", "abandono", "err"].filter(k => st[k]).map(k => `${N[k] || k}: ${st[k]}`);
+    return `<div class="rk-row"><div>${i + 1}.</div><div><div class="nm" title="${esc(x.modelo)}"><b>${esc(x.modelo.split("::").pop())}</b> <span class="small">${esc(x.modelo.split("::")[0])}</span>
+      ${x.razonador ? `<span class="badge" title="${L("IA de razonamiento: si falla baja antes en la lista", "reasoning AI: demoted sooner when it fails")}">🧠</span>` : ""}
+      ${x.enfriando ? `<span class="badge r" title="${esc(x.motivo || "")}">en enfriamiento</span>` : ""}${x.degradada ? ` <span class="badge r" title="${esc(x.degradada)}">⬇ ${L("degradada", "demoted")}</span> <button class="linkbtn" data-rh="${esc(x.modelo)}" title="${L("Olvidar sus fallos recientes y devolverla a su puesto", "Forget its recent failures")}">↺</button>` : ""}${x.sin_cuota ? ` <span class="badge r">⛽ ${L("sin cuota", "no quota")}</span>` : ""}${x.up ? ` <span class="badge g">👍 ${x.up}</span>` : ""}${x.down ? ` <span class="badge r">👎 ${x.down}</span>` : ""}</div>
+      <div class="det" data-noi18n>${L("catálogo", "catalog")} ${x.catalogo}/100 · ${x.datos_tipo || 0} ${L("datos en esta tarea", "data points for this task")} (${x.datos || 0} ${L("en total", "in total")})${x.seg_prom ? ` · ${x.seg_prom} ${L("s por respuesta", "s per reply")}` : ""}${buenos.length ? " · ✔ " + esc(buenos.join(", ")) : ""}${malos.length ? " · ✗ " + esc(malos.join(", ")) : ""}${x.tokens ? " · 🪙 " + esc(x.tokens) : ""}</div></div>
+      <div><div class="rk-bar"><i style="width:${Math.max(2, x.puntaje)}%"></i></div><div class="small" style="text-align:right">${x.puntaje.toFixed(0)}/100</div></div></div>`;
+  }).join("") : `<div class="small">Aún no hay modelos disponibles (conecta proveedores en 🎁 IA gratis).</div>`;
+  $("#rkList").querySelectorAll("[data-rh]").forEach(b => b.onclick = async () => { await jpost("/api/evaluador", {rehabilitar: b.dataset.rh}); renderRank(true); });
+  renderTokens(d);
+  $("#rkEv").innerHTML = (d.eventos || []).slice(0, 30).map(e => `<div class="rk-ev ${e.bueno ? "bueno" : "malo"}">${new Date(e.t * 1000).toLocaleString()} · <b>${esc(e.evento)}</b> · ${esc(e.modelo.split("::").pop())} · ${esc((d.tipos[e.tipo] || e.tipo))}${e.detalle ? " — " + esc(e.detalle) : ""}</div>`).join("") || `<div class="small">Todavía no hay eventos: se registran solos mientras las IAs trabajan.</div>`;
+}
+function renderTokens(d) {
+  const T = d.tokens || {}, P = T.proveedores || {}, M = T.modelos || {}, cup = T.cupos || {}, nom = d.proveedores || {};
+  const n = x => (x || 0).toLocaleString();
+  const fr = e => e.agotado ? `<span class="bad-t">⛽ ${L("agotado hasta", "empty until")} ${new Date(e.hasta * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</span>`
+    : e.fraccion != null ? `<span class="${e.fraccion < 0.2 ? "bad-t" : "ok-t"}">${Math.round(e.fraccion * 100)}%</span>` : "—";
+  const filasP = Object.entries(P).sort((a, b) => b[1].hoy - a[1].hoy).map(([pid, e]) => `<tr><td><b>${esc(nom[pid] || pid)}</b></td><td>${n(e.hoy)}${e.estimado ? "≈" : ""}</td><td>${n(e.hoy_llamadas)}</td><td>${n(e.mes)}</td><td>${n(e.total)}</td>
+    <td><input type="number" min="0" step="10000" data-cupo="${esc(pid)}" value="${(cup[pid] || {}).tokens_dia || ""}" placeholder="${L("sin tope", "no cap")}" style="width:110px"></td></tr>`).join("");
+  const filasM = Object.entries(M).slice(0, 25).map(([m, e]) => `<tr><td title="${esc(m)}">${esc(m.split("::").pop())} <span class="small">${esc(m.split("::")[0])}</span></td><td>${n(e.hoy)}${e.estimado ? "≈" : ""}</td><td>${n(e.hoy_llamadas)}</td><td>${fr(e)}</td>
+    <td class="small">${Object.entries(e.quedan || {}).map(([k, q]) => `${esc(k.replace("_", "/"))}: ${n(q.quedan)}${q.limite ? "/" + n(q.limite) : ""}`).join(" · ")}${e.agotado ? ` <button class="linkbtn" data-lib="${esc(m)}">${L("volver a probar", "retry now")}</button>` : ""}</td></tr>`).join("");
+  $("#rkTok").innerHTML = (filasP ? `<table class="bn"><tr><th>${L("Proveedor", "Provider")}</th><th>${L("Hoy (tokens)", "Today (tokens)")}</th><th>${L("Llamadas hoy", "Calls today")}</th><th>${L("Este mes", "This month")}</th><th>Total</th><th>${L("Tope diario (tokens)", "Daily cap (tokens)")}</th></tr>${filasP}</table>` : `<div class="small">${L("Aún no hay consumo registrado.", "No usage recorded yet.")}</div>`)
+    + (filasM ? `<table class="bn"><tr><th>${L("Modelo", "Model")}</th><th>${L("Hoy", "Today")}</th><th>${L("Llamadas", "Calls")}</th><th>${L("Le queda", "Left")}</th><th>${L("Límites del proveedor", "Provider limits")}</th></tr>${filasM}</table>` : "");
+  $("#rkTok").querySelectorAll("[data-cupo]").forEach(i => i.onchange = () => jpost("/api/evaluador", {cupo: {proveedor: i.dataset.cupo, tokens_dia: +i.value || 0}}).then(() => renderRank(true)));
+  $("#rkTok").querySelectorAll("[data-lib]").forEach(b => b.onclick = () => jpost("/api/evaluador", {liberar: b.dataset.lib}).then(() => renderRank(true)));
+}
+async function saveRankCfg() {
+  await jpost("/api/evaluador", {config: {activo: $("#rkOn").checked, elegir_al_inicio: $("#rkIni").value},
+                                 director: {activo: $("#dirOn").checked, max_continuaciones: Math.max(0, Math.min(20, +$("#dirMax").value || 0))}});
+  CFG = await jget("/api/config"); renderRank(true);
+}
+/* 🧪 Banco de pruebas de IAs */
+let BN_T = null;
+function renderBanco(e) {
+  const rs = e.resultados || [];
+  const head = e.activo ? `<div><span class="spin"></span> Probando ${esc(e.actual || "")} — ${e.hechos}/${e.total}</div>` : (rs.length ? `<div>${e.anterior ? "Última prueba" : "✔ Prueba terminada"}${e.informe ? ` · informe en <code>${esc(e.informe)}</code>` : ""}</div>` : "");
+  const filas = rs.slice().sort((a, b) => (b.nota || 0) - (a.nota || 0)).map(r => `<tr><td title="${esc(r.modelo)}"><b>${esc(r.modelo.split("::").pop())}</b></td><td>${r.aciertos}/${r.total}</td>
+    <td>${r.herramientas ? "✅" : r.herramientas === false ? "❌" : "—"}</td><td>${r.vacias ? `<span class="bad-t">${r.vacias}</span>` : 0}</td><td>${r.errores ? `<span class="bad-t">${r.errores}</span>` : 0}</td>
+    <td>${r.seg_primero ?? "—"}</td><td>${r.seg_prom ?? "—"}</td><td><b>${r.nota}</b></td></tr>
+    <tr class="bn-det"><td colspan="8">${(r.pruebas || []).map(p => `${p.ok ? "✅" : p.vacia ? "⚠" : "❌"} ${esc(p.nombre)}: ${esc(p.detalle || "")}${p.ms ? ` (${(p.ms / 1000).toFixed(1)} s)` : ""}${p.error ? ` — ${esc(p.error)}` : ""}`).join(" · ")}</td></tr>`).join("");
+  $("#bnRun").textContent = e.activo ? "⏹ Detener la prueba" : "▶ Probar mi IA y el respaldo"; $("#bnRun").dataset.activo = e.activo ? "1" : "";
+  $("#bnOut").innerHTML = head + (filas ? `<table class="bn"><tr><th>Modelo</th><th>Aciertos</th><th>Herram.</th><th>Vacías</th><th>Errores</th><th>1.ª letra (s)</th><th>Prom. (s)</th><th>Nota</th></tr>${filas}</table>` : "");
+}
+async function pollBanco() {
+  const e = await jget("/api/banco").catch(() => null); if (!e) return;
+  renderBanco(e); clearTimeout(BN_T);
+  if (e.activo) BN_T = setTimeout(pollBanco, 2500); else if (BN_T !== null) { BN_T = null; renderRank(true); }
+}
+$("#bnRun").onclick = async () => {
+  if ($("#bnRun").dataset.activo) { await jpost("/api/banco", {detener: true}); toast("🧪 La prueba se detiene al terminar la pregunta en curso."); return; }
+  const r = await jpost("/api/banco", {});
+  if (!r.ok) { toast("🧪 " + (r.error || "no se pudo iniciar")); return; }
+  toast("🧪 Probando: " + r.modelos.map(m => m.split("::").pop()).join(", ")); BN_T = 0; pollBanco();
+};
+$("#openRank").onclick = () => { openModal("#rankModal"); renderRank(true); pollBanco(); };
+["#rkOn", "#rkIni", "#dirOn", "#dirMax"].forEach(id => $(id).onchange = saveRankCfg);
+$("#rkClear").onclick = async () => { if (confirm("¿Borrar las estadísticas del evaluador? (el ranking vuelve a basarse solo en el catálogo)")) { await jpost("/api/evaluador", {borrar: true}); renderRank(true); } };
 
 /* ───────────── Plan en vivo + aprobación con cuenta regresiva ───────────── */
 const PLAN = {raz: null, txt: null, timer: null, id: null};
@@ -1458,10 +1834,11 @@ async function renderHomeConvs() {
 }
 
 /* Idioma de la interfaz (automático según el sistema, o fijo) */
-try { $("#langSel").value = window.getNoviqLangPref ? window.getNoviqLangPref() : "auto"; $("#langSel").onchange = () => window.setNoviqLang($("#langSel").value); } catch (e) {}
+try { $("#langSel").value = window.getNoviqLangPref ? window.getNoviqLangPref() : "auto";
+  $("#langSel").onchange = async () => { if (cfgDirty()) await guardarAjustes(false); window.setNoviqLang($("#langSel").value); }; } catch (e) {}
 
 $("#apagarBtn").onclick = async () => {
-  if (!confirm("¿Apagar NoviQ? Las IAs que estén trabajando se detendrán.")) return;
+  if (!confirm("¿Apagar Noviq? Las IAs que estén trabajando se detendrán.")) return;
   try { await jpost("/api/apagar"); } catch (e) {}
-  document.body.innerHTML = `<div style="display:grid;place-items:center;height:100vh;color:#e8f0ec;font:18px sans-serif"><div style="text-align:center"><img src="/static/noviq_icon.png" width="96"><p>${window.T ? T("NoviQ se apagó. Ya puedes cerrar esta ventana.") : "NoviQ se apagó. Ya puedes cerrar esta ventana."}</p></div></div>`;
+  document.body.innerHTML = `<div style="display:grid;place-items:center;height:100vh;color:#e8f0ec;font:18px sans-serif"><div style="text-align:center"><img src="/static/noviq_icon.png" width="96"><p>${window.T ? T("Noviq se apagó. Ya puedes cerrar esta ventana.") : "Noviq se apagó. Ya puedes cerrar esta ventana."}</p></div></div>`;
 };

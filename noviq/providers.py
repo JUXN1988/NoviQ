@@ -40,6 +40,10 @@ def http_error(status, body, model_id, local=False):
     return APIError(f"{status}: {body}", status)
 
 
+# proveedores que devuelven el uso de tokens al final del streaming con stream_options.include_usage
+CON_USO = {"openai", "groq", "deepseek", "cerebras", "xai", "gemini", "openrouter", "nvidia", "mistral", "huggingface", "vercel"}
+
+
 def split_model(model_id):
     if "::" in model_id:
         p, m = model_id.split("::", 1)
@@ -63,6 +67,17 @@ def provider_cfg(pid):
 _key_idx = {}
 
 
+def olvidar_clave(pid):
+    """Las claves cambiaron: se vuelve a empezar por la primera (y se olvida la lista de modelos guardada)."""
+    _key_idx.pop(pid, None)
+    _models_cache.pop(pid, None)
+
+
+def clave_actual(pid):
+    """Índice de la clave con la que se está trabajando ahora (la última que funcionó)."""
+    return _key_idx.get(pid, 0)
+
+
 def _keys(pid, p):
     from . import vault
     keys = vault.get_keys(pid)
@@ -83,7 +98,7 @@ def _headers(key, p=None):
     if p and p.get("anthropic_headers"):
         h.update({"x-api-key": key, "anthropic-version": "2023-06-01"})
     if p and "openrouter" in p.get("base_url", ""):
-        h.update({"HTTP-Referer": "http://localhost", "X-Title": "NoviQ"})
+        h.update({"HTTP-Referer": "http://localhost", "X-Title": "Noviq"})
     return h
 
 
@@ -105,9 +120,23 @@ def list_models(pid, refresh=False):
         return out
     try:
         p = provider_cfg(pid)
-        key = _keys(pid, p)[0]
-        r = requests.get(p["base_url"].rstrip("/") + "/models", headers=_headers(key, p),
-                         timeout=4 if p.get("local") else 20)
+        keys = _keys(pid, p)
+        # con varias claves (cuentas) se prueba primero la que funcionó la última vez y, si una es inválida o está
+        # vencida, la siguiente: antes solo se usaba la primera y bastaba una mala para que el proveedor «no funcionara»
+        start = _key_idx.get(pid, 0) % len(keys)
+        orden = keys[start:] + keys[:start]
+        malas = []
+        for n_, key in enumerate(orden):
+            r = requests.get(p["base_url"].rstrip("/") + "/models", headers=_headers(key, p),
+                             timeout=4 if p.get("local") else 20)
+            if r.status_code in (401, 403) and n_ < len(orden) - 1:
+                malas.append(keys.index(key) + 1)
+                continue
+            if r.status_code == 200 and len(keys) > 1:
+                _key_idx[pid] = keys.index(key)
+            break
+        if malas:
+            out["claves_malas"] = malas
         if r.status_code in (404, 405) and p.get("modelos_fijos"):
             out.update(ok=True, models=list(p["modelos_fijos"]))
             _models_cache[pid] = out
@@ -213,6 +242,8 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
     pid, model = split_model(model_id)
     p = provider_cfg(pid)
     ov = CONFIG.get("model_overrides", {}).get(model_id, {})
+    extra = dict(extra or {})
+    read_to_extra = extra.pop("_read_timeout", None)  # uso interno (banco de pruebas): no se manda al servidor
     from . import local as LOC
     if p.get("local") and (pid == "ollama" or ":11434" in p.get("base_url", "")) and LOC.cfg_local().get("ollama_nativo", True):
         # API nativa de Ollama: permite fijar num_ctx (por defecto Ollama usa solo 4096 tokens y "olvida" el inicio)
@@ -232,6 +263,9 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
         salud.ok(model_id)
         if usage:
             emit("usage", usage)
+        from . import tokens as TK
+        TK.usar(model_id, (usage or {}).get("entrada") or TK.estimar(messages, tools),
+                (usage or {}).get("salida") or int((len(raw) + len(reasoning)) / TK.CH), estimado=not (usage or {}).get("entrada"))
         log_call(model_id, {"tools": tools, "max_tokens": mt, "reasoning_effort": f"num_ctx={usage.get('num_ctx')}"},
                  raw, reasoning, calls, finish)
         return raw, reasoning, calls, finish
@@ -253,6 +287,8 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
     if tools:
         payload["tools"] = tools
         payload["tool_choice"] = "auto"
+    if pid in CON_USO and not ov.get("no_stream_options"):
+        payload["stream_options"] = {"include_usage": True}  # 🪙 el servidor dice cuántos tokens gastó
     if extra:
         payload.update(extra)
         if ov.get("no_reasoning_effort"):
@@ -263,12 +299,19 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
     keys = _keys(pid, p)
     url = p["base_url"].rstrip("/") + "/chat/completions"
     r, last_err, bad_keys = None, "", set()
-    read_to = float(CONFIG.get("read_timeout", 240))
+    # con imágenes en el contexto, un 5xx repetido casi siempre es «este modelo no acepta imágenes»: no se pierde tiempo
+    # reintentando igual; el agente reintenta enseguida SIN imágenes (un modelo con visión las describe en texto)
+    has_img = any(isinstance(m.get("content"), list) and any(isinstance(x, dict) and x.get("type") == "image_url"
+                                                                for x in m["content"]) for m in messages)
+    read_to = float(read_to_extra or CONFIG.get("read_timeout", 240))
     from . import salud as _S
+    from . import tokens as TK
     pref = _S.clave(model_id) if len(keys) > 1 else None
     if pref is not None and pref < len(keys):
         _key_idx[pid] = pref  # la clave (cuenta) que ya funcionó con este modelo
     for attempt in range(max_attempts + len(keys) - 1):
+        if stop_ev.is_set():  # «Detener» (o el límite de tiempo) también corta los reintentos
+            raise APIError("Detenido.")
         k = keys[_key_idx.get(pid, 0) % len(keys)]
         try:
             r = requests.post(url, headers=_headers(k, p), json=payload, stream=True, timeout=(15, read_to))
@@ -283,9 +326,15 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
             last_err = f"sin respuesta en {int(read_to)} s"
             continue
         if r.status_code == 200:
+            TK.cabeceras(model_id, r.headers)
             break
         body = r.text[:2000]
         r.close()
+        if r.status_code in (400, 422) and "stream_options" in payload and "stream_options" in body.lower():
+            payload.pop("stream_options", None)  # este servidor no lo acepta: se recuerda y se reintenta sin él
+            set_ov = CONFIG.setdefault("model_overrides", {}).setdefault(model_id, {})
+            set_ov["no_stream_options"] = True
+            continue
         cuenta_404 = r.status_code == 404 and "not found for account" in body.lower()
         if r.status_code in (401, 403) or cuenta_404:
             bad_keys.add(k)
@@ -294,8 +343,15 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
             emit("status", {"text": ("Este modelo no está en tu primera cuenta; " if cuenta_404 else f"Clave {r.status_code}: ")
                                     + "probando con tu otra API key…"})
             continue
+        if has_img and r.status_code in (500, 502, 503) and attempt >= 1:
+            raise http_error(r.status_code, body, model_id, local=p.get("local"))
+        espera_429 = TK.agotar(model_id, body, r.headers) if r.status_code == 429 else 0
+        if espera_429 > 45:
+            # ⛽ cuota agotada (por día o por muchos minutos): no se pierde tiempo reintentando, pasa al respaldo
+            raise http_error(r.status_code, body, model_id, local=p.get("local"))
         if r.status_code in (429, 500, 502, 503, 504) and attempt < max_attempts - 1:
-            wait = float(r.headers.get("Retry-After") or 0) or min(40, 2 ** attempt + random.random() * 2)
+            wait = float(r.headers.get("Retry-After") or 0) or espera_429 or min(40, 2 ** attempt + random.random() * 2)
+            wait = min(wait, 45)
             emit("status", {"text": f"El servidor respondió {r.status_code}; reintento en {int(wait)} s…"})
             for _ in range(int(wait * 2)):
                 if stop_ev.is_set():
@@ -306,8 +362,9 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
     else:
         raise APIError(f"{p.get('name', pid)} no respondió tras {max_attempts} intentos. {last_err}", 599)
 
-    raw, reasoning, calls, finish = "", "", {}, None
+    raw, reasoning, calls, finish, uso = "", "", {}, None, None
     splitter = TagSplitter()
+    ultimos = []  # últimas líneas crudas del servidor: si la respuesta sale vacía se guardan en el registro técnico
 
     def push(chunks):
         nonlocal reasoning
@@ -337,10 +394,15 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
             data = line[5:].strip()
             if data == b"[DONE]":
                 break
+            ultimos.append(data[:400])
+            del ultimos[:-4]
             try:
                 chunk = json.loads(data.decode("utf-8"))
             except Exception:
                 continue
+            u_ = chunk.get("usage") or (chunk.get("x_groq") or {}).get("usage")
+            if isinstance(u_, dict) and u_:
+                uso = u_
             if chunk.get("error"):
                 er = chunk["error"]
                 code = er.get("code") if isinstance(er, dict) else None
@@ -396,12 +458,28 @@ def stream_chat(model_id, messages, tools, emit, stop_ev, extra=None, max_attemp
             tool_calls.append({"id": c["id"] or f"call_{uuid.uuid4().hex[:12]}", "type": "function",
                                "function": {"name": c["name"], "arguments": c["arguments"] or "{}"}})
     log_call(model_id, payload, raw, reasoning, tool_calls, finish)
+    TK.usar_respuesta(model_id, uso, messages, tools, raw, reasoning, tool_calls)
+    if uso:
+        emit("usage", {"entrada": uso.get("prompt_tokens"), "salida": uso.get("completion_tokens")})
+    if not raw.strip() and not tool_calls and len(reasoning) < 400:
+        _log_vacia(model_id, reasoning, ultimos)
     if raw or reasoning or tool_calls:
         from . import salud
         salud.ok(model_id)
         if len(keys) > 1:
             salud.set_clave(model_id, _key_idx.get(pid, 0) % len(keys))
     return raw, reasoning, tool_calls, finish
+
+
+def _log_vacia(model_id, reasoning, ultimos):
+    """Respuesta vacía: se guarda lo último que mandó el servidor (para saber si es el modelo o un formato raro)."""
+    try:
+        from .config import DATA_DIR
+        with open(DATA_DIR / "registro.log", "a", encoding="utf-8") as fh:
+            fh.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {model_id} | VACÍA | razonamiento={json.dumps(reasoning[:200], ensure_ascii=False)} | "
+                     f"crudo={json.dumps([u.decode('utf-8', 'replace') for u in ultimos], ensure_ascii=False)[:1500]}\n")
+    except Exception:
+        pass
 
 
 def log_call(model_id, payload, raw, reasoning, tool_calls, finish):
@@ -482,6 +560,18 @@ def _parse_xml_call(block):
     return None, None
 
 
+def _nombre_valido(name, args, valid_names):
+    """Acepta también los nombres que usan las IAs pequeñas (Read, read_file, str_replace_editor…)."""
+    if name in valid_names:
+        return name, args
+    try:
+        from .experto import alias as AL
+        n2, a2, _ = AL.normalizar(name, args if isinstance(args, dict) else {}, valid_names)
+        return n2, a2
+    except Exception:
+        return None, args
+
+
 def parse_text_tool_calls(text, valid_names, allow_fenced=True):
     blocks = re.findall(r"<tool_call>\s*(.*?)\s*(?:</tool_call>|$)", text, re.S)
     if not blocks:
@@ -496,14 +586,19 @@ def parse_text_tool_calls(text, valid_names, allow_fenced=True):
         obj = _loads_lenient(b) if b.lstrip().startswith(("{", "```")) else None
         if not isinstance(obj, dict):
             name, args = _parse_xml_call(b)
+            name, args = _nombre_valido(name, args, valid_names) if name else (None, args)
             if name in valid_names:
                 calls.append({"id": f"txt_{uuid.uuid4().hex[:10]}", "type": "function",
                               "function": {"name": name, "arguments": json.dumps(args or {}, ensure_ascii=False)}})
             continue
         name = obj.get("name") or obj.get("herramienta") or obj.get("tool") or obj.get("function")
-        args = obj.get("arguments", obj.get("argumentos", obj.get("args", obj.get("parameters", {}))))
+        if isinstance(name, dict):  # {"function": {"name": …, "arguments": …}}
+            obj, name = name, name.get("name")
+        args = obj.get("arguments", obj.get("argumentos", obj.get("args", obj.get("parameters", obj.get("input", {})))))
         if isinstance(args, str):
             args = _loads_lenient(args) or {}
+        if isinstance(name, str):
+            name, args = _nombre_valido(name, args, valid_names)
         if name in valid_names:
             calls.append({"id": f"txt_{uuid.uuid4().hex[:10]}", "type": "function",
                           "function": {"name": name, "arguments": json.dumps(args or {}, ensure_ascii=False)}})
@@ -539,12 +634,24 @@ def probe(model_id, timeout=30):
                 r = requests.post(p["base_url"].rstrip("/") + "/chat/completions", headers=_headers(k, p), timeout=(10, timeout), json=body)
             if r.status_code == 200:
                 salud.ok(model_id)
+                from . import tokens as TK
+                TK.cabeceras(model_id, r.headers)
+                try:
+                    u_ = r.json().get("usage") or {}
+                    TK.usar(model_id, u_.get("prompt_tokens") or 8, u_.get("completion_tokens") or 4)
+                except Exception:
+                    pass
                 if len(keys) > 1:
                     salud.set_clave(model_id, i)
                 return {"ok": True, "ms": int((time.time() - t0) * 1000), "clave": i + 1}
             if not (r.status_code in (401, 403) or (r.status_code == 404 and "not found for account" in r.text.lower())):
                 break
         ms = int((time.time() - t0) * 1000)
+        if r.status_code == 429:
+            from . import tokens as TK
+            if TK.agotar(model_id, r.text[:600], r.headers) > 3600:
+                return {"ok": False, "kind": "ocupado", "ms": ms, "solucion": "Se usa otra IA hasta que se renueve la cuota.",
+                        "motivo": "⛽ Agotó su cuota por hoy (límite diario del proveedor)."}
         if r.status_code in (429, 500, 502, 503, 504):
             return {"ok": False, "kind": "ocupado", "ms": ms, "solucion": "Se volverá a probar más tarde.",
                     "motivo": "Ocupado ahora mismo (el servidor está saturado o llegaste al límite por minuto)."}

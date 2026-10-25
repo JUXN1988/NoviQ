@@ -59,17 +59,61 @@ def t_ejecutar_linux(a, ctx):
     if not cmd.strip():
         return "ERROR: falta el comando."
     root = bool(a.get("como_root"))
+    from . import recursos as R
     if IS_WINDOWS:
+        nat = _nativo_equivalente(cmd, ctx.cwd) if R.perfil().get("preferir_nativo") and not root else None
+        if nat:  # python/pip/node/npm: igual de bien en Windows, sin encender la máquina virtual (ahorra 1-4 GB de RAM)
+            from .tools import ps_command
+            ctx.emit("notice", {"text": f"⚡ Ejecuto «{cmd[:60]}» directo en Windows (nativo): más rápido y sin encender la máquina virtual Linux."})
+            if a.get("segundo_plano"):
+                return run_background(ps_command(nat), ctx, "nativo: " + nat[:180])
+            return "(ejecutado de forma nativa en Windows, sin máquina virtual)\n" + run_streaming(
+                ps_command(nat), ctx, timeout=min(int(a.get("timeout_segundos") or 600), 3600))
         st = wsl_estado()
         if not st["disponible"]:
             return (f"ERROR: Linux (WSL) no está disponible: {st.get('motivo')}\nSolución: usa entorno(accion='instalar_linux') "
                     "para instalarlo (el usuario acepta el permiso de Windows y reinicia), o usa ejecutar_powershell / contenedor.")
+        R.preparar_wsl(lambda t: ctx.emit("notice", {"text": t}))
         full = ["wsl", "--cd", str(ctx.cwd)] + (["-u", "root"] if root else []) + ["-e", "bash", "-lc", cmd]
     else:
         full = ["bash", "-lc", cmd]
-    if a.get("segundo_plano"):
-        return run_background(full, ctx, "linux: " + cmd[:180])
-    return run_streaming(full, ctx, timeout=min(int(a.get("timeout_segundos") or 600), 3600))
+    with R.trabajo_pesado("vm", aviso=lambda t: ctx.emit("status", {"text": t})):
+        if a.get("segundo_plano"):
+            return run_background(full, ctx, "linux: " + cmd[:180])
+        return run_streaming(full, ctx, timeout=min(int(a.get("timeout_segundos") or 600), 3600))
+
+
+_BASH_SOLO = re.compile(r"&&|\|\||[;|`$<>]|\b(sudo|apt|apt-get|chmod|chown|export|source|make|gcc|g\+\+|\./)")
+_NATIVOS = {"python": "python", "python3": "python", "pip": "python -m pip", "pip3": "python -m pip", "node": "node",
+            "npm": "npm", "npx": "npx"}
+
+
+def _nativo_equivalente(cmd, root=None):
+    """Si el comando de Linux es un simple python/pip/node/npm que también existe en Windows, su versión nativa
+    (con el Python del proyecto: su .venv si tiene)."""
+    c = cmd.strip()
+    if not c or _BASH_SOLO.search(c) or "\n" in c:
+        return None
+    first, _, rest = c.partition(" ")
+    base = _NATIVOS.get(first)
+    if not base:
+        return None
+    exe = base.split()[0]
+    if exe == "python":
+        try:
+            from .pruebas import project_python
+            py = project_python(Path(root)) if root else None
+        except Exception:
+            py = None
+        if not py:
+            from .config import python_exe
+            py = python_exe()
+        if not py:
+            return None
+        return (f'& "{py}"' + base[len("python"):] + " " + rest).strip()
+    if not shutil.which(exe) and not shutil.which(exe + ".cmd"):
+        return None
+    return (base + " " + rest).strip()
 
 
 # ───────────── Docker ─────────────
@@ -93,13 +137,21 @@ def t_contenedor(a, ctx):
         return "ERROR: " + info
     img = a.get("imagen") or "python:3.12-slim"
     cmd = a.get("comando") or "ls -la"
-    full = ["docker", "run", "--rm", "-v", f"{ctx.cwd}:/work", "-w", "/work"]
+    from . import recursos as R
+    R.preparar_wsl(lambda t: ctx.emit("notice", {"text": t}))  # Docker Desktop corre sobre la misma máquina virtual WSL2
+    p = R.perfil()
+    full = ["docker", "run", "--rm", "-v", f"{ctx.cwd}:/work", "-w", "/work"] + R.docker_args(p, gpu=bool(a.get("gpu")) and R.docker_gpu())
     if not a.get("red", True):
         full += ["--network", "none"]
-    for p in (a.get("puertos") or [])[:5]:
-        full += ["-p", str(p)]
+    for pt in (a.get("puertos") or [])[:5]:
+        full += ["-p", str(pt)]
     full += [img, "sh", "-lc", cmd]
-    return run_streaming(full, ctx, timeout=min(int(a.get("timeout_segundos") or 900), 3600))
+    with R.trabajo_pesado("vm", aviso=lambda t: ctx.emit("status", {"text": t})):
+        out = run_streaming(full, ctx, timeout=min(int(a.get("timeout_segundos") or 900), 3600))
+    if "137" in out.split("\n", 1)[0]:
+        out += (f"\n⚠ Código 137: el contenedor llegó a su límite de memoria ({p['vm_gb']:g} GB, puesto para no colapsar la PC). "
+                "Reduce el consumo o sube el límite en ⚙ Ajustes → Rendimiento.")
+    return out
 
 
 # ───────────── Entornos virtuales ─────────────
@@ -210,7 +262,7 @@ def t_instalar_herramienta(a, ctx):
             ["winget", "install", "--id", nombre, "-e", "--accept-package-agreements", "--accept-source-agreements", "--silent"], ctx, 1800)
     out = run_streaming(["winget", "install", "--id", wid, "-e", "--accept-package-agreements", "--accept-source-agreements",
                          "--silent"], ctx, timeout=1800)
-    return out + "\n(Si el programa no aparece en el PATH, puede hacer falta reiniciar NoviQ.)"
+    return out + "\n(Si el programa no aparece en el PATH, puede hacer falta reiniciar Noviq.)"
 
 
 # ───────────── Puntos de restauración ─────────────
@@ -220,8 +272,8 @@ SNAP_EXCL = ["node_modules/", ".venv/", "venv/", "__pycache__/", ".noviq/", ".no
 
 def _git(root: Path, *args, timeout=60):
     gd = root / ".noviq" / "snapshots.git"
-    env = dict(os.environ, GIT_DIR=str(gd), GIT_WORK_TREE=str(root), GIT_AUTHOR_NAME="NoviQ", GIT_AUTHOR_EMAIL="noviq@local",
-               GIT_COMMITTER_NAME="NoviQ", GIT_COMMITTER_EMAIL="noviq@local")
+    env = dict(os.environ, GIT_DIR=str(gd), GIT_WORK_TREE=str(root), GIT_AUTHOR_NAME="Noviq", GIT_AUTHOR_EMAIL="noviq@local",
+               GIT_COMMITTER_NAME="Noviq", GIT_COMMITTER_EMAIL="noviq@local")
     return subprocess.run(["git", *args], capture_output=True, timeout=timeout, env=env, cwd=str(root), creationflags=NO_WINDOW)
 
 

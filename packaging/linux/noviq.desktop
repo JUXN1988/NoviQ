@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=NoviQ
+Name=Noviq
 GenericName=Agente de IA para programar
 Comment=Crea, prueba y corrige programas con IA gratis o local
-Exec=/opt/noviark/NoviQ
-Icon=noviark
+Exec=/opt/noviq/Noviq
+Icon=noviq
 Terminal=false
 Categories=Development;IDE;Utility;
 Keywords=IA;AI;agente;programar;ollama;nvidia;
@@ -12,5 +12,5 @@ StartupNotify=true
 Actions=Detener;
 
 [Desktop Action Detener]
-Name=Apagar NoviQ
-Exec=/opt/noviark/NoviQ --stop
+Name=Apagar Noviq
+Exec=/opt/noviq/Noviq --stop

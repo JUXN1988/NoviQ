@@ -120,9 +120,41 @@ def buscar_parecido(text, old, max_lines=14):
     return "\n".join(out)
 
 
-def aplicar(text, old, new, todo=False, rango=None):
+def _elegir(lineas, rango=None, ocurrencia=None):
+    """Con el texto repetido: ¿cuál cambiar? (índice, explicación) o (None, '').
+    ocurrencia = 1, 2… (la N-ésima) · rango = líneas que indicó la IA (se usa la aparición dentro o más cercana, ±3)."""
+    if ocurrencia:
+        try:
+            k = int(ocurrencia)
+        except (TypeError, ValueError):
+            k = 0
+        if 1 <= k <= len(lineas):
+            return k - 1, f"usé la aparición {k} de {len(lineas)} (línea {lineas[k - 1]})"
+    if rango:
+        d, h = rango
+        dentro = [i for i, ln in enumerate(lineas) if d - 3 <= ln <= h + 3]
+        if len(dentro) == 1:
+            return dentro[0], f"el texto aparecía {len(lineas)} veces; cambié el de la línea {lineas[dentro[0]]} (la que indicaste)"
+        if len(dentro) > 1:
+            k = min(dentro, key=lambda i: abs(lineas[i] - d))
+            return k, f"el texto aparecía {len(lineas)} veces; cambié el más cercano a la línea {d} (línea {lineas[k]})"
+    return None, ""
+
+
+def _msg_varias(text, old, lineas, desc=""):
+    tl = text.split("\n")
+    ejemplos = "\n".join(f"  aparición {i + 1}: línea {ln}: {tl[ln - 1].strip()[:90]}"
+                         + (f"   (antes: «{tl[ln - 2].strip()[:60]}»)" if ln >= 2 else "")
+                         for i, ln in enumerate(lineas[:6]))
+    return (f"texto_anterior aparece {len(lineas)} veces{' (' + desc + ')' if desc else ''}:\n{ejemplos}\n"
+            "→ Repite la llamada con ocurrencia=N (la que quieres cambiar), o con desde_linea=<línea> (la aparición en esa línea), "
+            "o agrega líneas vecinas para que sea único, o reemplazar_todo=true para cambiarlas todas.")
+
+
+def aplicar(text, old, new, todo=False, rango=None, ocurrencia=None):
     """Aplica un reemplazo. Devuelve (texto_nuevo, n_cambios, error, nota).
-    rango=(desde, hasta) opcional: si texto_anterior no aparece pero se parece a esas líneas, se usan esas líneas."""
+    rango=(desde, hasta) opcional: si el texto aparece varias veces se cambia el de esas líneas; si no aparece pero se
+    parece a esas líneas, se usan esas líneas. ocurrencia=N: cambia la N-ésima aparición."""
     old = (old or "").replace("\r\n", "\n")
     new = (new or "").replace("\r\n", "\n")
     if not old:
@@ -132,21 +164,26 @@ def aplicar(text, old, new, todo=False, rango=None):
     if n == 1 or (n > 1 and todo):
         return (text.replace(old, new) if todo else text.replace(old, new, 1)), n, None, ""
     if n > 1:
-        lines = []
-        start = 0
-        for _ in range(min(n, 5)):
+        pos, start = [], 0
+        while True:
             k = text.find(old, start)
-            lines.append(text.count("\n", 0, k) + 1)
+            if k < 0:
+                break
+            pos.append(k)
             start = k + 1
-        return text, n, (f"texto_anterior aparece {n} veces (líneas {', '.join(map(str, lines))}): agrega líneas vecinas para que sea "
-                         "único, usa desde_linea/hasta_linea, o reemplazar_todo=true si quieres cambiarlas todas"), ""
+        lines = [text.count("\n", 0, k) + 1 for k in pos]
+        elegida, por_que = _elegir(lines, rango, ocurrencia)
+        if elegida is not None:
+            k = pos[elegida]
+            return text[:k] + new + text[k + len(old):], 1, None, por_que
+        return text, n, _msg_varias(text, old, lines), ""
     # 2) números de línea copiados  3) escapes dobles
     for fix, nota in ((_strip_numbers, "quité los números de línea que copiaste de leer_archivo"),
                       (_unescape, "quité escapes dobles (\\\" o \\n literales)")):
         o2 = fix(old)
         if o2 and o2 != old:
             n2 = fix(new) or new
-            t2, k, err, nota2 = aplicar(text, o2, n2, todo)
+            t2, k, err, nota2 = aplicar(text, o2, n2, todo, rango, ocurrencia)
             if not err:
                 return t2, k, None, nota + ("; " + nota2 if nota2 else "")
     if todo:
@@ -166,9 +203,13 @@ def aplicar(text, old, new, todo=False, rango=None):
                 return "\n".join(out), 1, None, (f"coincidencia {desc}" + (" y líneas en blanco" if skip_blank else "")
                                                  + f" (líneas {a + 1}-{b})")
             if len(hits) > 1:
-                return text, len(hits), (f"texto_anterior aparece {len(hits)} veces ({desc}; líneas "
-                                         f"{', '.join(str(h[0] + 1) for h in hits[:5])}): agrega líneas vecinas para que sea único "
-                                         "o usa desde_linea/hasta_linea"), ""
+                elegida, por_que = _elegir([h[0] + 1 for h in hits], rango, ocurrencia)
+                if elegida is not None:
+                    a, b = hits[elegida]
+                    first_old = next((x for x in ol if x.strip()), "")
+                    new_lines = _reindent(nl, first_old, tl[a]) if desc != "sin espacios al final" else nl
+                    return "\n".join(tl[:a] + new_lines + tl[b:]), 1, None, f"coincidencia {desc}; {por_que}"
+                return text, len(hits), _msg_varias(text, None, [h[0] + 1 for h in hits], desc), ""
     # 5) aproximada
     fz = _fuzzy(tl, ol)
     if fz:

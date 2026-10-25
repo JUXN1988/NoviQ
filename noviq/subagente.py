@@ -90,6 +90,7 @@ def run(conv, ctx, task, tools, system, max_steps=30, label="Subagente", executo
         log(f"🤖 {label} usando {model.split('::')[-1]}")
         msgs = [{"role": "system", "content": system}, {"role": "user", "content": task}]
         text = ""
+        ultimo_texto = ""
         try:
             for step in range(max_steps):
                 if ctx.stop_ev.is_set():
@@ -114,11 +115,21 @@ def run(conv, ctx, task, tools, system, max_steps=30, label="Subagente", executo
                         args = {}
                     short = next((str(v) for v in args.values() if isinstance(v, str)), "")[:90].replace("\n", " ")
                     log(f"  · {name.split('__')[-1]} {short}")
-                    try:
-                        res = executor(name, args)
-                    except Exception as e:
-                        res = f"ERROR: {type(e).__name__}: {e}"
+                    # 🛡 guardia: lo sensible (enviar, borrar, instalar, pagar) lo aprueba el usuario también dentro de los subagentes
+                    from . import guardia as G
+                    etiqueta = G.etiqueta_de(args, ultimo_texto)
+                    rechazo = G.revisar(ctx, name, dict(args, element=etiqueta) if etiqueta and not args.get("element") else args)
+                    if rechazo:
+                        res = rechazo
+                        log("  🛡 rechazado por el usuario")
+                    else:
+                        try:
+                            res = executor(name, args)
+                        except Exception as e:
+                            res = f"ERROR: {type(e).__name__}: {e}"
                     txt = res.get("text", "") if isinstance(res, dict) else str(res)
+                    if re.search(r"ref=|uid=|\[e\d+\]", txt):
+                        ultimo_texto = txt  # último snapshot/lista de controles: sirve para saber qué dice el botón que se pulsa
                     msgs.append({"role": "tool", "tool_call_id": tc["id"], "name": name, "content": txt[:12000]})
                     imgs = res.get("images") if isinstance(res, dict) else None
                     if imgs:
@@ -240,6 +251,12 @@ def work_team(conv, ctx, tareas):
         return "ERROR: no hay modelos con herramientas nativas disponibles para el equipo."
     models = diverse(pool, len(tareas))
     max_par = max(1, min(int(C.get("equipo_max", 3)), 4))
+    if any(str(m).split("::")[0] in ("ollama", "lmstudio") for m in models):
+        try:  # IAs locales en paralelo se reparten la misma GPU/RAM: tantas como permita la memoria libre
+            from . import recursos as R
+            max_par = max(1, min(max_par, int(R.perfil()["equipo"])))
+        except Exception:
+            pass
     sem = threading.Semaphore(max_par)
     results = [None] * len(tareas)
     lock = threading.Lock()
@@ -254,6 +271,13 @@ def work_team(conv, ctx, tareas):
             sub_ctx = T.ToolContext(conv, ctx.emit, ctx.stop_ev, ctx.call_id)
 
             def execute(name, args):
+                try:  # 🔤 nombres/argumentos de otras herramientas (Read, Edit, file_path…) → los de Noviq
+                    from .experto import alias as AL
+                    n2, a2, _ = AL.normalizar(name, args, set(allowed), T.esquema_de)
+                    if n2:
+                        name, args = n2, a2
+                except Exception:
+                    pass
                 if name not in allowed:
                     return f"ERROR: herramienta no permitida para este agente: {name}"
                 if archivos and name in ("escribir_archivo", "editar_archivo"):
@@ -286,5 +310,25 @@ def work_team(conv, ctx, tareas):
 
 
 def browser_tools():
+    """Herramientas del navegador preferido (tu Chrome real con sesiones, o el Chrome/Edge automático de Playwright)."""
     from .mcp import MANAGER
+    n = MANAGER.navegador_preferido()
+    if n:
+        return MANAGER.server_tools(n)
     return [t for t in MANAGER.tool_defs(include_browser=True) if t["function"]["name"].split("__")[-1].startswith("browser_")]
+
+
+CHROME_REAL_SYSTEM = """Eres un agente experto que controla el CHROME REAL del usuario (con sus sesiones abiertas: Gmail, Hotmail, bancos…)
+mediante Chrome DevTools MCP. Completa la TAREA de forma autónoma:
+- Abre una pestaña NUEVA (new_page) para trabajar; no cierres ni cambies las pestañas del usuario.
+- navigate_page para ir a una URL; take_snapshot para LEER la página: cada elemento tiene un uid.
+- click(uid), fill(uid, value) / fill_form, press_key, wait_for(texto). Tras cada acción importante vuelve a take_snapshot.
+- Usa take_screenshot solo si el snapshot no alcanza (gasta más).
+- Enviar, publicar, borrar o pagar piden aprobación al usuario automáticamente: si la rechaza, no insistas.
+- Si pide iniciar sesión, un captcha o algo del usuario, DETENTE y explícalo.
+Al terminar responde SOLO con un RESUMEN en español: qué hiciste, datos exactos encontrados (URLs, textos) y qué falló."""
+
+
+def sistema_navegador():
+    from .mcp import MANAGER
+    return CHROME_REAL_SYSTEM if MANAGER.navegador_preferido() == "chrome_real" else BROWSER_SYSTEM

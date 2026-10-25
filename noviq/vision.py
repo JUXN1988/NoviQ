@@ -15,7 +15,8 @@ _cache = None
 
 # Orden de preferencia para elegir un modelo con visión entre los disponibles
 VISION_PREF = [
-    r"gemini-[\d.]+-flash(?!-image)", r"gemini", r"glm-5[\w.-]*", r"glm-4\.\dv", r"gpt-5", r"gpt-4\.1", r"gpt-4o",
+    r"gemini-[\d.]+-flash(?!-image)", r"gemini", r"glm-5[\w.-]*flash", r"glm-[45](\.\d+)?v", r"kimi-k[3-9]", r"gpt-5",
+    r"gpt-4\.1", r"gpt-4o",
     r"claude", r"llama-4-(maverick|scout)", r"qwen[\d.]*-?vl", r"nemotron[\w-]*vl", r"pixtral", r"mistral-(medium|small)-3",
     r"gemma-?3", r"llama-3\.2-\d+b-vision", r"phi-4-multimodal", r"minicpm-v", r"llava", r"moondream", r"vision",
 ]
@@ -63,7 +64,12 @@ def looks_vision(model_id):
 
 
 def lacks_vision(model_id):
-    """¿El modelo NO puede ver imágenes? (aprendido por error, o modelo local sin nombre de visión)."""
+    """¿El modelo NO puede ver imágenes?
+    Antes, cualquier modelo de la nube se consideraba «con visión» y se le mandaban las capturas de probar_web:
+    los modelos solo-texto de NVIDIA (glm-5.3, nemotron…) respondían 500 «Internal server error», se pasaba al
+    siguiente, que también fallaba, y así toda la cadena. Ahora manda: 1) lo aprendido (no_vision / vision),
+    2) el catálogo de familias (ve o no ve imágenes), 3) por seguridad, lo desconocido se trata como «no ve»
+    (un modelo con visión describe la imagen en texto: nunca falla por eso)."""
     ov = model_override(model_id)
     if ov.get("no_vision"):
         return True
@@ -72,7 +78,31 @@ def lacks_vision(model_id):
     pid = model_id.split("::", 1)[0] if "::" in model_id else "nvidia"
     if CONFIG["providers"].get(pid, {}).get("local") and not looks_vision(model_id):
         return True
+    try:
+        from . import catalogo as K
+        return not K.info(model_id).get("vision")
+    except Exception:
+        return not looks_vision(model_id)
+
+
+def has_images(msgs):
+    """¿Hay imágenes en estos mensajes?"""
+    for m in msgs or []:
+        c = m.get("content")
+        if isinstance(c, list) and any(isinstance(p, dict) and p.get("type") == "image_url" for p in c):
+            return True
     return False
+
+
+def strip_images(msgs, nota="[imagen omitida: este modelo no ve imágenes]"):
+    """Quita (in-place) las imágenes que no tengan descripción, dejando una nota en texto. Último recurso para que
+    un modelo sin visión nunca reciba una imagen (el servidor respondería 500/400)."""
+    replace_images(msgs)
+    for m in msgs:
+        c = m.get("content")
+        if isinstance(c, list):
+            txt = " ".join(p.get("text", "") for p in c if isinstance(p, dict) and p.get("type") == "text")
+            m["content"] = (txt + " " + nota).strip()
 
 
 def candidates(exclude=()):
@@ -89,14 +119,21 @@ def candidates(exclude=()):
     pool = [m for m in pool if not ovs.get(m, {}).get("no_vision")]
     learned = [m for m in pool if ovs.get(m, {}).get("vision")]
     out += learned
+    from . import catalogo as K
     for pat in VISION_PREF:
         rx = re.compile(pat, re.I)
-        out += [m for m in pool if rx.search(m.split("::", 1)[1]) and not m.split("::")[0] in ("ollama", "lmstudio")]
+        out += [m for m in pool if rx.search(m.split("::", 1)[1]) and not m.split("::")[0] in ("ollama", "lmstudio")
+                and (ovs.get(m, {}).get("vision") or K.info(m).get("vision"))]
     out += [m for m in pool if looks_vision(m)]  # locales con visión al final
     seen, res = set(), []
     from . import salud
+    try:
+        from . import evaluador as EV
+        frio = lambda m: EV.en_enfriamiento(m) or EV._sin_cuota(m)  # noqa: E731
+    except Exception:
+        frio = lambda m: False
     for m in out:
-        if m and m not in seen and m not in exclude and not salud.blocked(m):
+        if m and m not in seen and m not in exclude and not salud.blocked(m) and not frio(m):
             seen.add(m)
             res.append(m)
     return res
@@ -123,13 +160,16 @@ def describe(url, contexto="", emit=None, exclude=()):
             txt = strip_tool_text(raw).strip()
             if len(txt) < 20:
                 raise APIError("descripción vacía")
-            set_override(m, "vision", True)
+            if not model_override(m).get("vision"):
+                set_override(m, "vision", True)
             c[k] = {"texto": txt, "modelo": m}
             _save()
             return txt, m
         except APIError as e:
             t = str(e).lower()
-            if any(w in t for w in ("image", "vision", "multimodal")) and not getattr(e, "kind", None):
+            # un 400/422/500 al mandarle SOLO una imagen = el modelo no ve imágenes (se recuerda para no volver a probar)
+            if not getattr(e, "kind", None) and (any(w in t for w in ("image", "vision", "multimodal"))
+                                                 or getattr(e, "status", 0) in (400, 415, 422, 500)):
                 set_override(m, "no_vision", True)
             last = f"{m}: {str(e)[:200]}"
     return None, last
@@ -159,8 +199,14 @@ def replace_images(msgs, only_cached=False):
         m["content"] = "\n\n".join(x for x in parts if x)
 
 
+_FALLIDAS = {}  # imagen → cuándo falló su descripción (no se reintenta en cada paso del agente)
+
+
 def ensure_descriptions(conv, emit):
-    """Analiza (y guarda en caché) todas las imágenes de la conversación que aún no tienen descripción."""
+    """Analiza (y guarda en caché) todas las imágenes de la conversación que aún no tienen descripción.
+    Si ningún modelo con visión pudo describir una imagen, no se vuelve a intentar hasta 10 minutos después
+    (antes se reintentaba en cada paso, gastando varias llamadas por paso)."""
+    import time
     errors = []
     for m in conv["messages"]:
         c = m.get("content")
@@ -170,8 +216,10 @@ def ensure_descriptions(conv, emit):
         for p in c:
             if p.get("type") == "image_url":
                 url = p.get("image_url", {}).get("url", "")
-                if not cached(url):
+                k = key(url)
+                if not cached(url) and time.time() - _FALLIDAS.get(k, 0) > 600:
                     txt, info = describe(url, ctx, emit)
                     if not txt:
+                        _FALLIDAS[k] = time.time()
                         errors.append(info)
     return errors

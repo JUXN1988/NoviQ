@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Agente de aprendizaje (sin LLM, vive dentro de NoviQ y aprende solo).
+"""Agente de aprendizaje (sin LLM, vive dentro de Noviq y aprende solo).
 
 Cómo aprende:
   1. Cuando una herramienta falla, extrae la FIRMA del error (el tipo de error normalizado, sin rutas ni nombres
@@ -7,7 +7,7 @@ Cómo aprende:
   2. Anota los pasos que da la IA después (ediciones, comandos, instalaciones).
   3. Cuando la verificación vuelve a salir bien (el mismo comando/prueba ya no da ese error), guarda la lección:
      firma → pasos que la resolvieron. Cuantas más veces funciona una solución, más peso tiene.
-  4. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA), NoviQ le pasa a la IA
+  4. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA), Noviq le pasa a la IA
      la solución que ya funcionó, junto al error. Las lecciones más probadas se vuelven "reglas" del sistema.
   5. También aprende qué paquete de pip corresponde a cada módulo (ej. cv2 → opencv-python).
 
@@ -184,7 +184,8 @@ def on_result(conv, name, args, result):
             res = str(result or "")
             is_err = res.startswith(("ERROR", "✗")) or "Traceback (most recent call last)" in res \
                 or bool(re.search(r"c[óo]digo de salida:? ?[1-9]|exit code:? ?[1-9]|\[PRUEBA AUTOM", res, re.I))
-            if name in ("leer_archivo", "listar_directorio", "buscar_en_archivos", "actualizar_tareas", "memoria", "mapa_codigo"):
+            if name in ("leer_archivo", "listar_directorio", "buscar_en_archivos", "actualizar_tareas", "marcar_tarea", "pedir_relevo", "memoria",
+                        "mapa_codigo"):
                 return ""
             if is_err and name in ("editar_archivo", "escribir_archivo", "deshacer_cambio") and \
                     re.search(r"texto_anterior|ya existe y tiene|aparece \d+ veces|no hay copias", res):

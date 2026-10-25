@@ -22,7 +22,7 @@ from pathlib import Path
 
 from . import texto as TX
 from .config import IS_WINDOWS, NO_WINDOW
-from .indice import SKIP
+from .indice import omitir_dir
 
 PIP_MAP = {"cv2": "opencv-python", "PIL": "pillow", "sklearn": "scikit-learn", "yaml": "pyyaml", "bs4": "beautifulsoup4",
            "dotenv": "python-dotenv", "docx": "python-docx", "serial": "pyserial", "win32api": "pywin32",
@@ -33,7 +33,7 @@ PIP_MAP = {"cv2": "opencv-python", "PIL": "pillow", "sklearn": "scikit-learn", "
 
 
 def project_python(cwd: Path):
-    """Python del proyecto si tiene su propio entorno virtual; si no, el de NoviQ."""
+    """Python del proyecto si tiene su propio entorno virtual; si no, el de Noviq."""
     for cand in (cwd / ".venv" / "Scripts" / "python.exe", cwd / "venv" / "Scripts" / "python.exe",
                  cwd / ".venv" / "bin" / "python", cwd / "venv" / "bin" / "python"):
         if cand.exists():
@@ -44,7 +44,7 @@ def project_python(cwd: Path):
 
 def _files(root: Path, exts):
     for dp, dns, fns in os.walk(root):
-        dns[:] = [d for d in dns if d not in SKIP and not d.startswith(".")]
+        dns[:] = [d for d in dns if not omitir_dir(dp, d)]
         for f in fns:
             if Path(f).suffix.lower() in exts and not f.startswith(".noviq_tmp"):
                 yield Path(dp) / f
@@ -220,11 +220,20 @@ def check_html(root, files):
             continue
         for m in re.finditer(r'(?:src|href)=["\']([^"\'#?]+)["\']', src):
             ref = m.group(1)
-            if re.match(r"(?i)^(https?:|//|data:|mailto:|tel:|javascript:)", ref) or ref.endswith("/"):
+            if re.match(r"(?i)^(https?:|//|data:|mailto:|tel:|javascript:|blob:|about:)", ref) or ref.endswith("/"):
                 continue
-            if not (f.parent / ref).exists():
-                line = src[:m.start()].count("\n") + 1
-                issues.append(_issue(root, f, line, f"El archivo enlazado «{ref}» no existe", "enlace"))
+            if re.search(r"\{\{|\{%|\$\{|<%|\{\s*\w", ref):
+                continue  # plantilla (Flask/Jinja, JS, etc.): la ruta real se arma al servir la página
+            if ref.startswith("/"):
+                # ruta absoluta del SERVIDOR (ej. Flask sirve /static/… desde <proyecto>/static): se busca desde la raíz
+                # del proyecto y desde la carpeta del HTML (antes daba falsos «no existe» con /static/favicon.png)
+                rel = ref.lstrip("/")
+                if (root / rel).exists() or (f.parent / rel).exists() or (f.parent.parent / rel).exists():
+                    continue
+            elif (f.parent / ref).exists():
+                continue
+            line = src[:m.start()].count("\n") + 1
+            issues.append(_issue(root, f, line, f"El archivo enlazado «{ref}» no existe", "enlace"))
     return issues[:6]
 
 
@@ -386,6 +395,11 @@ def web_run(root, emit=None):
         from .diagnostico import _pista_js
         i["pista"] = _pista_js(e["msg"])
         issues.append(i)
+    if r.get("fuga"):
+        issues.append({"archivo": rel, "linea": 0, "tipo": "ejecución", "fragmento": "",
+                       "msg": f"{rel}: " + "; ".join(r["fuga"]), "pista": NAV.FUGA_PISTA})
+    if r.get("fatal") and not issues:
+        issues.append({"archivo": rel, "linea": 0, "tipo": "ejecución", "fragmento": "", "msg": r["fatal"][:400], "pista": ""})
     if not issues and r.get("blanca"):
         issues.append({"archivo": rel, "linea": 0, "tipo": "ejecución", "fragmento": "",
                        "msg": f"{rel} abre sin errores pero " + ("el canvas está VACÍO (no se dibuja nada)" if r.get("zona") == "canvas"

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Juego</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="nk-cargando">Cargando el juego…</div>
+<canvas id="lienzo" tabindex="0"></canvas>
+<script src="lib/three.min.js"></script>
+<script src="lib/GLTFLoader.js"></script>
+<script src="lib/SkeletonUtils.js"></script>
+<script src="juego.config.js"></script>
+<script src="assets/activos.js"></script>
+<script>if (location.protocol === "file:") document.write('<script src="assets/activos_datos.js"><\/script>');</script>
+<script src="juego.js"></script>
+<script src="comun.js"></script>
+<script src="motor3d.js"></script>
+</body>
+</html>

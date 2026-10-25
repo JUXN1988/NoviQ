@@ -4,7 +4,7 @@
 otro, incluso uno local) lo ejecuta paso a paso. Así el plan sale de la mejor IA aunque el trabajo lo haga otra.
 
 - El cerebro se elige solo (catalogo.ranking) o se fija en Ajustes (modelo_cerebro).
-- Si el cerebro falla o no hay ninguno, NoviQ sigue como siempre (la IA principal planifica).
+- Si el cerebro falla o no hay ninguno, Noviq sigue como siempre (la IA principal planifica).
 - Un plan es un JSON con resumen, tecnología, estructura de archivos, tareas y pruebas; las tareas se cargan
   en la lista de tareas y el plan se adjunta al pedido del usuario para que cualquier IA (y los relevos) lo sigan.
 """
@@ -20,7 +20,7 @@ PLAN_RX = re.compile(r"\b(crea|cre[ae]r|cr[eé]ame|haz|hac(er|me|erme)|desarroll
                      r"genera|migra|refactoriz|rehac|necesito (una?|un) |quiero (una?|un) )\w*", re.I)
 MARK = "[PLAN DEL ARQUITECTO"
 
-SYSTEM = """Eres el ARQUITECTO principal de NoviQ, un equipo de IAs que construye programas reales en la PC del usuario (Windows).
+SYSTEM = """Eres el ARQUITECTO principal de Noviq, un equipo de IAs que construye programas reales en la PC del usuario (Windows).
 Tu trabajo NO es programar ahora: es pensar a fondo y diseñar el plan para construir el programa COMPLETO y funcional,
 de modo que otra IA (quizá más pequeña) lo ejecute paso a paso sin perderse.
 Analiza el pedido, elige la tecnología más simple que cumpla todo, define la estructura de archivos y divide el trabajo
@@ -50,6 +50,8 @@ def needs_plan(conv):
         return None
     if any(t.get("estado") in ("pendiente", "en_progreso") for t in conv.get("tasks") or []):
         return None
+    if conv.get("modo_juego"):
+        return None  # videojuegos: el diseño lo hace crear_juego (🎮 Estudio) y los cambios van a juego.js; sin plan del arquitecto
     msgs = conv.get("messages") or []
     if not msgs or msgs[-1].get("role") != "user":
         return None
@@ -76,9 +78,18 @@ def brain_models(main_model):
     except Exception:
         return []
     from . import salud
-    out = [m for m in K.ranking(infos, need_tools=False, n=4) if not salud.blocked(m)]
+    out = [m for m in K.ranking(infos, need_tools=False, n=8) if not salud.blocked(m)]
     if not out:
         return []
+    try:
+        # 🏆 las de mejor razonamiento que además FUNCIONAN: las que dan problemas (degradadas, fallando, sin cuota) al final
+        from . import evaluador as EV
+        buenos = sorted([m for m in out if not EV.fuera(m)], key=lambda m: EV.puntaje(m, "analizar", infos.get(m)), reverse=True)
+        out = (buenos + [m for m in out if m not in buenos])[:4]
+        if main_model in infos and EV.fuera(main_model):
+            return out
+    except Exception:
+        out = out[:4]
     # si la IA principal ya es la mejor, planifica ella misma (con razonamiento alto) y las demás de respaldo
     mi = infos.get(main_model)
     if mi and not salud.blocked(main_model) and mi.get("cerebro", -1) >= infos[out[0]]["cerebro"]:

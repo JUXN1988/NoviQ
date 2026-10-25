@@ -1,0 +1,825 @@
+{
+ "_que_es": "Nombres que usan las IAs pequeñas (entrenadas con Claude Code, OpenAI, Cline, Aider, Qwen...) para las herramientas y sus argumentos, y a qué herramienta de Noviq corresponden. Lo usan Noviq (Python) y el avatar (Node). Se compara sin mayúsculas, tildes, guiones ni prefijos como 'functions.'.",
+ "version": 1,
+ "herramientas": {
+  "leer_archivo": [
+   "read",
+   "read_file",
+   "readfile",
+   "view",
+   "view_file",
+   "cat",
+   "open_file",
+   "show_file",
+   "get_file",
+   "file_read",
+   "leer",
+   "ver_archivo",
+   "abrir_archivo",
+   "leer_codigo",
+   "read_code",
+   "notebookread"
+  ],
+  "escribir_archivo": [
+   "write",
+   "write_file",
+   "writefile",
+   "create_file",
+   "save_file",
+   "new_file",
+   "file_write",
+   "put_file",
+   "write_to_file",
+   "escribir",
+   "crear_archivo",
+   "guardar_archivo",
+   "nuevo_archivo"
+  ],
+  "editar_archivo": [
+   "edit",
+   "edit_file",
+   "multiedit",
+   "multi_edit",
+   "str_replace",
+   "replace_in_file",
+   "search_replace",
+   "search_and_replace",
+   "apply_edit",
+   "modify_file",
+   "update_file",
+   "patch_file",
+   "replace",
+   "editar",
+   "modificar_archivo",
+   "reemplazar",
+   "cambiar_archivo"
+  ],
+  "buscar_en_archivos": [
+   "grep",
+   "search",
+   "search_files",
+   "search_code",
+   "grep_search",
+   "find_in_files",
+   "ripgrep",
+   "rg",
+   "search_text",
+   "text_search",
+   "buscar",
+   "buscar_texto",
+   "buscar_en_codigo",
+   "buscar_en_el_codigo"
+  ],
+  "buscar_archivos": [
+   "glob",
+   "find",
+   "find_files",
+   "file_search",
+   "find_file",
+   "locate",
+   "list_files_matching",
+   "buscar_archivo",
+   "encontrar_archivo"
+  ],
+  "listar_directorio": [
+   "ls",
+   "list",
+   "list_dir",
+   "list_directory",
+   "list_files",
+   "dir",
+   "tree",
+   "listar",
+   "listar_archivos",
+   "listar_carpeta",
+   "ver_carpeta"
+  ],
+  "ejecutar_powershell": [
+   "bash",
+   "shell",
+   "sh",
+   "run",
+   "run_command",
+   "execute_command",
+   "execute",
+   "exec",
+   "terminal",
+   "powershell",
+   "pwsh",
+   "cmd",
+   "command",
+   "run_terminal_cmd",
+   "run_shell",
+   "run_in_terminal",
+   "ejecutar",
+   "ejecutar_comando",
+   "terminal_ejecutar",
+   "consola"
+  ],
+  "ejecutar_python": [
+   "python",
+   "run_python",
+   "execute_python",
+   "exec_python",
+   "python_exec",
+   "code_interpreter",
+   "ipython",
+   "ejecutar_codigo_python"
+  ],
+  "crear_carpeta": [
+   "mkdir",
+   "make_dir",
+   "makedirs",
+   "create_dir",
+   "create_directory",
+   "create_folder",
+   "new_folder",
+   "crear_directorio",
+   "nueva_carpeta"
+  ],
+  "mapa_codigo": [
+   "repo_map",
+   "code_map",
+   "outline",
+   "symbols",
+   "list_symbols",
+   "list_code_definition_names",
+   "estructura",
+   "mapa"
+  ],
+  "explorar_codigo": [
+   "explore",
+   "explorar",
+   "find_code",
+   "where_is",
+   "donde_esta",
+   "code_search",
+   "semantic_search",
+   "codebase_search",
+   "search_codebase",
+   "buscar_funcion",
+   "localizar_codigo"
+  ],
+  "buscar_en_internet": [
+   "web_search",
+   "websearch",
+   "search_web",
+   "google",
+   "internet_search",
+   "buscar_web",
+   "buscar_internet"
+  ],
+  "leer_pagina_web": [
+   "web_fetch",
+   "webfetch",
+   "fetch",
+   "fetch_url",
+   "read_url",
+   "browse",
+   "open_url",
+   "get_url",
+   "leer_web",
+   "leer_pagina"
+  ],
+  "actualizar_tareas": [
+   "todowrite",
+   "todo_write",
+   "update_todos",
+   "write_todos",
+   "set_tasks",
+   "todo",
+   "todos",
+   "plan",
+   "update_plan",
+   "tareas",
+   "plan_tareas"
+  ],
+  "marcar_tarea": [
+   "complete_task",
+   "mark_task",
+   "task_done",
+   "update_task",
+   "completar_tarea",
+   "tarea_hecha"
+  ],
+  "deshacer_cambio": [
+   "undo",
+   "undo_edit",
+   "revert",
+   "revert_file",
+   "rollback",
+   "deshacer",
+   "restaurar"
+  ],
+  "memoria": [
+   "memory",
+   "remember",
+   "save_memory",
+   "add_memory",
+   "recordar",
+   "guardar_memoria",
+   "memorizar"
+  ],
+  "mover_o_copiar": [
+   "move",
+   "copy",
+   "mv",
+   "cp",
+   "rename",
+   "move_file",
+   "copy_file",
+   "rename_file",
+   "mover",
+   "copiar",
+   "renombrar"
+  ],
+  "eliminar": [
+   "delete",
+   "delete_file",
+   "rm",
+   "remove",
+   "remove_file",
+   "borrar",
+   "borrar_archivo"
+  ],
+  "localizar_error": [
+   "locate_error",
+   "find_error",
+   "stack_trace",
+   "traceback",
+   "buscar_error"
+  ],
+  "probar_proyecto": [
+   "test",
+   "run_tests",
+   "pytest",
+   "npm_test",
+   "probar",
+   "pruebas",
+   "ejecutar_pruebas"
+  ],
+  "pedir_ayuda_usuario": [
+   "ask_user",
+   "ask",
+   "askuserquestion",
+   "ask_followup_question",
+   "ask_question",
+   "preguntar",
+   "preguntar_usuario"
+  ],
+  "verificar_codigo": [
+   "check",
+   "lint",
+   "check_syntax",
+   "syntax_check",
+   "verify",
+   "validate",
+   "verificar",
+   "revisar_sintaxis",
+   "compilar"
+  ],
+  "aplicar_parche": [
+   "apply_patch",
+   "applypatch",
+   "apply_diff",
+   "patch",
+   "diff",
+   "apply_unified_diff",
+   "parche",
+   "aplicar_diff"
+  ]
+ },
+ "editor": {
+  "_que_es": "Herramienta única tipo «str_replace_editor» de Anthropic/OpenHands: el argumento 'command' dice qué hacer.",
+  "nombres": [
+   "str_replace_editor",
+   "str_replace_based_edit_tool",
+   "text_editor",
+   "texteditor",
+   "editor",
+   "file_editor"
+  ],
+  "comandos": {
+   "view": "leer_archivo",
+   "create": "escribir_archivo",
+   "str_replace": "editar_archivo",
+   "insert": "editar_archivo",
+   "undo_edit": "deshacer_cambio"
+  }
+ },
+ "argumentos": {
+  "ruta": [
+   "path",
+   "file_path",
+   "filepath",
+   "file",
+   "filename",
+   "file_name",
+   "target_file",
+   "absolute_path",
+   "relative_path",
+   "notebook_path",
+   "archivo",
+   "fichero",
+   "nombre_archivo",
+   "ruta_archivo",
+   "directory",
+   "dir",
+   "dir_path",
+   "folder",
+   "carpeta",
+   "directorio",
+   "target"
+  ],
+  "ruta_o_url": [
+   "url",
+   "path",
+   "file_path",
+   "ruta",
+   "link",
+   "enlace"
+  ],
+  "contenido": [
+   "content",
+   "contents",
+   "file_text",
+   "text",
+   "data",
+   "body",
+   "codigo_completo",
+   "texto"
+  ],
+  "texto_anterior": [
+   "old_string",
+   "old_str",
+   "old_text",
+   "oldtext",
+   "search",
+   "find",
+   "original",
+   "before",
+   "texto_viejo",
+   "texto_original",
+   "buscar",
+   "antes",
+   "old"
+  ],
+  "texto_nuevo": [
+   "new_string",
+   "new_str",
+   "new_text",
+   "newtext",
+   "replace",
+   "replacement",
+   "after",
+   "updated",
+   "texto_reemplazo",
+   "reemplazo",
+   "despues",
+   "nuevo",
+   "new"
+  ],
+  "reemplazar_todo": [
+   "replace_all",
+   "replaceall",
+   "all",
+   "global",
+   "todas"
+  ],
+  "ediciones": [
+   "edits",
+   "changes",
+   "cambios",
+   "replacements"
+  ],
+  "desde_linea": [
+   "start_line",
+   "line_start",
+   "from_line",
+   "startline",
+   "line",
+   "linea",
+   "linea_inicio",
+   "linea_inicial",
+   "desde",
+   "inicio",
+   "offset"
+  ],
+  "hasta_linea": [
+   "end_line",
+   "line_end",
+   "to_line",
+   "endline",
+   "linea_fin",
+   "linea_final",
+   "hasta",
+   "fin"
+  ],
+  "despues_de_linea": [
+   "insert_line",
+   "after_line",
+   "insert_after",
+   "insertar_despues"
+  ],
+  "ocurrencia": [
+   "occurrence",
+   "match_index",
+   "nth",
+   "instancia"
+  ],
+  "comando": [
+   "command",
+   "cmd",
+   "script",
+   "commandline",
+   "command_line",
+   "comandos",
+   "shell_command"
+  ],
+  "codigo": [
+   "code",
+   "source",
+   "python_code",
+   "script_python",
+   "codigo_python",
+   "program"
+  ],
+  "explicacion": [
+   "description",
+   "explanation",
+   "reason",
+   "why",
+   "descripcion",
+   "motivo"
+  ],
+  "timeout_segundos": [
+   "timeout",
+   "timeout_seconds",
+   "seconds",
+   "tiempo",
+   "timeout_s"
+  ],
+  "segundo_plano": [
+   "background",
+   "run_in_background",
+   "is_background",
+   "async",
+   "en_segundo_plano"
+  ],
+  "recursivo": [
+   "recursive",
+   "recurse",
+   "deep"
+  ],
+  "regex": [
+   "pattern",
+   "query",
+   "search",
+   "regexp",
+   "regular_expression",
+   "texto_buscar",
+   "termino",
+   "patron",
+   "q",
+   "text"
+  ],
+  "patron": [
+   "pattern",
+   "glob",
+   "glob_pattern",
+   "mask",
+   "filtro",
+   "name",
+   "nombre"
+  ],
+  "incluir": [
+   "include",
+   "glob",
+   "file_pattern",
+   "files",
+   "filter",
+   "filtro",
+   "extension",
+   "ext",
+   "type"
+  ],
+  "mayusculas": [
+   "case_sensitive",
+   "match_case",
+   "sensible"
+  ],
+  "contexto": [
+   "context",
+   "context_lines",
+   "-c",
+   "c",
+   "lines_context"
+  ],
+  "modo": [
+   "output_mode",
+   "mode",
+   "salida"
+  ],
+  "limite": [
+   "head_limit",
+   "limit",
+   "max_results",
+   "max",
+   "maximo",
+   "max_resultados"
+  ],
+  "multilinea": [
+   "multiline",
+   "multi_line"
+  ],
+  "consulta": [
+   "query",
+   "q",
+   "search",
+   "busqueda",
+   "texto",
+   "pregunta"
+  ],
+  "url": [
+   "link",
+   "uri",
+   "href",
+   "enlace",
+   "direccion"
+  ],
+  "tareas": [
+   "todos",
+   "tasks",
+   "todo",
+   "items",
+   "plan",
+   "lista"
+  ],
+  "origen": [
+   "source",
+   "src",
+   "from",
+   "from_path",
+   "source_path",
+   "desde"
+  ],
+  "destino": [
+   "destination",
+   "dest",
+   "dst",
+   "to",
+   "to_path",
+   "target",
+   "hasta",
+   "target_path"
+  ],
+  "copiar": [
+   "copy",
+   "keep_original"
+  ],
+  "accion": [
+   "action",
+   "op",
+   "operation",
+   "command"
+  ],
+  "alcance": [
+   "scope",
+   "ambito",
+   "tipo"
+  ],
+  "texto": [
+   "text",
+   "content",
+   "note",
+   "memory",
+   "nota",
+   "dato",
+   "fact",
+   "contenido"
+  ],
+  "texto_error": [
+   "error",
+   "traceback",
+   "stacktrace",
+   "stack",
+   "trace",
+   "mensaje_error",
+   "error_message"
+  ],
+  "pregunta": [
+   "question",
+   "query",
+   "prompt",
+   "que",
+   "consulta",
+   "concepto",
+   "texto"
+  ],
+  "instrucciones": [
+   "question",
+   "message",
+   "prompt",
+   "mensaje",
+   "texto"
+  ],
+  "nombre": [
+   "name",
+   "project",
+   "project_name",
+   "proyecto"
+  ],
+  "numero": [
+   "number",
+   "index",
+   "id",
+   "n",
+   "task_id",
+   "num"
+  ],
+  "estado": [
+   "status",
+   "state"
+  ],
+  "sobrescribir": [
+   "overwrite",
+   "force",
+   "reemplazar"
+  ],
+  "archivos": [
+   "files",
+   "paths",
+   "rutas"
+  ],
+  "parche": [
+   "patch",
+   "diff",
+   "input",
+   "unified_diff",
+   "changes_diff"
+  ]
+ },
+ "estados": {
+  "completed": "completada",
+  "complete": "completada",
+  "done": "completada",
+  "in_progress": "en_progreso",
+  "inprogress": "en_progreso",
+  "doing": "en_progreso",
+  "pending": "pendiente",
+  "todo": "pendiente",
+  "hecha": "completada",
+  "hecho": "completada",
+  "terminada": "completada",
+  "en_curso": "en_progreso"
+ },
+ "valores": {
+  "_que_es": "Valores de opciones (enum) que las IAs escriben en inglés u otra forma → el valor de Noviq.",
+  "agregar": [
+   "add",
+   "append",
+   "save",
+   "store",
+   "insert",
+   "create",
+   "remember",
+   "guardar",
+   "anadir",
+   "añadir",
+   "nuevo"
+  ],
+  "ver": [
+   "view",
+   "show",
+   "get",
+   "read",
+   "list",
+   "display",
+   "mostrar",
+   "leer"
+  ],
+  "buscar": [
+   "search",
+   "find",
+   "query",
+   "lookup",
+   "grep",
+   "encontrar"
+  ],
+  "olvidar": [
+   "forget",
+   "delete",
+   "remove",
+   "borrar",
+   "eliminar",
+   "quitar"
+  ],
+  "limpiar": [
+   "clean",
+   "dedupe",
+   "deduplicate",
+   "tidy"
+  ],
+  "reemplazar_todo": [
+   "replace_all",
+   "overwrite",
+   "rewrite",
+   "set",
+   "reemplazar"
+  ],
+  "proyecto": [
+   "project",
+   "repo",
+   "workspace",
+   "local"
+  ],
+  "usuario": [
+   "user",
+   "global",
+   "personal",
+   "general",
+   "me"
+  ],
+  "ajustes": [
+   "settings",
+   "config",
+   "configuration",
+   "configuracion",
+   "preferences"
+  ],
+  "todas": [
+   "all",
+   "everything",
+   "todo",
+   "todos"
+  ],
+  "crear": [
+   "create",
+   "new",
+   "make"
+  ],
+  "listar": [
+   "list",
+   "ls",
+   "show_all"
+  ],
+  "lineas": [
+   "content",
+   "lines",
+   "line",
+   "contenido"
+  ],
+  "archivos": [
+   "files_with_matches",
+   "files",
+   "file",
+   "filenames"
+  ],
+  "conteo": [
+   "count",
+   "counts",
+   "total"
+  ],
+  "completada": [
+   "completed",
+   "complete",
+   "done",
+   "finished",
+   "hecha",
+   "terminada"
+  ],
+  "en_progreso": [
+   "in_progress",
+   "inprogress",
+   "doing",
+   "working",
+   "en_curso"
+  ],
+  "pendiente": [
+   "pending",
+   "todo",
+   "open",
+   "not_started"
+  ],
+  "salida": [
+   "output",
+   "log",
+   "logs"
+  ],
+  "detener": [
+   "stop",
+   "kill",
+   "terminate"
+  ],
+  "restaurar": [
+   "restore",
+   "revert",
+   "rollback"
+  ],
+  "diferencias": [
+   "diff",
+   "compare",
+   "changes"
+  ]
+ }
+}

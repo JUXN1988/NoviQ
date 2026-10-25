@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Bucle del agente: prompt del sistema, contexto, llamadas a herramientas (nativas o por texto)."""
 import copy
+import difflib
 import json
 import re
 import threading
@@ -11,8 +12,10 @@ from datetime import datetime
 
 from . import compacto as C
 from . import diagnostico as D
+from . import director as DIR
 from . import ejecutor as EJ
 from . import escalado as ESC
+from . import evaluador as EV
 from . import guardian as G
 from . import pruebas as PR
 from . import estado as E
@@ -45,32 +48,40 @@ def system_prompt(conv, text_tools=None, handoff=None):
     ctx = T.ToolContext(conv, lambda *a: None, threading.Event())
     cwd = ctx.cwd
     proj = conv.get("project")
-    s = f"""Eres un asistente de IA autónomo y experto que trabaja dentro de "NoviQ", una aplicación de escritorio en la PC del usuario ({OS_NAME}). Fecha y hora: {datetime.now():%Y-%m-%d %H:%M}.
+    s = f"""Eres un asistente de IA autónomo y experto que trabaja dentro de "Noviq", una aplicación de escritorio en la PC del usuario ({OS_NAME}). Fecha y hora: {datetime.now():%Y-%m-%d %H:%M}.
 Responde en el idioma del usuario (normalmente español), con Markdown claro. Los bloques de código llevan su lenguaje (```python, ```powershell…).
 
 ## Cómo trabajas
 - Tienes HERRAMIENTAS reales sobre la PC del usuario. Úsalas directamente; no le digas al usuario que haga lo que tú puedes hacer.
 - ACTÚA, no solo pienses: tu razonamiento interno debe ser BREVE (máximo ~15 líneas); el trabajo se hace llamando herramientas. NUNCA escribas el código dentro del razonamiento: escríbelo directamente con escribir_archivo/editar_archivo. Nunca termines un turno solo con un plan: ejecútalo en ese mismo momento. (Un guardián corta los razonamientos eternos y los bucles.)
-- Sé autónomo: en trabajos de varios pasos tu PRIMERA acción es `actualizar_tareas` con el plan completo; luego ejecútalo paso a paso marcando cada tarea (en_progreso → completada) y termina todo sin pedir confirmaciones innecesarias. Así, si algo falla, otra IA puede continuar exactamente donde quedaste.
+- Sé autónomo: en trabajos de varios pasos tu PRIMERA acción es `actualizar_tareas` con el plan completo; luego ejecútalo paso a paso y, al terminar cada tarea, márcala con `marcar_tarea` (número y estado='completada'). Termina todo sin pedir confirmaciones innecesarias. Así, si algo falla, otra IA puede continuar exactamente donde quedaste.
+- Si una tarea es un INFORME/RESUMEN/EXPLICACIÓN: escríbelo en tu respuesta y márcala completada. No repitas el mismo informe.
+- Si después de intentarlo de verdad no puedes resolver algo, usa `pedir_relevo`: otra IA más capaz continúa con todo lo hecho.
 - Si existe un "ESTADO DEL TRABAJO" con trabajo previo, NO empieces de cero ni repitas lo hecho: continúa con su "SIGUIENTE PASO". Los archivos listados ahí ya existen.
 - PROGRAMAS/APPS/WEBS NUEVOS: primero `crear_proyecto` (se crea su carpeta en Documentos con PowerShell), luego escribe TODOS los archivos completos con `escribir_archivo` (nunca pongas "..." ni omitas partes). Si un archivo es muy largo (más de ~300 líneas), escríbelo por partes con modo='agregar'.
 - Después de escribir código, PRUÉBALO (ejecutar_powershell / ejecutar_python: instalar dependencias, ejecutar, compilar, tests; en webs y juegos `probar_web`) y corrige los errores hasta que funcione. Para servidores usa segundo_plano=true.
 - ARCHIVOS: créalos y cámbialos SOLO con escribir_archivo / editar_archivo (guardan en UTF-8 y dejan copia de respaldo). NUNCA escribas archivos con ejecutar_powershell (Set-Content, Out-File, here-strings @"…"@): rompe el código y la codificación.
 - WEBS Y JUEGOS: librerías por CDN con <script> normal (cdnjs.cloudflare.com; Three.js r128 + OrbitControls de examples/js), sin type="module" si se abre con doble clic; ids del HTML iguales a los del JS; un solo punto de inicio. Al terminar, `probar_web` con acciones (teclas/clics/arrastrar) para comprobar que se ve y responde.
+- MEMORIA (juegos 3D, canvas, animaciones): NUNCA crees geometrías, materiales, texturas, mallas ni canvas dentro del bucle requestAnimationFrame. Créalos UNA vez y reutilízalos (una BoxGeometry compartida, materiales en caché por color, un pool de mallas); en el bucle solo cambia posición/visibilidad, y redibuja el tablero solo cuando cambia. Si quitas objetos de la escena llama geometry.dispose()/material.dispose(). Una fuga así llena la RAM y la memoria de video en minutos y cuelga la PC; `probar_web` la detecta.
+- RECURSOS DE LA PC: prueba y ejecuta NATIVO (ejecutar_python, ejecutar_powershell, probar_proyecto): es lo más rápido y liviano. Usa ejecutar_linux (máquina virtual WSL) o contenedor (Docker) solo si de verdad hace falta Linux o aislamiento. Noviq limita la memoria y la CPU de lo que ejecutas para no colapsar la PC.
 
 ## Depuración metódica (algo falla, o el usuario dice que no funciona / pide revisar o arreglar)
 Trabaja como un programador senior, sin adivinar ni reescribir a ciegas:
 1. MIDE el problema real: `diagnosticar` (codificación, código incompleto, funciones que no existen o no se cargan, orden de scripts, ids, librerías, sintaxis, y abre la web en un navegador invisible) o `probar_web` en webs/juegos (errores de consola con archivo:línea, archivos que no cargan, captura, teclas/clics). En programas, ejecútalos y lee el error COMPLETO. Si el mensaje del usuario ya trae un DIAGNÓSTICO AUTOMÁTICO, empieza por él.
 2. LOCALIZA la causa raíz: `localizar_error` con la traza, `buscar_en_archivos`, `mapa_codigo` y `leer_archivo` solo del rango necesario. El primer error suele causar los demás.
-3. CORRIGE lo mínimo con `editar_archivo` (texto_anterior copiado del archivo SIN números de línea, o desde_linea/hasta_linea con los números que viste; despues_de_linea para insertar). Si un archivo está dañado, casi vacío o le falta la mayor parte, reescríbelo COMPLETO con escribir_archivo (sobrescribir=true), sin «...». Si una edición empeora algo, `deshacer_cambio`.
+3. CORRIGE lo mínimo con `editar_archivo` (texto_anterior copiado del archivo SIN números de línea, o desde_linea/hasta_linea con los números que viste; despues_de_linea para insertar). Si un archivo está dañado, casi vacío o le falta la mayor parte, reescríbelo COMPLETO con escribir_archivo (sobrescribir=true), sin «...». Si una edición empeora algo, `deshacer_cambio`; para volver a una versión más antigua (de esta u otra conversación) usa `versiones_archivo` (listar → diferencias → restaurar).
 4. VERIFICA: vuelve a ejecutar `diagnosticar` / `probar_web` / el programa. Solo está terminado cuando no quedan errores (y en juegos los controles cambian la imagen). NUNCA marques una tarea como completada ni digas «listo» sin haberlo verificado.
 5. Si una herramienta falla 2 veces igual, CAMBIA de estrategia: lee el error (te dice exactamente qué hacer). Nunca repitas la misma llamada.
+   Para revisar sintaxis, imports y dependencias usa `probar_proyecto` / `diagnosticar` (ya lo hacen bien); no escribas scripts de verificación propios. Ignora los errores de carpetas que no son del proyecto (perfiles del navegador, extensiones, .venv, node_modules).
 6. Si el usuario dice que quedó mal, créele: busca el fallo real con diagnosticar/probar_web en vez de volver a leer lo mismo.
 - EQUIPO DE IAs: en proyectos medianos/grandes o problemas difíciles, usa `planificar_en_equipo` para que varias IAs propongan planes y combínalos en uno (regístralo con actualizar_tareas). Si el plan tiene partes independientes (archivos distintos), repártelas con `trabajar_en_equipo` (define bien las interfaces: nombres de funciones, rutas, formatos) y después integra, prueba y corrige tú como coordinador.
 - NAVEGADOR: para abrir páginas, llenar formularios o sacar datos de sitios web usa `agente_navegador` con una tarea detallada. Si no está disponible o falla, usa `pedir_ayuda_usuario` para que el usuario haga los pasos y te envíe capturas.
 - Si necesitas algo que solo el usuario puede hacer (iniciar sesión, conectar un equipo, un dato), usa `pedir_ayuda_usuario` y continúa con su respuesta.
 - Para dibujar usa `generar_imagen` (prompt en inglés). Para ver la pantalla usa `captura_pantalla`. Para información actual usa `buscar_en_internet` y `leer_pagina_web`.
-- Guarda en `memoria` (alcance 'usuario') datos duraderos que el usuario te cuente. En proyectos, guarda en `memoria` (alcance 'proyecto') las decisiones importantes, el estado y cómo ejecutarlo, para que cualquier IA pueda continuar.
+- GPU NVIDIA: si un programa necesita la tarjeta (CUDA, PyTorch, CuPy, video con NVENC, IA local, render) usa primero `nvidia_ia` accion='info' para saber qué tiene la PC y cómo instalarlo bien. Texturas o modelos 3D con IA: `nvidia_ia` 'textura' / 'modelo_3d'. VIDEOJUEGOS nuevos: `crear_juego`.
+- VERSIONES Y ENTREGAS: cada archivo que cambias queda respaldado solo (`versiones_archivo`). Cuando el programa YA funciona y está probado, o el usuario pide el entregable, crea el ZIP con `empaquetar_proyecto` (queda en la carpeta entregas del proyecto). Si algo que hiciste sirve para otros proyectos (login, conector, componente), guárdalo con `biblioteca` (accion='guardar'); antes de programar algo común, busca en la `biblioteca`.
+- Guarda en `memoria` (alcance 'usuario') datos duraderos que el usuario te cuente. En proyectos, guarda en `memoria` (alcance 'proyecto') las decisiones importantes, el estado y cómo ejecutarlo, para que cualquier IA pueda continuar. Lo que aprendas de IAs, servicios o configuración va en alcance 'ajustes' (nunca claves). Antes de preguntar algo que quizá ya se sabe, `memoria` accion='buscar'.
+- BUSCAR CÓDIGO: para «¿dónde está X?» usa primero `explorar_codigo` (una pregunta en palabras normales; entiende sinónimos español/inglés) y luego `leer_archivo` solo de esas líneas. No leas archivos enteros para buscar.
 - Si una herramienta falla, analiza el error y reintenta con otra estrategia. No inventes resultados.
 - Al terminar, resume brevemente qué hiciste, dónde quedaron los archivos y cómo usarlos.
 
@@ -86,12 +97,16 @@ Trabaja como un programador senior, sin adivinar ni reescribir a ciegas:
         s += f"\n## Archivos del proyecto\n{project_tree(cwd)}\n"
     else:
         s += "- No hay proyecto activo (se usa la carpeta _General). Si el usuario pide un programa, crea un proyecto.\n"
-    mem = T.read_memory().strip()
-    if mem:
-        s += f"\n## Memoria sobre el usuario\n{mem[:6000]}\n"
-    pmem = T.read_project_memory(proj).strip()
-    if pmem:
-        s += f"\n## Memoria del proyecto (decisiones y estado)\n{pmem[:8000]}\n"
+    try:  # 🧠 memoria en 3 lugares (usuario · proyecto · ajustes) + mapa de dónde buscar
+        from .experto import memoria as MEM
+        s += MEM.para_prompt(conv)
+    except Exception:
+        mem = T.read_memory().strip()
+        if mem:
+            s += f"\n## Memoria sobre el usuario\n{mem[:6000]}\n"
+        pmem = T.read_project_memory(proj).strip()
+        if pmem:
+            s += f"\n## Memoria del proyecto (decisiones y estado)\n{pmem[:8000]}\n"
     est = E.build(conv)
     if est:
         s += "\n" + est + "\n"
@@ -107,6 +122,17 @@ Trabaja como un programador senior, sin adivinar ni reescribir a ciegas:
     if handoff:
         s += (f"\n## ⚠ RELEVO\nLa IA anterior ({handoff}) falló o dejó de responder. Tú continúas su trabajo según el "
               "ESTADO DEL TRABAJO: sigue EXACTAMENTE donde quedó, sin repetir lo hecho ni volver a preguntar.\n")
+    try:
+        from . import herr_juegos as HJ
+        if HJ.modo_juego(conv):
+            s += HJ.PROMPT_JUEGO
+    except Exception:
+        pass
+    try:
+        from . import herr_windows as HW
+        s += HW.prompt_extra(conv)
+    except Exception:
+        pass
     if conv.get("idioma") == "en":
         s += "\n## Language\nThe user's interface is in ENGLISH: reply in English unless the user writes in another language.\n"
     rg = A.reglas(900)
@@ -218,7 +244,7 @@ def build_messages(conv, mode, tool_defs, model_id, handoff=None, raw=False):
     # 2) imágenes: si el modelo no ve, van como descripción del modelo visual; si ve, solo las 2 últimas
     #    (las anteriores se reemplazan por su descripción en caché, que cuesta muchos menos tokens)
     if V.lacks_vision(model_id):
-        V.replace_images(msgs)
+        V.strip_images(msgs)  # un modelo sin visión NUNCA recibe una imagen (el servidor respondería 500/400)
     img_idx = [i for i, m in enumerate(msgs) if isinstance(m.get("content"), list)]
     for i in img_idx[:-2]:
         V.replace_images([msgs[i]], only_cached=True)
@@ -285,8 +311,12 @@ PERSIST = {"file", "image", "tasks", "project", "notice"}
 READ_TOOLS = {"leer_archivo", "listar_directorio", "probar_proyecto", "procesos", "diagnosticar", "probar_web",
               "buscar_en_archivos", "buscar_archivos", "mapa_codigo", "localizar_error", "captura_pantalla"}
 STATE_TOOLS = {"escribir_archivo", "editar_archivo", "deshacer_cambio", "ejecutar_powershell", "ejecutar_python",
-               "mover_o_copiar", "eliminar", "puntos_restauracion", "instalar_herramienta", "entorno", "crear_proyecto",
+               "mover_o_copiar", "eliminar", "puntos_restauracion", "versiones_archivo", "biblioteca", "instalar_herramienta", "entorno", "crear_proyecto",
                "diagnosticar", "ejecutar_linux", "contenedor", "descargar_archivo", "cambiar_proyecto"}
+# herramientas que cambian archivos · herramientas que se vuelven a ejecutar para comprobar un arreglo
+FILE_TOOLS = {"escribir_archivo", "editar_archivo", "deshacer_cambio", "mover_o_copiar", "eliminar", "versiones_archivo",
+              "puntos_restauracion", "biblioteca", "crear_carpeta", "instalar_herramienta", "entorno", "descargar_archivo"}
+RERUN_TOOLS = {"ejecutar_powershell", "ejecutar_python", "ejecutar_linux", "contenedor", "abrir", "peticion_http", "verificar_codigo"}
 BUG_RX = re.compile(r"(?i)(no funciona|no sirve|no anda|no carga|no abre|no se ve|no aparece|no hace nada|no responde|no se mueve|"
                     r"no juega|no deja|pantalla (en )?(blanco|negro)|\bfalla|\bfallo|\bbug|arregl|corrig|revis|repar|"
                     r"\b(?:da|sale|salta|aparece|hay|tira|lanza|muestra|tengo|tiene|marca|me sale|me da)\s+(?:un\s+|el\s+|este\s+|ese\s+|otro\s+)?error|"
@@ -325,7 +355,7 @@ def diagnostico_texto(conv, emit, stop_ev, max_items=8):
 
 
 def auto_diagnostico(conv, emit, stop_ev):
-    """Si el usuario dice que algo no funciona, NoviQ diagnostica el proyecto ANTES de que la IA empiece
+    """Si el usuario dice que algo no funciona, Noviq diagnostica el proyecto ANTES de que la IA empiece
     y le entrega la lista de problemas reales (las IAs pequeñas no saben por dónde empezar)."""
     if not CONFIG.get("diagnostico_auto", True) or not conv.get("project") or not conv.get("messages"):
         return
@@ -381,36 +411,61 @@ def msg_supervisor(motivo, diag=""):
             + ("\n\n" + diag if diag else ""))
 
 
-def fallback_chain(conv):
+def _proveedor_activo(model_id):
+    pid = model_id.split("::", 1)[0] if "::" in model_id else "nvidia"
+    return bool((CONFIG["providers"].get(pid) or {}).get("enabled"))
+
+
+def fallback_chain(conv, first=None):
     """IA elegida + respaldo configurado + (respaldo automático) los mejores modelos gratuitos disponibles.
-    Los modelos marcados como NO operativos (sin clave, 404, sin crédito…) pasan al final."""
-    first = conv.get("model") or CONFIG["model"]
+    El 🏆 evaluador ordena el respaldo (de mejor a peor para este tipo de tarea) y manda al final los modelos
+    que están fallando ahora (enfriamiento) o no operativos (sin clave, 404, sin crédito…)."""
+    first = first or conv.get("model") or CONFIG["model"]
     chain = [first]
+    tipo = conv.get("_tipo") or EV.tipo_conv(conv)
     if CONFIG.get("fallback_enabled", True):
         for m in CONFIG.get("fallback_models") or []:
-            if m and m not in chain:
+            # un modelo de un proveedor DESACTIVADO en Ajustes no se usa (antes se intentaba igual y fallaba)
+            if m and m not in chain and _proveedor_activo(m):
                 chain.append(m)
-        if CONFIG.get("respaldo_auto", True) and len(chain) < 4:
-            extend_chain(chain, max_add=4 - len(chain))
+        if CONFIG.get("respaldo_auto", True) and len(chain) < 5:
+            extend_chain(chain, max_add=5 - len(chain), tipo=tipo)
+    chain = EV.ordenar_cadena(chain, tipo)
     ok = [m for m in chain if not S.blocked(m)]
     return ok + [m for m in chain if m not in ok]
 
 
-def extend_chain(chain, max_add=3):
-    """Añade al respaldo los modelos gratuitos más inteligentes que estén operativos (catalogo.ranking)."""
+def extend_chain(chain, max_add=3, tipo="general"):
+    """Añade al respaldo los modelos gratuitos mejor valorados que estén operativos, alternando proveedores
+    (si NVIDIA entero está caído, el siguiente es de otra empresa)."""
     try:
-        from . import catalogo as K
-        infos = K.all_infos()
+        cands = [m for m, s in EV.ranking(tipo, need_tools=True, excluir=set(chain), solo_nube=True, solo_gratis=True, n=20)
+                 if not S.blocked(m) and not EV.fuera(m)]
+        if not cands:
+            from . import catalogo as K
+            cands = [m for m in K.ranking(K.all_infos(), need_tools=True, n=10) if m not in chain and not S.blocked(m)]
         added = 0
-        for m in K.ranking(infos, need_tools=True, n=10):
-            if m not in chain and not S.blocked(m):
-                chain.append(m)
-                added += 1
-                if added >= max_add:
-                    break
+        while cands and added < max_add:
+            last = chain[-1].split("::")[0] if chain else ""
+            pick = next((m for m in cands[:4] if m.split("::")[0] != last), cands[0])
+            cands.remove(pick)
+            chain.append(pick)
+            added += 1
         return added
     except Exception:
         return 0
+
+
+def _es_informe(texto):
+    return bool(re.search(r"(?i)(informe|reporte|resumen|resume|expl[ií]ca|explicaci|conclusi|entreg|responde|resp[óo]ndele|"
+                          r"dime|dar (el|un) |mejoras|recomendaci|documenta|report|summary|explain)", texto or ""))
+
+
+def _similar(a, b):
+    a, b = (a or "").strip()[:1500], (b or "").strip()[:1500]
+    if not a or not b:
+        return 0.0
+    return difflib.SequenceMatcher(None, a, b).ratio() if abs(len(a) - len(b)) < 600 else 0.0
 
 
 def _failover_worthy(e: APIError):
@@ -433,7 +488,30 @@ def log_line(name, args, result):
     return f"{ok} {name}: {str(arg)[:120]}"
 
 
+def _salir(conv, motivo, model_id, chain=None):
+    """Anota por qué terminó el ciclo (lo lee el 🧭 director para decidir si continúa solo)."""
+    conv["_salida"] = {"motivo": motivo, "modelo": model_id, "cadena": list(chain or [])}
+
+
 def run_agent(conv, emit_raw, stop_ev):
+    """Punto de entrada. El 🧭 director ejecuta el agente y, si el trabajo queda a medias (la IA dejó de usar
+    herramientas, repitió, se atascó, llegó al máximo de pasos o fallaron todas las IAs), lo continúa SOLO con la
+    IA mejor valorada por el 🏆 evaluador, dentro de unos límites de seguridad."""
+    def emit(kind, payload):
+        emit_raw(kind, payload)
+        if kind in PERSIST:
+            conv["display"].append({"type": kind, **payload})
+
+    conv.pop("_tipo", None)
+    conv["_tipo"] = EV.tipo_conv(conv)  # tipo del pedido actual (crear, arreglar, web, analizar, general)
+    conv.setdefault("_turno_modelos", {})
+    try:
+        DIR.run(conv, emit, stop_ev, lambda c, _e, s: _run_once(c, emit_raw, s))
+    finally:
+        EV.flush()
+
+
+def _run_once(conv, emit_raw, stop_ev):
     from .server_state import save_conv
 
     def emit(kind, payload):
@@ -444,12 +522,22 @@ def run_agent(conv, emit_raw, stop_ev):
             E.record_file(conv, payload)
 
     conv["en_progreso"] = True
-    chain = fallback_chain(conv)
+    tipo = conv.get("_tipo") or EV.tipo_conv(conv)
     want = conv.get("model") or CONFIG["model"]
-    if chain[0] != want and S.blocked(want):
-        st = S.get(want) or {}
-        emit("notice", {"text": f"{S.ICONO.get(st.get('kind'), '⛔')} {want.split('::')[-1]} no está operativo: {st.get('motivo', '')} "
+    dir_model = conv.pop("_modelo_director", None)
+    first, por_que = (dir_model, None) if dir_model else EV.modelo_inicial(conv, want)
+    chain = fallback_chain(conv, first)
+    if chain[0] != first and S.blocked(first):
+        st = S.get(first) or {}
+        emit("notice", {"text": f"{S.ICONO.get(st.get('kind'), '⛔')} {first.split('::')[-1]} no está operativo: {st.get('motivo', '')} "
                                 f"Trabajo con {chain[0].split('::')[-1]}. 💡 {st.get('solucion', '')}"})
+    elif por_que and chain[0] == first and first != want:
+        emit("notice", {"text": f"🏆 Evaluador: empiezo con {first.replace('::', ' · ')} en vez de {want.split('::')[-1]} porque "
+                                f"{por_que}. (Puedes cambiarlo en ⚙ Ajustes → 🏆 Ranking de IAs.)"})
+    elif chain[0] != first and EV.fuera(first):
+        emit("notice", {"text": f"🏆 Evaluador: {first.split('::')[-1]} {EV.fuera(first)}; empiezo con "
+                                f"{chain[0].replace('::', ' · ')} y la dejo al final de la lista hasta que vuelva a funcionar bien."})
+    conv["_cadena"] = chain
     rounds, max_rounds = 0, int(CONFIG.get("fallback_rounds", 3))
     ci = 0
     model_id = chain[0]
@@ -467,10 +555,14 @@ def run_agent(conv, emit_raw, stop_ev):
     changed_run = set()      # archivos de código cambiados en este turno (para las pruebas finales)
     final_fixes, last_report, stalls = 0, "", {}
     seen_sigs, loops = {}, 0
+    edit_ver = 0             # sube cada vez que cambia un archivo: volver a ejecutar/probar después NO es un bucle
     step, retried = 0, set()
     cuts, nudges, tools_used, ejec_passes, vision_warned = 0, 0, 0, 0, False
     sup, reg = ESC.Supervisor(), ESC.Registro(conv)   # 🚀 escalador: detecta atascos y pasa el trabajo a una IA más capaz
     breve, state_ver = 0, 0                           # 🛡 guardián: respuestas con razonamiento breve tras un corte
+    vacias, prov_fail, img_tent = {}, {}, {}          # respuestas vacías por modelo, fallos 5xx por proveedor, visión a prueba
+    last_text, ok_files = "", set()                   # detector de informe repetido · archivos que ya pasaban las pruebas
+    turno_m = conv.setdefault("_turno_modelos", {})
     # ⏪ Punto de restauración automático antes de trabajar (git en la sombra dentro de .noviq, sin tocar tu .git)
     if conv.get("project"):
         try:
@@ -496,11 +588,18 @@ def run_agent(conv, emit_raw, stop_ev):
         emit("status", {"text": f"(diagnóstico automático omitido: {type(ex).__name__}: {str(ex)[:80]})"})
     while step < max_steps:
         step += 1
-        # ── 🚀 Escalador: la IA se atascó → pasa el trabajo a la IA más capaz habilitada (con cuota) ──
+        # ── 🤝 La propia IA pidió relevo (pedir_relevo): reconoce que no puede → escalado inmediato ──
+        rel = conv.pop("_relevo", None)
+        if rel:
+            sup.registrar("relevo", "la IA pidió relevo: " + rel.get("motivo", "")[:160])
+            emit("notice", {"text": f"🤝 {model_id.split('::')[-1]} pidió relevo: {rel.get('motivo', '')[:200]}"})
+        # ── 🚀 Escalador: la IA se atascó → pasa el trabajo a la IA mejor valorada habilitada (con cuota) ──
         if sup.atascado() and not stop_ev.is_set():
             motivo = sup.explicacion()
             reg.marcar(model_id)
-            nuevo, info_ = ESC.mejor(model_id, excluir=reg.excluidos()) if sup.escalados < sup.max else (None, "ya se escaló varias veces")
+            EV.registrar(model_id, "atasco", tipo, detalle=motivo[:150])
+            nuevo, info_ = ESC.mejor(model_id, excluir=reg.excluidos(), tipo=tipo) if (sup.escalados < sup.max or rel) \
+                else (None, "ya se escaló varias veces")
             diag = ""
             if conv.get("project") and es_depuracion(conv):
                 try:
@@ -519,22 +618,25 @@ def run_agent(conv, emit_raw, stop_ev):
                 breve = 0
                 emit_raw("reset_segment", {})
                 emit("notice", {"text": f"🚀 Escalado: {prev.split('::')[-1]} se atascó ({motivo[:180]}). Paso el trabajo a "
-                                        f"{nuevo.replace('::', ' · ')}, la IA más capaz que tienes habilitada con cuota; "
-                                        "continúa con todo lo hecho hasta ahora."})
+                                        f"{nuevo.replace('::', ' · ')}, la IA mejor valorada por el 🏆 evaluador para esta tarea "
+                                        f"({EV.puntaje(nuevo, tipo):.0f}/100); continúa con todo lo hecho hasta ahora."})
                 emit_raw("model_switch", {"model": nuevo})
                 T.append_log(conv, f"🚀 escalado de IA: {prev} → {nuevo} ({motivo[:100]})")
                 E.record_model(conv, nuevo)
-                conv["messages"].append({"role": "user", "content": E.handoff_message(conv, prev, nuevo, "se atascó: " + motivo[:200])
-                                         + "\n\nEres una IA más capaz que toma el relevo porque la anterior no avanzaba. NO repitas lo "
-                                         "que ya falló: mide el problema real (diagnosticar / probar_web / ejecutar), encuentra la causa "
-                                         "raíz, corrige lo mínimo y verifica." + ("\n\n" + diag if diag else "")})
+                DIR.push_sistema(conv, E.handoff_message(conv, prev, nuevo, "se atascó: " + motivo[:200])
+                                 + "\n\nEres una IA más capaz que toma el relevo porque la anterior no avanzaba. NO repitas lo "
+                                 "que ya falló: mide el problema real (diagnosticar / probar_web / ejecutar), encuentra la causa "
+                                 "raíz, corrige lo mínimo y verifica."
+                                 + (f"\nLo que la IA anterior ya intentó: {rel.get('intentado')}" if rel and rel.get("intentado") else "")
+                                 + ("\n\n" + diag if diag else ""))
             else:
                 sup.intervenciones += 1
                 if sup.intervenciones > 2:
                     conv["en_progreso"] = True
                     E.save_file(conv)
-                    emit("notice", {"text": f"🧭 La IA sigue atascada ({motivo[:160]}) y {info_}. La detuve para no gastar recursos. "
-                                            "💡 Activa una IA más capaz en 🎁 IA gratis (o elige otra en la lista) y pulsa «▶ Continuar el trabajo»."})
+                    emit("notice", {"text": f"🧭 La IA sigue atascada ({motivo[:160]}) y {info_}. La detengo para no gastar recursos; "
+                                            "el director decide si otra IA puede continuar."})
+                    _salir(conv, "atascado", model_id, chain)
                     save_conv(conv)
                     return
                 breve = 2
@@ -542,7 +644,7 @@ def run_agent(conv, emit_raw, stop_ev):
                 conv["messages"].append({"role": "user", "content": msg_supervisor(motivo, diag)})
             sup.reiniciar()
             save_conv(conv)
-        tool_defs = (T.BUILTIN + MANAGER.tool_defs()) if mode != "ninguno" else []
+        tool_defs = (T.defs_para(conv) + MANAGER.tool_defs()) if mode != "ninguno" else []
         valid = {t["function"]["name"] for t in tool_defs} | set(T.FUNCS)
         if V.lacks_vision(model_id) and any(isinstance(m.get("content"), list) for m in conv["messages"]):
             errs = V.ensure_descriptions(conv, emit_raw)
@@ -560,31 +662,80 @@ def run_agent(conv, emit_raw, stop_ev):
         emit_raw("context", cinfo)
         guard = G.Guardian(factor=(0.6 if compact else 1.0) * (0.8 if tools_used else 1.0))
         extra_used = extra_breve(model_id) if breve > 0 else None
+        t_call = time.time()
         try:
             raw, reasoning, calls, finish = stream_chat(
                 model_id, msgs, tools_arg, emit, stop_ev, extra=extra_used,
                 max_attempts=3 if (ci < len(chain) - 1 or rounds < max_rounds) else 5, guard=guard)
             if breve > 0:
                 breve -= 1
-            if not calls and mode != "ninguno" and any(x in raw for x in ("<tool_call>", "[TOOL_REQUEST]", '"name"', "<function=")):
-                calls = parse_text_tool_calls(raw, valid, allow_fenced=(mode == "texto"))
+            if not calls and mode != "ninguno" and any(x in raw for x in ("<tool_call>", "[TOOL_REQUEST]", '"name"', "<function=", '"tool"')):
+                # en modo nativo, un bloque ```json {"tool": …}``` solo cuenta si la respuesta es (casi) solo ese bloque:
+                # así una explicación con un ejemplo de JSON nunca se ejecuta por error
+                solo_bloque = bool(re.fullmatch(r"\s*(?:[^\n`]{0,160}\n)?\s*```(?:json|tool)?\s*\{.*\}\s*```\s*", raw, re.S))
+                calls = parse_text_tool_calls(raw, valid, allow_fenced=(mode == "texto" or solo_bloque))
             if not calls and mode != "ninguno" and finish != "guardian" and reasoning and not strip_tool_text(raw).strip() \
                     and any(x in reasoning for x in ("<tool_call>", "<function=", "[TOOL_REQUEST]")):
                 # algunos modelos locales escriben la llamada a la herramienta DENTRO del razonamiento
                 calls = parse_text_tool_calls(reasoning, valid, allow_fenced=False)
-            if not calls and not strip_tool_text(raw).strip() and not reasoning.strip() and not stop_ev.is_set():
+            # respuesta vacía: sin texto, sin herramientas y (casi) sin razonamiento. Ej. kimi-k3 devolvía 32 caracteres de
+            # razonamiento y nada más, 3 veces seguidas, y el trabajo se pausaba. Ahora cuenta como fallo de esa IA.
+            if not calls and not strip_tool_text(raw).strip() and finish not in ("guardian", "length") \
+                    and len(reasoning.strip()) < 400 and not stop_ev.is_set():
                 raise APIError("respuesta vacía", 599)
+            pid_ok = split_model(model_id)[0]
+            prov_fail.pop(pid_ok, None)
+            if img_tent.pop(model_id, None):
+                emit("notice", {"text": f"🖼 Confirmado: {model_id.split('::')[-1]} no acepta imágenes. Desde ahora recibe la "
+                                        "descripción en texto que hace un modelo con visión."})
+            EV.registrar(model_id, "turno", tipo)
+            EV.latencia(model_id, (time.time() - t_call) * 1000)
+            turno_m[model_id] = turno_m.get(model_id, 0) + 1
         except APIError as e:
             t = str(e).lower()
             key = (model_id, )
+            if stop_ev.is_set():  # el usuario pulsó Detener: no es un fallo de la IA (no se penaliza ni se cambia de IA)
+                emit("notice", {"text": "Detenido por el usuario."})
+                _salir(conv, "detenido", model_id, chain)
+                return
+            if t == "respuesta vacía":
+                vacias[model_id] = vacias.get(model_id, 0) + 1
+                EV.registrar(model_id, "vacia", tipo, detalle="respondió sin texto ni herramientas")
+                sup.registrar("vacia", f"{model_id.split('::')[-1]} respondió vacío")
+                if vacias[model_id] == 1 and not stop_ev.is_set():
+                    emit("status", {"text": f"{model_id.split('::')[-1]} respondió vacío; reintento una vez…"})
+                    breve = max(breve, 1)
+                    step -= 1
+                    continue
+            elif e.status >= 500 or e.status in (0, 408) or "no respondió" in t or "se cortó" in t:
+                EV.registrar(model_id, "api", tipo, detalle=_short(e)[:150])
+                pf = split_model(model_id)[0]
+                prov_fail[pf] = prov_fail.get(pf, 0) + 1
+            if img_tent.pop(model_id, None) and not V.has_images(msgs):
+                # sin imágenes también falla: no era por las imágenes (servidor caído) → se olvida la marca
+                ov_ = model_override(model_id)
+                if ov_.pop("no_vision", None):
+                    from .config import save_config
+                    save_config()
+            # 🖼 imágenes en el contexto + error del servidor → se reintenta YA sin imágenes (un modelo con visión las describe)
+            if V.has_images(msgs) and not e.kind and t != "respuesta vacía" \
+                    and (e.status in (400, 413, 415, 422) or e.status >= 500) and ("img",) + key not in retried:
+                retried.add(("img",) + key)
+                img_tent[model_id] = not model_override(model_id).get("no_vision")
+                set_override(model_id, "no_vision", True)
+                EV.registrar(model_id, "imagen", tipo, detalle=_short(e)[:120])
+                emit("notice", {"text": f"🖼 {model_id.split('::')[-1]} falló con capturas/imágenes en el contexto ({_short(e)[:90]}). "
+                                        "Reintento SIN imágenes: un modelo con visión las describe en texto."})
+                step -= 1
+                continue
             if e.kind in S.BLOQUEA or e.kind in ("limite", "apagado"):
                 # modelo no operativo (clave, 404, crédito, memoria…): no es culpa de las herramientas → pasa al respaldo
                 if ci >= len(chain) - 1 and CONFIG.get("fallback_enabled", True):
-                    extend_chain(chain, max_add=3)
+                    extend_chain(chain, max_add=3, tipo=tipo)
                 if ci < len(chain) - 1:
                     prev = model_id
                     ci += 1
-                    while ci < len(chain) - 1 and S.blocked(chain[ci]):
+                    while ci < len(chain) - 1 and (S.blocked(chain[ci]) or EV.fuera(chain[ci])):
                         ci += 1
                     model_id = chain[ci]
                     mode = mode_for(model_id)
@@ -597,15 +748,14 @@ def run_agent(conv, emit_raw, stop_ev):
                     T.append_log(conv, f"⚠ relevo de IA: {prev} → {model_id} ({e.kind})")
                     E.record_model(conv, model_id)
                     if any(m.get("role") == "assistant" for m in conv["messages"]):
-                        last = conv["messages"][-1] if conv["messages"] else {}
-                        if not (last.get("role") == "user" and str(last.get("content", "")).startswith("[RELEVO")):
-                            conv["messages"].append({"role": "user", "content": E.handoff_message(conv, prev, model_id, e.kind)})
+                        DIR.push_sistema(conv, E.handoff_message(conv, prev, model_id, e.kind))
                     save_conv(conv)
                     step -= 1
                     continue
                 E.save_file(conv)
+                _salir(conv, "error", model_id, chain)
                 raise APIError(str(e) + "\n\n💾 El trabajo quedó guardado. 💡 Activa más IAs en 🎁 IA gratis (o «🧠 Usar los más "
-                                        "inteligentes gratis» en la lista de modelos) para que NoviQ cambie solo a otra que funcione.",
+                                        "inteligentes gratis» en la lista de modelos) para que Noviq cambie solo a otra que funcione.",
                                e.status, e.kind)
             if mode == "nativo" and e.status in (400, 404, 422, 500) and any(w in t for w in ("tool", "function")) \
                     and "not found for account" not in t and not e.kind and ("tools",) + key not in retried:
@@ -646,6 +796,7 @@ def run_agent(conv, emit_raw, stop_ev):
                 continue
             if stop_ev.is_set():
                 emit("notice", {"text": "Detenido por el usuario."})
+                _salir(conv, "detenido", model_id, chain)
                 return
             img_err = any(w in t for w in ("image", "vision", "multimodal", "image_url")) and e.status in (400, 422)
             if img_err and not model_override(model_id).get("no_vision") and ("vision",) + key not in retried:
@@ -662,6 +813,11 @@ def run_agent(conv, emit_raw, stop_ev):
                 prev = model_id
                 if ci < len(chain) - 1:
                     ci += 1
+                    # si 2 modelos del MISMO proveedor fallaron con error del servidor (ej. NVIDIA respondiendo 500 a todo),
+                    # se saltan los demás de ese proveedor y se pasa a otra empresa; también los que están en enfriamiento
+                    while ci < len(chain) - 1 and (prov_fail.get(split_model(chain[ci])[0], 0) >= 2
+                                                   or EV.fuera(chain[ci]) or S.blocked(chain[ci])):
+                        ci += 1
                 else:
                     # ninguna IA respondió: espera y vuelve a intentar la cadena completa (no se abandona el trabajo)
                     rounds += 1
@@ -672,9 +828,11 @@ def run_agent(conv, emit_raw, stop_ev):
                     for _ in range(wait * 2):
                         if stop_ev.is_set():
                             emit("notice", {"text": "Detenido por el usuario."})
+                            _salir(conv, "detenido", model_id, chain)
                             return
                         time.sleep(0.5)
                     ci = 0
+                    prov_fail.clear()
                 model_id = chain[ci]
                 mode = mode_for(model_id)
                 compact = C.is_compact(model_id)
@@ -686,13 +844,13 @@ def run_agent(conv, emit_raw, stop_ev):
                     emit_raw("model_switch", {"model": model_id})
                     T.append_log(conv, f"⚠ relevo de IA: {prev} → {model_id} ({_short(e)[:80]})")
                     E.record_model(conv, model_id)
-                    last = conv["messages"][-1] if conv["messages"] else {}
-                    if not (last.get("role") == "user" and str(last.get("content", "")).startswith("[RELEVO")):
-                        conv["messages"].append({"role": "user", "content": E.handoff_message(conv, prev, model_id, _short(e)[:120])})
+                    if any(m.get("role") == "assistant" for m in conv["messages"]):
+                        DIR.push_sistema(conv, E.handoff_message(conv, prev, model_id, _short(e)[:120]))
                 save_conv(conv)
                 E.save_file(conv)
                 step -= 1
                 continue
+            _salir(conv, "error", model_id, chain)
             if img_err:
                 raise APIError("Este modelo no acepta imágenes. Elige un modelo con visión (ej. z-ai/glm-5.3-flash, "
                                "Gemini, llama-4-maverick) o envía el mensaje sin imagen.\n\nDetalle: " + str(e)[:400])
@@ -710,12 +868,14 @@ def run_agent(conv, emit_raw, stop_ev):
                 conv["messages"].append({"role": "assistant", "content": text})
                 conv["display"].append({"type": "assistant", "text": text, "reasoning": reasoning, "model": model_id})
             emit("notice", {"text": "Detenido por el usuario."})
+            _salir(conv, "detenido", model_id, chain)
             return
 
         # ── 🛡 Guardián: cortó un razonamiento eterno o un bucle de texto → se le pide actuar ya, con razonamiento breve ──
         if finish == "guardian" and not calls:
             quien = model_id.split("::")[-1]
             sup.registrar("guardian", f"{quien} {guard.tripped}")
+            EV.registrar(model_id, "guardian", tipo, detalle=str(guard.tripped)[:120])
             conv["display"].append({"type": "assistant", "text": text, "reasoning": reasoning, "model": model_id})
             if reasoning and not conv.get("tasks"):
                 E.record_plan_text(conv, G.resumen_razonamiento(reasoning, 3000))
@@ -787,6 +947,32 @@ def run_agent(conv, emit_raw, stop_ev):
 
         if not calls:
             pending = [t for t in conv.get("tasks") or [] if t.get("estado") != "completada"]
+            # ── 📝 Informe entregado: si lo único pendiente es un informe/resumen y la IA acaba de escribirlo, esa tarea
+            #    ESTÁ hecha (antes quedaba «en progreso», se le insistía, repetía el informe 3 veces y el trabajo se pausaba) ──
+            if pending and len(text.strip()) >= 300 and all(_es_informe(t_.get("contenido")) for t_ in pending):
+                for t_ in conv.get("tasks") or []:
+                    if t_.get("estado") != "completada":
+                        t_["estado"] = "completada"
+                        EV.registrar(model_id, "tarea", tipo, detalle=t_.get("contenido", "")[:100])
+                emit("tasks", {"tasks": conv["tasks"]})
+                emit("notice", {"text": "✅ La IA entregó el informe: marco como completada «" + "», «".join(
+                    t_["contenido"][:60] for t_ in pending[:3]) + "»."})
+                pending = []
+                save_conv(conv)
+            # ── 🔁 Respuesta repetida: la IA escribe otra vez (casi) lo mismo en vez de avanzar ──
+            repite = len(text.strip()) > 80 and _similar(text, last_text) >= 0.85
+            if text.strip():
+                last_text = text
+            if repite:
+                EV.registrar(model_id, "repite", tipo, detalle=text.strip()[:100])
+                sup.registrar("repite", f"{model_id.split('::')[-1]} repitió la misma respuesta")
+                if pending:
+                    conv["en_progreso"] = True
+                    E.save_file(conv)
+                    emit("notice", {"text": f"🔁 {model_id.split('::')[-1]} repite la misma respuesta en vez de avanzar con: "
+                                            + "; ".join(t_["contenido"][:60] for t_ in pending[:3]) + "."})
+                    _salir(conv, "repite", model_id, chain)
+                    return
             # ── Modo compacto: el orquestador pasa al siguiente paso con la mesa limpia ──
             if compact and pending and mode != "ninguno":
                 key = pending[0]["contenido"]
@@ -821,30 +1007,51 @@ def run_agent(conv, emit_raw, stop_ev):
                     emit_raw("assistant_break", {})
                     save_conv(conv)
                     continue
+                if not res["ok"]:
+                    EV.registrar(model_id, "prueba_mal", tipo, detalle=rep_.split("\n")[0][:120])
                 if res["ok"]:
                     emit("notice", {"text": "🧪 " + rep_})
                     changed_run.clear()
                     A.resolve_all(conv)
+                    EV.registrar(model_id, "prueba_ok", tipo)
+                    conv["_entrega_lista"] = True  # código cambiado y pruebas OK: al terminar se guarda el ZIP estable
             # ── Anunció acciones pero no llamó herramientas: se le recuerda que actúe ──
             intent = re.search(r"\b(voy a|vamos a|procedo|proceder[ée]|a continuaci[óo]n|crear[ée]|escribir[ée]|"
                                r"ejecutar[ée]|let me|i will|i'll|now i|next,? i)\b", (text[-600:] + " " + reasoning[-400:]).lower())
             short = len(text.strip()) < 500
-            if mode != "ninguno" and nudges < 3 and ((intent and short and not text.rstrip().endswith("?")) or (pending and tools_used)):
+            if mode != "ninguno" and nudges < 2 and not repite and ((intent and short and not text.rstrip().endswith("?"))
+                                                                    or (pending and tools_used)):
                 nudges += 1
                 if pending or tools_used:
                     sup.registrar("sin_herramientas", "respondió sin usar herramientas con trabajo pendiente")
-                conv["messages"].append({"role": "user", "content":
-                    "[Sistema] No llamaste a ninguna herramienta. Si aún hay trabajo por hacer, EJECÚTALO AHORA "
-                    "llamando a las herramientas (no lo describas). Si ya terminaste todo, responde solo con el resumen final."
-                    + (f" Tareas pendientes: {', '.join(t['contenido'] for t in pending[:6])}." if pending else "")
-                    + f" Siguiente paso: {E.next_step(conv)}"})
+                pend_txt = "; ".join(f"{i_ + 1}. {t_['contenido']}" for i_, t_ in enumerate(conv.get("tasks") or [])
+                                     if t_.get("estado") != "completada")
+                DIR.push_sistema(conv,
+                    "[Sistema] No llamaste a ninguna herramienta. Si aún hay trabajo por hacer, EJECÚTALO AHORA llamando a las "
+                    "herramientas (no lo describas). Si ya terminaste una tarea, márcala con marcar_tarea (número y "
+                    "estado='completada'); si todas están hechas, da el resumen final UNA sola vez (no repitas lo que ya escribiste)."
+                    + (f" Tareas pendientes: {pend_txt}." if pend_txt else "")
+                    + f" Siguiente paso: {E.next_step(conv)}")
                 emit_raw("assistant_break", {})
                 save_conv(conv)
                 continue
             if finish == "length":
-                emit("notice", {"text": "La respuesta se cortó por el límite de tokens varias veces. Pulsa «▶ Continuar el trabajo»."})
+                emit("notice", {"text": "La respuesta se cortó por el límite de tokens varias veces; el director continúa el trabajo."})
             conv["en_progreso"] = bool(E.pending_tasks(conv)) or finish == "length"
             E.save_file(conv)
+            if finish == "length":
+                _salir(conv, "cortado", model_id, chain)
+            elif E.pending_tasks(conv):
+                _salir(conv, "sin_herramientas", model_id, chain)
+            elif text.rstrip().endswith("?") and not tools_used:
+                _salir(conv, "espera_usuario", model_id, chain)
+            else:
+                if tools_used or text.strip():
+                    EV.registrar(model_id, "fin", tipo, detalle="trabajo terminado")
+                if conv.pop("_entrega_lista", False):
+                    from . import versiones as VR
+                    VR.entrega_automatica(conv, emit)
+                _salir(conv, "terminado", model_id, chain)
             return
         tools_used += len(calls)
 
@@ -853,6 +1060,17 @@ def run_agent(conv, emit_raw, stop_ev):
         for tc in calls:
             name = tc["function"]["name"]
             args = parse_args(tc["function"]["arguments"])
+            # 🔤 IAs pequeñas: Read/Edit/Grep/Bash/TodoWrite, read_file, mkdir, file_path, old_string… → herramientas de Noviq
+            nota_alias = ""
+            if "_error" not in args and (name not in valid or any(k not in (T.esquema_de(name) or {k: 1}) for k in args)):
+                try:
+                    from .experto import alias as AL
+                    n2, a2, nota_alias = AL.normalizar(name, args, valid, T.esquema_de)
+                    if n2:
+                        name, args = n2, a2
+                        tc["function"]["name"], tc["function"]["arguments"] = name, json.dumps(args, ensure_ascii=False)
+                except Exception:
+                    nota_alias = ""
             call_id = uuid.uuid4().hex
             label = T.LABELS.get(name) or ("🔌 " + name.replace("mcp__", "").replace("__", " › "))
             if tc["id"].startswith("ejec_"):
@@ -860,9 +1078,11 @@ def run_agent(conv, emit_raw, stop_ev):
             emit_raw("tool_start", {"id": call_id, "name": name, "label": label, "args": display_args(args)})
             conv["display"].append({"type": "tool", "id": call_id, "name": name, "label": label, "args": display_args(args)})
             ctx = T.ToolContext(conv, emit, stop_ev, call_id)
-            sig = name + ":" + json.dumps(args, sort_keys=True, ensure_ascii=False)[:4000] + (f"@{state_ver}" if name in READ_TOOLS else "")
+            sig = name + ":" + json.dumps(args, sort_keys=True, ensure_ascii=False)[:4000] + (
+                f"@{state_ver}" if name in READ_TOOLS else f"@e{edit_ver}" if name in RERUN_TOOLS else "")
             seen_sigs[sig] = seen_sigs.get(sig, 0) + 1
             repetida = seen_sigs[sig] >= 3
+            done_antes = sum(t_.get("estado") == "completada" for t_ in conv.get("tasks") or [])
             if name not in valid:
                 result = f"ERROR: herramienta desconocida '{name}'. Disponibles: {', '.join(sorted(valid))}"
             elif "_error" in args:
@@ -871,11 +1091,16 @@ def run_agent(conv, emit_raw, stop_ev):
                 # detector de bucles: la IA repite exactamente la misma acción
                 loops += 1
                 sup.registrar("bucle", f"repitió {name} {seen_sigs[sig]} veces igual")
+                EV.registrar(model_id, "bucle", tipo, detalle=f"repitió {name} {seen_sigs[sig]} veces")
                 result = (f"ERROR: ya hiciste exactamente esta acción {seen_sigs[sig] - 1} veces. No la repitas: revisa el "
                           f"ESTADO DEL TRABAJO (siguiente paso: {E.next_step(conv)}) y avanza, o termina con un resumen.")
             else:
                 approved = True
-                if T.needs_permission(name, args, ctx):
+                from . import guardia as GD
+                sensible = GD.clasificar(name, args, ctx)
+                if sensible:  # 🛡 enviar / borrar / instalar / pagar: SIEMPRE se pregunta (Noviq + Telegram), aun en automático
+                    approved = GD.aprobar(ctx, name, args, sensible, stop_ev)
+                elif T.needs_permission(name, args, ctx):
                     ev = threading.Event()
                     PENDING[call_id] = {"event": ev, "ok": False, "always": False}
                     rz = getattr(ctx, "riesgo", None)
@@ -889,6 +1114,16 @@ def run_agent(conv, emit_raw, stop_ev):
                     approved = ans.get("ok", False)
                     if approved and ans.get("always"):
                         conv.setdefault("allowed_tools", []).append(name)
+                        # el permiso que el usuario ya dio se recuerda para las próximas conversaciones (⚙ se puede quitar)
+                        if name not in T.CMD_TOOLS and name not in ("eliminar",):
+                            ps_ = CONFIG.setdefault("permisos_siempre", [])
+                            if name not in ps_:
+                                ps_.append(name)
+                                try:
+                                    from .config import save_config
+                                    save_config()
+                                except Exception:
+                                    pass
                 if approved and name == "actualizar_tareas" and not conv.get("plan_cerebro") and not conv.get("_plan_revisado") \
                         and len(args.get("tareas") or []) >= 3 and not (conv.get("tasks") or []):
                     # primer plan de la IA principal: el usuario puede revisarlo/editarlo (se aprueba solo al acabar el tiempo)
@@ -920,12 +1155,28 @@ def run_agent(conv, emit_raw, stop_ev):
             if repetida and name in READ_TOOLS and not result.startswith("ERROR"):
                 loops += 1
                 sup.registrar("bucle", f"repitió {name} {seen_sigs[sig]} veces sin cambiar nada")
+                EV.registrar(model_id, "bucle", tipo, detalle=f"repitió {name} {seen_sigs[sig]} veces sin cambiar nada")
                 result = (f"⚠ [Ya hiciste esta misma consulta {seen_sigs[sig] - 1} veces sin cambiar nada entre medio: NO la repitas; "
                           "usa lo que ya sabes y ACTÚA (editar/escribir/ejecutar).]\n" + result)
+            if nota_alias:  # al final si es un error (para que se siga viendo como error), al principio si salió bien
+                from .experto import alias as AL
+                result = (result.rstrip() + "\n" + AL.nota_para_ia(nota_alias)) if E._is_error(result) else AL.nota_para_ia(nota_alias) + result
             es_err = E._is_error(result)
             sup.resultado(name, args, result, es_err)
             if name in STATE_TOOLS and not es_err:
                 state_ver += 1
+            if name in FILE_TOOLS and not es_err:
+                edit_ver += 1
+            # 🏆 evaluador: qué tan bien usa esta IA las herramientas y cuánto avanza de verdad
+            if name not in ("actualizar_tareas", "marcar_tarea", "pedir_relevo"):
+                EV.registrar(model_id, "err" if es_err else "ok", tipo, detalle=result.splitlines()[0][:120] if es_err and result else "")
+            if not es_err and name not in E.READONLY:
+                conv["_n_ok"] = int(conv.get("_n_ok") or 0) + 1
+            if name in ("actualizar_tareas", "marcar_tarea") and not es_err:
+                hechas = sum(t_.get("estado") == "completada" for t_ in conv.get("tasks") or [])
+                if hechas > done_antes:
+                    EV.registrar(model_id, "tarea", tipo, n=hechas - done_antes)
+                    conv["_n_ok"] = int(conv.get("_n_ok") or 0) + 1
             if name not in ("actualizar_tareas", "listar_directorio", "leer_archivo", "memoria"):
                 T.append_log(conv, log_line(name, args, result))
             reminder = E.record_action(conv, name, args, result)
@@ -970,10 +1221,16 @@ def run_agent(conv, emit_raw, stop_ev):
                             break
                     first = res["errores"][0]
                     emit("notice", {"text": f"🧪 Agente de pruebas: {first['archivo']}:{first['linea']} — {first['msg'][:90]}"})
+                    rotos = {str(e_.get("archivo", "")).replace("\\", "/") for e_ in res["errores"]} & ok_files
+                    if rotos:
+                        # 💥 daño: un archivo que YA pasaba las pruebas quedó con errores tras la edición de esta IA
+                        EV.registrar(model_id, "dano", tipo, detalle="rompió " + ", ".join(sorted(rotos))[:120])
+                        ok_files.difference_update(rotos)
                 else:
                     A.on_result(conv, "prueba_auto", {"ruta": rels[0]}, "OK")
+                    ok_files.update(rels)
         # ── Modo compacto: al completar una tarea, la siguiente empieza con la mesa limpia ──
-        if compact and any(tc["function"]["name"] == "actualizar_tareas" for tc in calls):
+        if compact and any(tc["function"]["name"] in ("actualizar_tareas", "marcar_tarea") for tc in calls):
             done_now = sum(t.get("estado") == "completada" for t in conv.get("tasks") or [])
             if done_now > conv.get("_done_prev", 0) and E.pending_tasks(conv):
                 conv["seg_start"] = len(conv["messages"])
@@ -983,12 +1240,15 @@ def run_agent(conv, emit_raw, stop_ev):
         E.save_file(conv)
         if loops >= 6:
             conv["en_progreso"] = True
-            emit("notice", {"text": "🔁 La IA está repitiendo las mismas acciones sin avanzar; la detuve para no gastar recursos. "
-                                    "Revisa el 📋 Estado y pulsa «▶ Continuar el trabajo» o prueba otro modelo."})
+            emit("notice", {"text": "🔁 La IA está repitiendo las mismas acciones sin avanzar; la detuve para no gastar recursos "
+                                    "(el director decide si otra IA continúa)."})
+            _salir(conv, "bucle", model_id, chain)
             return
         if stop_ev.is_set():
             emit("notice", {"text": "Detenido por el usuario."})
+            _salir(conv, "detenido", model_id, chain)
             return
     conv["en_progreso"] = True
     E.save_file(conv)
-    emit("notice", {"text": f"Se alcanzó el máximo de {max_steps} pasos seguidos. Pulsa «▶ Continuar el trabajo» para seguir."})
+    emit("notice", {"text": f"Se alcanzó el máximo de {max_steps} pasos seguidos (la IA estaba avanzando)."})
+    _salir(conv, "max_pasos", model_id, chain)

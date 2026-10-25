@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-NoviQ 4.0 — agente de IA de escritorio para modelos de NVIDIA (build.nvidia.com), Gemini, OpenAI,
+Noviq 4.0 — agente de IA de escritorio para modelos de NVIDIA (build.nvidia.com), Gemini, OpenAI,
 Ollama y LM Studio, con herramientas estilo Claude: proyectos, archivos, PowerShell, Python,
 internet, imágenes, capturas, tareas, memoria y servidores MCP.
 
@@ -30,12 +30,14 @@ from noviq import vault
 from noviq.mcp import MANAGER
 from noviq.providers import APIError, list_models
 from noviq.server_state import conv_path, list_convs, load_conv, new_conv, save_conv
+from noviq import avatar_agente as AV  # 🤖 avatar: cara, voz y oído de Noviq
 
 PORT = int(os.environ.get("NVIDIA_CHAT_PORT", "7860"))
 TOKEN = secrets.token_urlsafe(24)
 STATIC = BASE_DIR / "static"
 app = Flask(__name__, static_folder=str(STATIC), static_url_path="/static")
 app.json.sort_keys = False  # conserva el orden de los proveedores
+app.register_blueprint(AV.bp)  # rutas /api/avatar/* (usan el mismo token que el resto de la API)
 STOP = {}
 RUNNING = set()
 JOBS = {}  # conversación → trabajo en curso (eventos para reengancharse)
@@ -49,8 +51,12 @@ def guard():
         abort(403)
     if request.path.startswith("/api/") or request.path == "/f":
         tok = request.headers.get("X-Token") or request.args.get("t")
+        if not tok and request.headers.get("Authorization", "").startswith("Bearer "):
+            tok = request.headers["Authorization"][7:].strip()
         if tok != TOKEN:
-            abort(403)
+            # 🤖 otros programas pueden conversar con el bot del avatar con su clave fija (⚙ Ajustes → 🤖 Avatar → API)
+            if not ((request.path.startswith("/api/avatar/v1/") or request.path == "/api/avatar/charla") and AV.clave_valida(tok)):
+                abort(403)
 
 
 @app.get("/")
@@ -65,6 +71,7 @@ def J():
 
 # ───────────── Configuración ─────────────
 def public_config():
+    from noviq.config import CONFIG_AVISOS
     c = json.loads(json.dumps(CONFIG))
     for pid, p in c["providers"].items():
         keys = vault.get_keys(pid)
@@ -73,6 +80,7 @@ def public_config():
     c["vault"] = "Cifrada con DPAPI de Windows" if IS_WINDOWS else "Protegida con permisos de archivo"
     c["projects_root"] = str(projects_root())
     c["os"] = "Windows" if IS_WINDOWS else sys.platform
+    c["avisos_config"] = list(CONFIG_AVISOS[-5:])
     return c
 
 
@@ -81,36 +89,124 @@ def get_config():
     return jsonify(public_config())
 
 
+# Tipos y rangos de los ajustes: lo que llega de la ventana se corrige (antes un «0» de temperatura se volvía 0.6 y un
+# texto en un campo numérico podía dejar la configuración inservible).
+_NUM = {"temperature": (float, 0.0, 2.0), "top_p": (float, 0.0, 1.0), "max_tokens": (int, 256, 262144),
+        "max_steps": (int, 1, 500), "read_timeout": (int, 30, 3600), "fallback_rounds": (int, 1, 10),
+        "equipo_max": (int, 1, 4), "revisar_plan_seg": (int, 0, 600)}
+_NUM_SUB = {"local": {"vram_gb": (float, 1, 256), "ram_gb": (float, 2, 2048), "num_ctx": (int, 0, 1048576),
+                      "max_ctx": (int, 2048, 1048576), "max_steps": (int, 10, 1000)},
+            "guardian": {"max_razonamiento": (int, 3000, 400000), "max_seg_razonamiento": (int, 30, 3600)},
+            "escalado": {"umbral": (int, 1, 50), "max_escalados": (int, 0, 10)},
+            "director": {"max_continuaciones": (int, 0, 20), "max_minutos": (int, 5, 1440), "espera_error_seg": (int, 0, 600)},
+            "evaluador": {"min_datos": (int, 1, 100)}, "entregas": {"max": (int, 1, 100)},
+            "respaldos": {"max_por_archivo": (int, 3, 500)},
+            "recursos": {"reserva_gb": (float, 0, 64), "vm_gb": (float, 1, 128), "vm_cpus": (int, 1, 64), "swap_gb": (float, 0, 64),
+                         "navegadores": (int, 1, 4), "proc_mb": (int, 256, 131072), "cpu_pct": (int, 10, 100),
+                         "vista_max_gb": (float, 0.5, 32)}}
+_BOOL = {"fallback_enabled", "navegador_directo", "respaldo_auto", "verificar_modelos", "solo_operativos", "pruebas_auto",
+         "diagnostico_auto"}
+
+
+def _num(v, spec, actual):
+    tipo, lo, hi = spec
+    try:
+        x = tipo(float(v))
+    except (TypeError, ValueError):
+        return actual
+    return max(lo, min(hi, x))
+
+
+def _guardar_claves(pid, lineas, informe):
+    """Guarda las claves de un proveedor desde la caja de texto. Cada línea puede ser una clave enmascarada (ya guardada)
+    o una clave nueva pegada de cualquier forma («Bearer nvapi-…», «clave 2 …», entre comillas…)."""
+    before = vault.get_keys(pid)
+    pool = {}
+    for k in before:  # cada línea enmascarada recupera su clave real (aunque dos máscaras coincidan)
+        pool.setdefault(vault.mask(k), []).append(k)
+    if isinstance(lineas, str):
+        lineas = lineas.splitlines()
+    nuevas, pegadas, limpiadas, ignoradas = [], 0, 0, 0
+    for x in lineas or []:
+        x = (x or "").strip()
+        if not x:
+            continue
+        if pool.get(x):
+            nuevas.append(pool[x].pop(0))
+            continue
+        ks = vault.extraer_claves(x)
+        if not ks:
+            ignoradas += 1  # «Bearer» suelto, una máscara que ya no existe, texto sin clave…
+            continue
+        pegadas += len(ks)
+        if len(ks) != 1 or ks[0] != x:
+            limpiadas += 1
+        nuevas.extend(ks)
+    dup = len(nuevas) - len(dict.fromkeys(nuevas))
+    guardadas = vault.set_keys(pid, nuevas)
+    rep = {"guardadas": len(guardadas), "duplicadas": dup, "limpiadas": limpiadas, "ignoradas": ignoradas,
+           "nuevas": len([k for k in guardadas if k not in before]), "quitadas": len([k for k in before if k not in guardadas]),
+           "sospechosas": [f"clave {i + 1}: {vault.formato_sospechoso(pid, k)}" for i, k in enumerate(guardadas)
+                           if vault.formato_sospechoso(pid, k)]}
+    if guardadas != before:  # claves nuevas: se vuelve a probar qué modelos funcionan
+        from noviq import salud as S, verificador
+        from noviq.providers import olvidar_clave
+        olvidar_clave(pid)
+        S.reset_proveedor(pid)
+        verificador.pedir(pid, forzar=True)
+    if pegadas or rep["quitadas"] or dup or ignoradas:
+        informe[pid] = rep
+
+
 @app.post("/api/config")
 def set_config():
+    from noviq.config import CONFIG_AVISOS
     d = J()
-    for k, v in d.items():
-        if k == "providers":
-            for pid, pv in v.items():
-                cur = CONFIG["providers"].setdefault(pid, {})
-                for kk, vv in pv.items():
-                    if kk == "api_keys":
-                        before = vault.get_keys(pid)
-                        pool = {}
-                        for k in before:  # cada línea enmascarada recupera su clave real (aunque dos máscaras coincidan)
-                            pool.setdefault(vault.mask(k), []).append(k)
-                        nuevas = []
-                        for x in vv:
-                            x = (x or "").strip()
-                            if not x:
-                                continue
-                            nuevas.append(pool[x].pop(0) if pool.get(x) else x)
-                        vault.set_keys(pid, list(dict.fromkeys(nuevas)))
-                        if vault.get_keys(pid) != before:  # claves nuevas: se vuelve a probar qué modelos funcionan
-                            from noviq import salud as S, verificador
-                            S.reset_proveedor(pid)
-                            verificador.pedir(pid, forzar=True)
-                    elif kk != "has_key":
-                        cur[kk] = vv
-        elif k in CONFIG and k not in ("model_overrides",):
-            CONFIG[k] = v
-    save_config()
-    return jsonify(public_config())
+    informe, ignorados = {}, []
+    try:
+        for k, v in d.items():
+            if k == "providers" and isinstance(v, dict):
+                for pid, pv in v.items():
+                    if not isinstance(pv, dict):
+                        continue
+                    cur = CONFIG["providers"].setdefault(pid, {})
+                    for kk, vv in pv.items():
+                        if kk == "api_keys":
+                            _guardar_claves(pid, vv, informe)
+                        elif kk == "enabled":
+                            cur[kk] = bool(vv)
+                        elif kk in ("base_url", "name", "cuenta"):
+                            cur[kk] = str(vv or "").strip()
+                        elif kk != "has_key":
+                            cur[kk] = vv
+            elif k in _NUM:
+                CONFIG[k] = _num(v, _NUM[k], CONFIG.get(k))
+            elif k in _BOOL:
+                CONFIG[k] = bool(v)
+            elif k in _NUM_SUB and isinstance(v, dict):
+                sub = dict(CONFIG.get(k) or {})
+                for kk, vv in v.items():
+                    spec = _NUM_SUB[k].get(kk)
+                    sub[kk] = _num(vv, spec, sub.get(kk)) if spec else vv
+                CONFIG[k] = sub
+            elif k == "fallback_models" and isinstance(v, list):
+                CONFIG[k] = [m for m in dict.fromkeys(str(x).strip() for x in v) if m and "::" in m]
+            elif k in CONFIG and k not in ("model_overrides",):
+                CONFIG[k] = v
+            else:
+                ignorados.append(k)
+    except Exception as e:  # nunca se pierde lo ya aplicado: se guarda y se informa el problema
+        save_config()
+        return jsonify({"ok": False, "error": f"No se pudo aplicar un ajuste: {e}"}), 400
+    if not save_config():
+        return jsonify({"ok": False, "error": (CONFIG_AVISOS[-1] if CONFIG_AVISOS else "no se pudo guardar config.json")}), 500
+    c = public_config()
+    c["_guardado"] = True
+    if informe:
+        c["_claves"] = informe
+    if ignorados:
+        c["_ignorados"] = ignorados
+    return jsonify(c)
 
 
 @app.post("/api/reset_model_overrides")
@@ -141,7 +237,7 @@ def models():
         th.join(25)
     for pid in CONFIG["providers"]:
         r = out.get(pid) or {"id": pid, "name": pid, "ok": False, "models": [], "error": "tiempo agotado"}
-        res.append({k: r.get(k) for k in ("id", "name", "ok", "models", "error", "kind")})
+        res.append({k: r.get(k) for k in ("id", "name", "ok", "models", "error", "kind", "claves_malas")})
     return jsonify(res)
 
 
@@ -202,7 +298,7 @@ def get_conv(cid):
     if not c:
         abort(404)
     return jsonify({k: c.get(k) for k in ("id", "title", "display", "project", "model", "tasks", "en_progreso")} |
-                   {"running": cid in RUNNING})
+                   {"running": cid in RUNNING, "calif": (c.get("_calif") or {}).get("valor")})
 
 
 @app.get("/api/conversations/<cid>/estado")
@@ -237,8 +333,13 @@ def confirm():
     d = J()
     p = PENDING.get(d.get("id"))
     if p:
-        p["ok"], p["always"] = bool(d.get("approved")), bool(d.get("always"))
+        p["ok"], p["always"], p["via"] = bool(d.get("approved")), bool(d.get("always")) and not p.get("guardia"), "Noviq"
         p["event"].set()
+        try:
+            from noviq import telegram_bot as TG
+            TG.cerrar_aprobacion(d.get("id"), bool(d.get("approved")), "Noviq")
+        except Exception:
+            pass
     return jsonify({"ok": bool(p)})
 
 
@@ -266,11 +367,29 @@ def chat():
         conv["model"] = d["model"]
     if d.get("idioma") in ("es", "en"):
         conv["idioma"] = d["idioma"]
+    if d.get("permiso") in ("preguntar", "auto_seguro", "auto"):
+        conv["permiso"] = d["permiso"]  # (Telegram y tareas: se aprueba solo; lo sensible lo sigue preguntando la guardia)
+    if d.get("origen"):
+        conv["origen"] = str(d["origen"])[:20]
+    if d.get("titulo") and not conv["messages"]:
+        conv["title"] = str(d["titulo"])[:60]
     if "project" in d and not conv["messages"]:
         conv["project"] = d.get("project")
+    # 🎮 Detector de intención multilingüe: si el mensaje habla de crear un videojuego, la conversación pasa a modo juego
+    # (la IA recibe las herramientas y las reglas del Estudio de juegos). La ventana abre el Estudio por su lado.
+    try:
+        if d.get("modo_juego"):
+            conv["modo_juego"] = True
+        elif (CONFIG.get("juegos") or {}).get("detector", "auto") != "apagado" and not conv.get("modo_juego"):
+            from noviq import intencion
+            if intencion.detectar(d.get("text") or "")["juego"]:
+                conv["modo_juego"] = True
+    except Exception:
+        pass
     if cid in RUNNING:
         return jsonify({"error": "Esta conversación ya está trabajando."}), 409
 
+    conv["_turno_modelos"] = {}  # IAs que trabajan en este turno (para repartir el 👍/👎 del usuario)
     if d.get("regenerate"):
         # vuelve al último mensaje del usuario
         idx = max((i for i, x in enumerate(conv["display"]) if x["type"] == "user"), default=None)
@@ -318,25 +437,41 @@ def start_job(conv):
     stop_ev = threading.Event()
     STOP[cid] = stop_ev
     RUNNING.add(cid)
+    AV.evento(cid, "inicio", {}, conv)  # 🤖 el avatar se pone a trabajar
 
     def emit(kind, payload):
         with job["cond"]:
             job["events"].append((kind, payload))
             job["cond"].notify_all()
+        if kind in ("confirm", "ask_user"):  # 📱 permisos y preguntas también al Telegram del usuario
+            try:
+                from noviq import telegram_bot as TG
+                TG.evento(cid, kind, payload, conv)
+            except Exception:
+                pass
+        AV.evento(cid, kind, payload, conv)  # 🤖 herramientas, tareas, permisos y preguntas → avatar (no bloquea)
 
     def worker():
+        error = None
         try:
             run_agent(conv, emit, stop_ev)
         except APIError as e:
+            error = str(e)
             conv["en_progreso"] = True
             emit("error", {"text": str(e)})
             conv["display"].append({"type": "error", "text": str(e)})
         except Exception as e:
             import traceback
             traceback.print_exc()
+            error = f"{type(e).__name__}: {e}"
             emit("error", {"text": f"{type(e).__name__}: {e}"})
             conv["display"].append({"type": "error", "text": f"{type(e).__name__}: {e}"})
         finally:
+            job["detenido"] = stop_ev.is_set()
+            try:
+                _fin_trabajo(conv, job, error)
+            except Exception:
+                pass
             try:
                 save_conv(conv)
             finally:
@@ -348,6 +483,29 @@ def start_job(conv):
 
     threading.Thread(target=worker, daemon=True, name=f"agente-{cid}").start()
     return job
+
+
+def _fin_trabajo(conv, job, error=None):
+    """📅 Al terminar: el resultado de las tareas programadas va a la agenda y (si está vinculado) a Telegram."""
+    resumen = ""
+    for d in reversed(conv.get("display") or []):
+        if d.get("type") == "assistant" and (d.get("text") or "").strip():
+            resumen = d["text"].strip()
+            break
+    if not error:
+        for kind, p in reversed(job["events"][-40:]):
+            if kind == "error":
+                error = p.get("text")
+                break
+    try:
+        AV.fin_trabajo(conv, resumen, error, job.get("detenido"))  # 🤖 «¡Ya terminé!» / «¿Qué más hacemos?»
+    except Exception:
+        pass
+    if conv.get("tarea_programada"):
+        from noviq import agenda
+        agenda.registrar_resultado(conv["tarea_programada"], conv["id"], resumen[:1500], error)
+    from noviq import telegram_bot as TG
+    TG.fin_trabajo(conv, resumen, error)
 
 
 def _stream_response(cid, since=0):
@@ -377,7 +535,8 @@ def _stream_response(cid, since=0):
                     continue
                 if kind == "plan_review" and payload.get("id") not in CB.PLANS:
                     continue
-                yield f"event: {kind}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                # «id»: si la conexión se corta, la ventana se reengancha desde aquí (/api/chat/<id>/stream?since=N)
+                yield f"id: {i}\nevent: {kind}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
             if done and i >= len(job["events"]):
                 break
         yield "event: done\ndata: {}\n\n"
@@ -392,6 +551,369 @@ def chat_stream(cid):
     if cid not in JOBS:
         return jsonify({"error": "Esta conversación no está trabajando."}), 404
     return _stream_response(cid, int(request.args.get("since") or 0))
+
+
+# ───────────── 🏆 Evaluador de IAs ─────────────
+@app.get("/api/evaluador")
+def evaluador_get():
+    from noviq import evaluador as EV
+    return jsonify(EV.resumen())
+
+
+@app.post("/api/evaluador")
+def evaluador_set():
+    from noviq import evaluador as EV
+    d = J()
+    if d.get("borrar"):
+        EV.borrar(d.get("modelo") or None)
+    if d.get("rehabilitar"):
+        EV.rehabilitar(d["rehabilitar"])
+        from noviq import tokens as TK
+        TK.liberar(d["rehabilitar"])
+    if isinstance(d.get("cupo"), dict) and d["cupo"].get("proveedor"):
+        from noviq import tokens as TK
+        TK.poner_cupo(d["cupo"]["proveedor"], int(d["cupo"].get("tokens_dia") or 0))
+    if "liberar" in d:
+        from noviq import tokens as TK
+        TK.liberar(d["liberar"] or None)
+    if isinstance(d.get("config"), dict):
+        cur = dict(CONFIG.get("evaluador") or {})
+        for k in ("activo", "elegir_al_inicio", "min_datos"):
+            if k in d["config"]:
+                cur[k] = d["config"][k]
+        CONFIG["evaluador"] = cur
+    if isinstance(d.get("director"), dict):
+        cur = dict(CONFIG.get("director") or {})
+        for k in ("activo", "max_continuaciones", "max_minutos"):
+            if k in d["director"]:
+                cur[k] = d["director"][k]
+        CONFIG["director"] = cur
+    save_config()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/recursos", methods=["GET", "POST"])
+def recursos_api():
+    """⚙ Rendimiento: medición de la PC (RAM libre, CPU, GPU…), perfil de límites y acciones (analizar, aplicar a WSL)."""
+    from noviq import recursos as R
+    d = J() if request.method == "POST" else {}
+    extra = {}
+    if d.get("analizar") or request.args.get("completo"):
+        R.medir(max_age=0, con_procesos=True)
+        extra["resumen"] = R.resumen_texto()
+    if d.get("aplicar_wsl"):
+        cambio, texto = R.aplicar_wslconfig(forzar=True)
+        extra["wsl"] = {"cambio": cambio, "archivo": str(R.WSLCONFIG), "texto": texto[:1500]}
+        if d.get("reiniciar_wsl"):
+            extra["wsl"]["reiniciado"] = R.reiniciar_wsl()
+    if d.get("autoprueba"):
+        extra["autoprueba"] = R.autoprueba()
+    e = R.estado_publico()
+    if request.args.get("completo") or d:
+        e["medicion"] = R.medir(max_age=5, con_procesos=True)
+    return jsonify(dict(e, **extra))
+
+
+# ───────────── ✍ Taller de prompts ─────────────
+@app.post("/api/prompt")
+def prompt_api():
+    """Corrige la ortografía/sintaxis o convierte el texto de la caja de mensaje en un prompt profesional."""
+    from noviq import prompts as PR
+    d = J()
+    acc = d.get("accion") or "corregir"
+    try:
+        return jsonify(PR.mejorar(d.get("texto") or "", acc, d.get("modelo") or None, d.get("idioma") or "es"))
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 500
+
+
+@app.get("/api/prompt/plantillas")
+def prompt_plantillas():
+    from noviq import prompts as PR
+    return jsonify(PR.plantillas())
+
+
+# ───────────── 🎮 Estudio de juegos ─────────────
+@app.get("/api/juegos/lexico")
+def juegos_lexico():
+    from noviq import intencion
+    return jsonify(dict(intencion.lexico(), detector=(CONFIG.get("juegos") or {}).get("detector", "auto")))
+
+
+@app.post("/api/juegos/detectar")
+def juegos_detectar():
+    from noviq import intencion
+    return jsonify(intencion.detectar(J().get("texto") or ""))
+
+
+@app.get("/api/juegos/perfil")
+def juegos_perfil():
+    from noviq import juegos as JG
+    en = request.args.get("idioma") == "en"
+    p = JG.perfil_grafico("en" if en else "es")
+    return jsonify(dict(p, generos={k: (JG.GENEROS_EN[k] if en else v["nombre"]) for k, v in JG.GENEROS.items()}, temas=list(JG.TEMAS)))
+
+
+@app.post("/api/juegos/planificar")
+def juegos_planificar():
+    from noviq import juegos as JG
+    d = J()
+    idea = (d.get("idea") or "").strip()
+    if not idea:
+        return jsonify({"ok": False, "error": "Describe tu idea primero."}), 400
+    r = JG.planificar(idea, d.get("estilo") or None, d.get("genero") or None, usar_ia=d.get("usar_ia", True) is not False)
+    return jsonify(dict(r, ok=True))
+
+
+@app.post("/api/juegos/activos")
+def juegos_activos():
+    from noviq import activos as A
+    d = J()
+    tipo = d.get("tipo") if d.get("tipo") in ("modelo", "textura", "hdri") else "modelo"
+    r = A.buscar(d.get("consulta") or "", tipo, d.get("fuentes") or None, d.get("estilo") or None, d.get("nivel") or None,
+                 int(d.get("limite") or 12), bool(d.get("solo_cc0", (CONFIG.get("juegos") or {}).get("solo_cc0"))),
+                 rol=d.get("rol") or None, tema=d.get("tema") or None, genero=d.get("genero") or None)
+    r["paquetes"] = A.paquetes(d.get("estilo"), d.get("tema"), d.get("genero"))
+    return jsonify(r)
+
+
+@app.post("/api/juegos/crear")
+def juegos_crear():
+    from noviq import juegos as JG
+    d = J()
+    if not isinstance(d.get("diseno"), dict):
+        return jsonify({"ok": False, "error": "falta el diseño del juego"}), 400
+    jid = JG.crear_en_segundo_plano(d["diseno"], d.get("nombre") or None, d.get("activos") or None, d.get("buscar_auto", True) is not False,
+                                    sin_modelo=d.get("sin_modelo") if isinstance(d.get("sin_modelo"), list) else None)
+    return jsonify({"ok": True, "trabajo": jid})
+
+
+@app.route("/api/juegos/biblioteca", methods=["GET", "POST"])
+def juegos_biblioteca():
+    """📁 Tu carpeta 3D: GET = modelos encontrados (?escanear=1 vuelve a leer todo); POST {carpeta} = cambiarla («» = la estándar)."""
+    from noviq import biblioteca3d as B
+    try:
+        if request.method == "POST":
+            d = J()
+            if "carpeta" in d:
+                B.cambiar_carpeta(d.get("carpeta") or "")
+            return jsonify(dict(B.resumen_publico(B.indice(forzar=True)), ok=True))
+        return jsonify(dict(B.resumen_publico(B.indice(forzar=request.args.get("escanear") == "1")), ok=True))
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 400
+
+
+@app.post("/api/juegos/biblioteca/miniatura")
+def juegos_biblioteca_miniatura():
+    """La ventana dibuja la vista previa de cada modelo (WebGL) y la guarda aquí para no volver a dibujarla."""
+    from noviq import biblioteca3d as B
+    import base64
+    d = J()
+    try:
+        png = base64.b64decode((d.get("png") or "").split(",", 1)[-1])
+        return jsonify({"ok": True, "url": B.guardar_miniatura(d.get("h") or "", png)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 400
+
+
+@app.get("/api/juegos/biblioteca/mini/<h>.png")
+def juegos_biblioteca_mini(h):
+    from noviq import biblioteca3d as B
+    import re as _re
+    if not _re.fullmatch(r"[0-9a-f]{16}", h) or not (B.MINIS / f"{h}.png").is_file():
+        abort(404)
+    return send_file(B.MINIS / f"{h}.png", mimetype="image/png", max_age=3600)
+
+
+@app.get("/api/juegos/trabajo/<jid>")
+def juegos_trabajo(jid):
+    from noviq import juegos as JG
+    t = JG.TRABAJOS.get(jid)
+    if not t:
+        return jsonify({"estado": "desconocido"}), 404
+    return jsonify({"estado": t["estado"], "log": t["log"][-40:], "resultado": t["resultado"]})
+
+
+@app.post("/api/juegos/activos/descargar")
+def juegos_descargar():
+    from noviq import activos as A
+    d = J()
+    p = project_path(d.get("proyecto") or "")
+    if not d.get("proyecto") or not p.exists():
+        return jsonify({"ok": False, "error": "elige primero el proyecto del juego"}), 400
+    try:
+        ent = A.descargar(d.get("item") or {}, p, rol=(d.get("rol") or None))
+        return jsonify({"ok": True, "activo": ent})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:300]})
+
+
+@app.route("/api/juegos/claves", methods=["GET", "POST"])
+def juegos_claves():
+    """Claves opcionales de las galerías (Sketchfab para descargar, Poly Pizza para buscar low poly): en la bóveda cifrada."""
+    if request.method == "POST":
+        d = J()
+        for k in ("sketchfab", "polypizza"):
+            if k in d:
+                v = (d.get(k) or "").strip()
+                if v and "…" not in v and "•" not in v:
+                    vault.set_keys(k, [v])
+                elif v == "":
+                    vault.set_keys(k, [])
+    return jsonify({k: (vault.mask(vault.get_keys(k)[0]) if vault.get_keys(k) else "") for k in ("sketchfab", "polypizza")})
+
+
+@app.get("/api/juegos/galerias")
+def juegos_galerias():
+    from noviq import activos as A
+    return jsonify(A.probar())
+
+
+@app.post("/api/juegos/director")
+def juegos_director():
+    """🎬 Director creativo: vuelve a mejorar un diseño (más épico, con la IA si hay) o aprende de uno que te gustó."""
+    from noviq import director_juegos as DJ
+    from noviq import juegos as JG
+    d = J()
+    diseno = d.get("diseno")
+    if not isinstance(diseno, dict):
+        return jsonify({"ok": False, "error": "falta el diseño"}), 400
+    idea = (d.get("idea") or diseno.get("idea") or diseno.get("descripcion") or "").strip()
+    try:
+        if d.get("accion") == "aprender":
+            return jsonify({"ok": True, "guardado": DJ.aprender(diseno, idea, int(d.get("votos") or 1))})
+        perfil = JG.perfil_grafico()
+        nuevo, info = DJ.dirigir(diseno, idea, perfil, usar_ia=d.get("usar_ia", True) is not False)
+        return jsonify({"ok": True, "diseno": nuevo, "director": info, "texto": DJ.texto(nuevo)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 500
+
+
+def _rutas_disenos():
+    from noviq import figuras3d as F
+    from noviq import figuras2d as F2
+    return [F.carpeta_creados().resolve(), F2.carpeta_creados().resolve()]
+
+
+@app.get("/api/juegos/disenos")
+def juegos_disenos():
+    """🗂 Mis diseños: las figuras 3D animadas y los diseños 2D que Noviq creó y guardó en tus carpetas (para reutilizarlos)."""
+    from noviq import figuras3d as F
+    from noviq import figuras2d as F2
+    tipo = request.args.get("tipo") or "todos"
+    out = {"ok": True, "carpeta_3d": str(F.carpeta_creados()), "carpeta_2d": str(F2.carpeta_creados())}
+    if tipo in ("3d", "todos"):
+        out["d3"] = [{"nombre": x.get("nombre"), "categoria": (x.get("carpeta") or x.get("categoria") or "").split("/")[-1], "plantilla": x.get("plantilla"), "rig": x.get("rig"),
+                      "animaciones": x.get("animaciones") or [], "creado": x.get("creado"), "ruta": x.get("ruta"), "img": x.get("miniatura_png"),
+                      "bloques": (x.get("cambios") or {}).get("_estilo") == "bloques" or "Bloques" in str(x.get("carpeta") or "")} for x in F.creados()[:400]]
+    if tipo in ("2d", "todos"):
+        out["d2"] = [{"nombre": x.get("nombre"), "tipo": x.get("tipo"), "categoria": x.get("categoria"), "tema": x.get("tema"), "creado": x.get("creado"),
+                      "img": x.get("png"), "capas": sorted((x.get("capas") or {}).keys()), "hoja": bool(x.get("hoja"))} for x in F2.creados()[:400]]
+    if request.args.get("plantillas"):
+        out["plantillas"] = F.plantillas_publicas()
+    return jsonify(out)
+
+
+@app.get("/api/juegos/disenos/img")
+def juegos_disenos_img():
+    """Sirve la imagen (.png) de un diseño guardado: solo dentro de las carpetas de diseños de Noviq."""
+    ruta = Path(request.args.get("ruta") or "")
+    try:
+        r = ruta.resolve()
+    except Exception:
+        abort(404)
+    if r.suffix.lower() != ".png" or not r.is_file() or not any(str(r).startswith(str(b) + os.sep) for b in _rutas_disenos()):
+        abort(404)
+    return send_file(r, mimetype="image/png", max_age=600)
+
+
+@app.post("/api/juegos/disenos/crear")
+def juegos_disenos_crear():
+    """✨ Crear un diseño nuevo desde una descripción: figura 3D animada (tipo=3d) o diseño 2D (retrato, icono, sprites, fondo…)."""
+    from noviq import figuras3d as F
+    from noviq import figuras2d as F2
+    d = J()
+    texto = (d.get("texto") or "").strip()
+    if not texto and not d.get("plantilla"):
+        return jsonify({"ok": False, "error": "Describe lo que quieres crear (ej. «soldado de bloques», «dragón rojo», «fondo de bosque al atardecer»)."}), 400
+    try:
+        if (d.get("tipo") or "3d") == "2d":
+            info = F2.crear_desde_texto(texto)
+            return jsonify({"ok": True, "tipo": "2d", "nombre": info.get("nombre"), "categoria": info.get("categoria"), "img": info.get("png"),
+                            "reutilizado": info.get("reutilizado")})
+        if d.get("plantilla") in F.POR_ID:
+            pl, cambios = F.POR_ID[d["plantilla"]], dict(d.get("cambios") or {})
+        else:
+            pl, cambios, _ = F.desde_texto(texto)
+        if d.get("bloques") and pl["rig"] in ("humanoide", "cuadrupedo"):
+            cambios["_estilo"] = "bloques"
+        info = F.guardar(pl, cambios, float(d.get("detalle") or 1.0), nombre=d.get("nombre") or None, descripcion=texto)
+        return jsonify({"ok": True, "tipo": "3d", "nombre": info.get("nombre"), "categoria": info.get("categoria"), "img": info.get("miniatura_png"),
+                        "ruta": info.get("ruta"), "animaciones": info.get("animaciones"), "reutilizado": info.get("reutilizado"), "plantilla": pl["id"]})
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 500
+
+
+@app.route("/api/nvidia", methods=["GET", "POST"])
+def nvidia_api():
+    """🟩 GPU NVIDIA y herramientas: info (GET), textura o modelo 3D con IA para un proyecto (POST)."""
+    from noviq import nvidia as NV
+    if request.method == "GET":
+        i = NV.info(max_age=0 if request.args.get("actualizar") else 120)
+        return jsonify(dict(i, resumen=NV.resumen(i)))
+    d = J()
+    p = project_path(d.get("proyecto") or "")
+    if not d.get("proyecto") or not p.exists():
+        return jsonify({"ok": False, "error": "elige primero un proyecto"}), 400
+    from noviq import activos as A
+    try:
+        if d.get("accion") == "textura":
+            r = NV.textura(d.get("descripcion") or "", p / "assets" / "texturas", d.get("nombre") or "textura")
+            rel = {k: Path(v).relative_to(p).as_posix() for k, v in r.items() if k in ("color", "normal")}
+            A.registrar(p, {"id": "ia-" + (d.get("nombre") or "textura"), "fuente": "nvidia", "nombre": d.get("nombre") or "textura",
+                            "tipo": "textura", "rol": d.get("rol") or d.get("nombre") or "", "licencia": "generada con IA",
+                            "autor": "NVIDIA FLUX (build.nvidia.com)", "mapas": rel})
+            return jsonify({"ok": True, **r})
+        if d.get("accion") == "modelo_3d":
+            r = NV.modelo_3d(d.get("descripcion") or "", p / "assets" / "modelos", d.get("rol") or d.get("nombre") or "modelo")
+            A.registrar(p, {"id": "ia-" + Path(r["glb"]).stem, "fuente": "nvidia", "nombre": (d.get("descripcion") or "")[:60], "tipo": "modelo",
+                            "rol": d.get("rol") or "", "licencia": "generado con IA", "autor": "Microsoft TRELLIS (build.nvidia.com)",
+                            "archivo": Path(r["glb"]).relative_to(p).as_posix(), "bytes": r["bytes"]})
+            return jsonify({"ok": True, **r})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:400]})
+    return jsonify({"ok": False, "error": "accion: textura | modelo_3d"}), 400
+
+
+@app.route("/api/banco", methods=["GET", "POST"])
+def banco_api():
+    """🧪 Banco de pruebas de IAs (preguntas y respuestas reales con tus claves)."""
+    from noviq import banco
+    if request.method == "POST":
+        d = J()
+        if d.get("detener"):
+            banco.detener()
+            return jsonify({"ok": True, "detenido": True})
+        mods = [m for m in (d.get("modelos") or []) if isinstance(m, str) and "::" in m] or banco.modelos_sugeridos()
+        ok = banco.iniciar(mods)
+        return jsonify({"ok": ok, "modelos": mods, "error": "" if ok else "ya hay una prueba en marcha"})
+    return jsonify(banco.estado())
+
+
+@app.post("/api/calificar")
+def calificar():
+    """👍/👎 del usuario sobre la última respuesta: el evaluador lo usa para elegir la mejor IA por tipo de tarea."""
+    from noviq import evaluador as EV
+    d = J()
+    cid = d.get("conversation_id")
+    if cid in RUNNING:
+        return jsonify({"ok": False, "error": "Espera a que termine el turno para calificarlo."}), 409
+    c = load_conv(cid) if cid else None
+    if not c:
+        abort(404)
+    modelos = EV.calificar(c, d.get("valor", 1))
+    save_conv(c)
+    return jsonify({"ok": True, "modelos": modelos})
 
 
 @app.get("/api/trabajando")
@@ -652,24 +1174,36 @@ def salud_api():
 
 @app.post("/api/claves/probar")
 def claves_probar():
-    """Prueba cada API key de un proveedor por separado (lista de modelos + un mensaje mínimo)."""
+    """Prueba CADA API key de un proveedor por separado: lista de modelos + un mensaje real corto (con el tiempo que
+    tardó). Así se sabe qué clave funciona, cuál está vencida y si dos cuentas ven modelos distintos."""
     import requests as rq
     from noviq import salud as S
-    from noviq.providers import _headers, provider_cfg
-    pid = J().get("pid")
+    from noviq.providers import _headers, _models_cache, provider_cfg
+    d = J()
+    pid = d.get("pid")
     try:
         p = provider_cfg(pid)
     except Exception as e:
         return jsonify({"error": str(e)})
     keys = vault.get_keys(pid)
-    test_model = next((m.split("::", 1)[1] for m, t in S._load().get("verificados", {}).items() if m.startswith(pid + "::")), None)
+    if not keys:
+        return jsonify({"claves": [], "error": "No hay claves guardadas: pégalas en la caja y pulsa Guardar."})
+    test_model = d.get("modelo") or next((m.split("::", 1)[1] for m, t in S._load().get("verificados", {}).items()
+                                          if m.startswith(pid + "::")), None)
+    if not test_model:  # sin modelos verificados: uno pequeño y estable de la lista del proveedor
+        lista = (_models_cache.get(pid) or {}).get("models") or []
+        pref = ("meta/llama-3.1-8b-instruct", "meta/llama-3.3-70b-instruct", "gemini-2.5-flash", "gpt-4o-mini")
+        test_model = next((m for m in pref if m in lista), lista[0] if lista else None)
     out = []
+    iguales = {}
     for n, k in enumerate(keys, 1):
-        item = {"n": n, "mask": vault.mask(k), "ok": False, "modelos": None, "error": ""}
+        iguales.setdefault(k, []).append(n)
+        item = {"n": n, "mask": vault.mask(k), "ok": False, "modelos": None, "error": "", "ms": None, "modelo_prueba": test_model,
+                "aviso": vault.formato_sospechoso(pid, k)}
         try:
             r = rq.get(p["base_url"].rstrip("/") + "/models", headers=_headers(k, p), timeout=20)
             if r.status_code in (401, 403):
-                item["error"] = "clave inválida o vencida"
+                item["error"] = "clave inválida, vencida o revocada (" + str(r.status_code) + ")"
             else:
                 try:
                     item["modelos"] = len((r.json() or {}).get("data") or [])
@@ -677,19 +1211,33 @@ def claves_probar():
                     pass
                 item["ok"] = r.status_code == 200
                 if test_model:
-                    c = rq.post(p["base_url"].rstrip("/") + "/chat/completions", headers=_headers(k, p), timeout=40,
-                                json={"model": test_model, "messages": [{"role": "user", "content": "ok"}], "max_tokens": 8})
+                    t0 = time.time()
+                    c = rq.post(p["base_url"].rstrip("/") + "/chat/completions", headers=_headers(k, p), timeout=60,
+                                json={"model": test_model, "messages": [{"role": "user", "content": "Responde solo: ok"}],
+                                      "max_tokens": 16})
+                    item["ms"] = int((time.time() - t0) * 1000)
                     if c.status_code in (401, 403):
                         item.update(ok=False, error="la clave no tiene permiso para chatear")
                     elif c.status_code == 404 and "account" in c.text.lower():
-                        item.update(ok=True, error="")
                         item["nota"] = f"{test_model} no está en esta cuenta"
+                    elif c.status_code == 429:
+                        item["nota"] = "límite por minuto alcanzado (la clave funciona; espera un momento)"
+                    elif c.status_code == 200:
+                        try:
+                            msg = (c.json().get("choices") or [{}])[0].get("message") or {}
+                            item["respuesta"] = (msg.get("content") or msg.get("reasoning_content") or "")[:60]
+                        except ValueError:
+                            pass
+                    elif c.status_code >= 500:
+                        item["nota"] = f"{test_model} respondió {c.status_code} (servidor ocupado; la clave es válida)"
                 if not item["ok"] and not item["error"]:
                     item["error"] = f"respondió {r.status_code}"
         except rq.RequestException as e:
             item["error"] = f"sin conexión ({type(e).__name__})"
         out.append(item)
-    return jsonify({"claves": out})
+    dups = [v for v in iguales.values() if len(v) > 1]
+    return jsonify({"claves": out, "modelo_prueba": test_model,
+                    "nota": ("Hay claves repetidas: " + "; ".join(" = ".join(f"clave {x}" for x in v) for v in dups)) if dups else ""})
 
 
 @app.post("/api/salud/probar")
@@ -766,6 +1314,20 @@ def elegir_carpeta():
 @app.get("/api/projects/<name>/estado")
 def project_estado(name):
     return jsonify({"text": E.read_project_file(name) or ""})
+
+
+@app.post("/api/projects/<name>/entrega")
+def proyecto_entrega(name):
+    """📦 ZIP de entrega del proyecto (botón en la ficha del proyecto)."""
+    from noviq import versiones as VR
+    root = project_path(name)
+    if not root.exists():
+        return jsonify({"ok": False, "error": "no existe la carpeta del proyecto"})
+    try:
+        z, n, size = VR.crear_entrega(root, name, (J().get("nota") or "").strip())
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+    return jsonify({"ok": True, "nombre": z.name, "ruta": str(z), "carpeta": str(z.parent), "archivos": n, "bytes": size})
 
 
 @app.post("/api/projects/importar")
@@ -970,10 +1532,10 @@ def oauth_openrouter():
         CONFIG["providers"]["openrouter"].setdefault("solo_gratis", True)
         save_config()
         list_models("openrouter", refresh=True)
-        msg, color = "✅ ¡OpenRouter conectado! Ya puedes cerrar esta pestaña y volver a NoviQ.", "#3fdc2b"
+        msg, color = "✅ ¡OpenRouter conectado! Ya puedes cerrar esta pestaña y volver a Noviq.", "#3fdc2b"
     except Exception as e:
         msg, color = f"❌ No se pudo conectar: {e}", "#ef5350"
-    return Response(f"""<!doctype html><meta charset="utf-8"><title>NoviQ</title>
+    return Response(f"""<!doctype html><meta charset="utf-8"><title>Noviq</title>
 <body style="background:#0a0f14;color:#e8f0ec;font:18px Segoe UI,sans-serif;display:grid;place-items:center;height:100vh;margin:0">
 <div style="text-align:center"><img src="/static/noviq_icon.png" width="96" style="border-radius:18px"><p style="color:{color}">{html_escape(msg)}</p></div>
 <script>setTimeout(()=>window.close(),2500)</script></body>""", mimetype="text/html")
@@ -998,6 +1560,7 @@ def _run_scheduled(t):
         conv["title"] = "⏰ " + (t.get("nombre") or "Tarea programada")[:55]
     if t.get("autonomo", True):
         conv["permiso"] = "auto"
+    conv["origen"], conv["tarea_programada"] = "programada", t.get("id")
     text = f"[Tarea programada «{t.get('nombre')}» · {time.strftime('%Y-%m-%d %H:%M')}]\n{t.get('instruccion', '')}"
     E.record_user(conv, text)
     conv["display"].append({"type": "user", "text": text, "images": [], "files": [], "msg_index": len(conv["messages"])})
@@ -1018,7 +1581,11 @@ def prog_save():
     from noviq import programador as PG
     d = J()
     try:
-        t = PG.crear(d.get("nombre"), d.get("instruccion") or "", d.get("cuando") or {}, d.get("proyecto"), d.get("modelo"),
+        cuando = d.get("cuando") or {}
+        if isinstance(cuando, str):  # «los lunes y jueves a las 9» escrito tal cual
+            from noviq.agenda import interpretar
+            cuando = interpretar(cuando) or {}
+        t = PG.crear(d.get("nombre"), d.get("instruccion") or "", cuando, d.get("proyecto"), d.get("modelo"),
                      d.get("autonomo", True), d.get("misma_conv", False), d.get("recuperar", True), d.get("id"))
         return jsonify({"ok": True, "tarea": dict(t, descripcion=PG.describe(t))})
     except Exception as e:
@@ -1039,12 +1606,12 @@ def prog_action(tid, accion):
 
 @app.route("/api/inicio_windows", methods=["GET", "POST"])
 def inicio_windows():
-    """Acceso directo en la carpeta Inicio de Windows para que NoviQ (y sus tareas programadas) arranque con el PC."""
+    """Acceso directo en la carpeta Inicio de Windows para que Noviq (y sus tareas programadas) arranque con el PC."""
     if not IS_WINDOWS:
         return jsonify({"ok": False, "activo": False, "error": "Solo en Windows."})
     import subprocess
     startup = Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs/Startup"
-    lnk = startup / "NoviQ.lnk"
+    lnk = startup / "Noviq.lnk"
     if request.method == "GET":
         return jsonify({"ok": True, "activo": lnk.exists()})
     on = bool(J().get("activo"))
@@ -1098,6 +1665,170 @@ def pc_activar():
     return jsonify({"ok": True, "log": log, "nota": "Windows-MCP se está iniciando (la primera vez descarga Python 3.13 y tarda 1-2 min)."})
 
 
+# ───────────── 🔌 Catálogo MCP, 🪪 perfil de Windows ─────────────
+@app.route("/api/mcp/catalogo", methods=["GET", "POST"])
+def mcp_catalogo():
+    from noviq import mcp as M
+    if request.method == "POST":
+        d = J()
+        log = []
+        acc = d.get("accion")
+        if acc == "agregar":
+            M.conectar([d.get("key")], log)
+        elif acc == "recomendados":
+            M.conectar(M.RECOMENDADOS, log)
+        elif acc == "quitar" and d.get("key") in M.CATALOGO:
+            MANAGER.quitar(d["key"])
+            log.append("✔ Quitado.")
+        elif acc == "requisito" and d.get("req") in ("node", "uv"):
+            M.instalar_requisito(d["req"], log)
+        time.sleep(1)
+        return jsonify({"ok": True, "log": log, "catalogo": M.catalogo_publico(), "requisitos": M.requisitos(), "servers": MANAGER.status()})
+    return jsonify({"catalogo": M.catalogo_publico(), "requisitos": M.requisitos(), "servers": MANAGER.status(),
+                    "navegador": (CONFIG.get("pc") or {}).get("navegador", "auto")})
+
+
+@app.post("/api/pc/navegador")
+def pc_navegador():
+    v = J().get("navegador")
+    if v in ("auto", "real", "automatico"):
+        CONFIG["pc"] = dict(CONFIG.get("pc") or {}, navegador=v)
+        from noviq.config import save_config
+        save_config()
+    return jsonify({"ok": True})
+
+
+@app.get("/api/pc/perfil")
+def pc_perfil():
+    from noviq import perfil_windows as PW
+    d = PW.perfil(forzar=request.args.get("forzar") == "1")
+    return jsonify(dict({k: v for k, v in d.items() if k != "apps"}, n_apps=len(d.get("apps") or []), resumen=PW.resumen_prompt()))
+
+
+@app.post("/api/pc/leer_pantalla")
+def pc_leer_pantalla():
+    """Prueba del OCR de Windows sobre la pantalla (sin imágenes para la IA)."""
+    from noviq import pantalla
+    from noviq.tools import ToolContext
+    try:
+        return jsonify({"ok": True, "texto": pantalla.leer_texto(ToolContext({}, lambda *a: None, threading.Event()), "pantalla", 60)})
+    except Exception as e:
+        return jsonify({"ok": False, "texto": f"✖ {e}"})
+
+
+@app.route("/api/permisos", methods=["GET", "POST"])
+def permisos():
+    """Permisos que el usuario ya dio con «Permitir siempre» (se recuerdan entre conversaciones) y la 🛡 guardia."""
+    from noviq import guardia as G
+    from noviq.config import save_config
+    if request.method == "POST":
+        d = J()
+        if "quitar" in d:
+            CONFIG["permisos_siempre"] = [x for x in CONFIG.get("permisos_siempre") or [] if x != d["quitar"]]
+        if isinstance(d.get("guardia"), dict):
+            g = dict(CONFIG.get("guardia") or {})
+            for k in ("activo", "enviar", "eliminar", "instalar", "pagos"):
+                if k in d["guardia"]:
+                    g[k] = bool(d["guardia"][k])
+            if "espera_min" in d["guardia"]:
+                g["espera_min"] = max(1, min(1440, int(d["guardia"]["espera_min"] or 30)))
+            CONFIG["guardia"] = g
+        save_config()
+    return jsonify({"permisos_siempre": CONFIG.get("permisos_siempre") or [], "guardia": dict({"activo": True, "enviar": True, "eliminar": True,
+                    "instalar": True, "pagos": True, "espera_min": 30}, **(CONFIG.get("guardia") or {})), "categorias": G.CATEGORIAS,
+                    "historial": G.HISTORIAL[-15:][::-1]})
+
+
+# ───────────── ✉ Correo ─────────────
+@app.route("/api/correo", methods=["GET", "POST"])
+def correo_api():
+    from noviq import correo as CO
+    if request.method == "POST":
+        d = J()
+        try:
+            if d.get("quitar"):
+                CO.quitar_cuenta(d["quitar"])
+            elif d.get("predeterminada") and not d.get("tipo"):
+                c = CONFIG.get("correo") or {}
+                c["predeterminada"] = d["predeterminada"]
+                CONFIG["correo"] = c
+                from noviq.config import save_config
+                save_config()
+            else:
+                CO.guardar_cuenta(d)
+        except Exception as e:
+            return jsonify(dict(CO.publico(), ok=False, error=str(e)))
+    return jsonify(dict(CO.publico(), ok=True))
+
+
+@app.post("/api/correo/probar")
+def correo_probar():
+    from noviq import correo as CO
+    d = J()
+    r = CO.probar(d.get("id"))
+    if r["ok"] and d.get("enviar_prueba"):
+        c = CO.cuenta(d.get("id"))
+        try:
+            r["texto"] += " " + CO.enviar(c.get("correo") or "", "Prueba de Noviq ✔", "Si ves este correo, Noviq ya puede enviar correos por ti.",
+                                          cuenta_id=c["id"])
+        except Exception as e:
+            r.update(ok=False, texto=r["texto"] + f" ✖ Envío de prueba: {e}")
+    return jsonify(r)
+
+
+# ───────────── 📱 Telegram ─────────────
+@app.route("/api/telegram", methods=["GET", "POST"])
+def telegram_api():
+    from noviq import telegram_bot as TG
+    if request.method == "POST":
+        d = J()
+        try:
+            if d.get("token"):
+                TG.configurar(d["token"])
+            if d.get("desvincular"):
+                TG.desvincular(bool(d.get("borrar_token")))
+            if isinstance(d.get("avisos"), dict):
+                c = dict(CONFIG.get("telegram") or {})
+                c["avisos"] = dict(c.get("avisos") or {}, **{k: bool(v) for k, v in d["avisos"].items()})
+                CONFIG["telegram"] = c
+                from noviq.config import save_config
+                save_config()
+            if "activo" in d:
+                c = dict(CONFIG.get("telegram") or {})
+                c["activo"] = bool(d["activo"])
+                CONFIG["telegram"] = c
+                from noviq.config import save_config
+                save_config()
+                TG.reiniciar()
+            if d.get("probar"):
+                if not TG.enviar("👋 Prueba de Noviq: ¡funciona! Escríbeme lo que quieres que haga en tu PC. /ayuda"):
+                    return jsonify(dict(TG.estado_publico(), ok=False, error="No pude enviar el mensaje (¿vinculaste tu chat?)."))
+        except Exception as e:
+            return jsonify(dict(TG.estado_publico(), ok=False, error=str(e)))
+        time.sleep(0.3)
+    return jsonify(dict(TG.estado_publico(), ok=True))
+
+
+# ───────────── 📅 Agenda ─────────────
+@app.route("/api/agenda", methods=["GET", "POST"])
+def agenda_api():
+    from noviq import agenda as AG
+    if request.method == "POST":
+        d = J()
+        if d.get("borrar"):
+            AG.borrar_nota(d["borrar"])
+        elif d.get("texto"):
+            AG.nota(d["texto"], "nota", importante=bool(d.get("importante")))
+    return jsonify({"semana": AG.semana(), "notas": AG.notas(int(request.args.get("n") or 40))})
+
+
+@app.post("/api/agenda/interpretar")
+def agenda_interpretar():
+    from noviq import agenda as AG
+    c = AG.interpretar(J().get("texto") or "")
+    return jsonify({"ok": bool(c), "cuando": c})
+
+
 # ───────────── Aprendizaje ─────────────
 @app.get("/api/aprendizaje")
 def apr_list():
@@ -1119,7 +1850,16 @@ def apr_set():
 
 @app.post("/api/apagar")
 def apagar():
-    """Cierra NoviQ por completo (botón ⏻ o el icono de la bandeja)."""
+    """Cierra Noviq por completo (botón ⏻ o el icono de la bandeja)."""
+    try:
+        from noviq import evaluador as EV
+        EV.flush()  # estadísticas y 🪙 tokens pendientes (os._exit no corre atexit)
+    except Exception:
+        pass
+    try:
+        AV.apagar()  # 🤖 el avatar se despide
+    except Exception:
+        pass
     threading.Timer(0.5, lambda: os._exit(0)).start()
     return jsonify({"ok": True})
 
@@ -1132,7 +1872,7 @@ def puerto_ocupado(port=PORT):
 
 
 def main(abrir_navegador=True, bloquear=True, abrir_si_ocupado=True):
-    """Arranca el servidor. Si NoviQ ya estaba abierto, solo muestra su ventana/página."""
+    """Arranca el servidor. Si Noviq ya estaba abierto, solo muestra su ventana/página."""
     url = f"http://127.0.0.1:{PORT}"
     if puerto_ocupado():
         if abrir_si_ocupado:
@@ -1149,14 +1889,28 @@ def main(abrir_navegador=True, bloquear=True, abrir_si_ocupado=True):
     except OSError:
         pass
     print("=" * 64)
-    print(f"  NoviQ {VERSION} listo en:", url)
+    print(f"  Noviq {VERSION} listo en:", url)
     print("  Proyectos en:            ", projects_root())
     print("  Datos en:                ", DATA_DIR)
     print("=" * 64)
     threading.Thread(target=MANAGER.reload, daemon=True).start()
+    from noviq import evaluador as _EV
+    threading.Thread(target=_EV.importar_registro, daemon=True).start()  # una sola vez: aprende del registro técnico
+    from noviq import recursos as _R
+    _R.iniciar()  # vigilante de memoria + limpieza de navegadores de prueba que quedaron abiertos
     from noviq import programador, verificador
     programador.iniciar(_run_scheduled)
     verificador.iniciar()
+    try:
+        from noviq import perfil_windows, telegram_bot
+        threading.Thread(target=perfil_windows.perfil, daemon=True, name="perfil-windows").start()
+        telegram_bot.iniciar()  # 📱 solo escucha si hay un bot configurado
+    except Exception as e:
+        print("[telegram/perfil]", e)
+    try:
+        AV.iniciar(PORT, TOKEN)  # 🤖 abre el avatar, lo conecta y lo vigila
+    except Exception as e:
+        print("[avatar]", e)
     if abrir_navegador:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     kw = dict(host="127.0.0.1", port=PORT, threaded=True, debug=False, use_reloader=False)

@@ -118,15 +118,44 @@ def choose_num_ctx(info):
         cap = min(cap, int(info["ctx_max"]))
     size = info.get("size_gb") or ((info.get("params_b") or 8) * 0.62)  # ~Q4 si no se conoce
     kv = info.get("kv_tok") or (0.00016e9 if (info.get("params_b") or 8) >= 20 else 0.00012e9)
-    free = float(L["vram_gb"]) * 0.92 - size - 0.8  # margen para buffers de cómputo
+    vram, ram_libre = float(L["vram_gb"]), float(L["ram_gb"]) * 0.7
+    try:  # lo que está LIBRE ahora (otros programas también usan la GPU y la RAM), no lo instalado
+        from . import recursos as R
+        v_libre, r_libre = R.presupuesto_ia()
+        ya = _ollama_vram_gb()  # lo que Ollama ya ocupa también le sirve (lo reutiliza)
+        if v_libre is not None:
+            vram = min(vram, v_libre + ya)
+        ram_libre = min(ram_libre, r_libre + ya)
+    except Exception:
+        pass
+    free = vram * 0.92 - size - 0.8  # margen para buffers de cómputo
     if free > 0.5:
         ctx = free * 1e9 / kv
     else:
         # el modelo no cabe entero en la GPU: parte va a la RAM. Contexto moderado para no volverlo lentísimo.
-        spare_ram = float(L["ram_gb"]) * 0.7 - (size - float(L["vram_gb"]) * 0.9)
-        ctx = 16384 if spare_ram > 8 else 8192
+        spare_ram = ram_libre - max(0.0, size - vram * 0.9)
+        ctx = 16384 if spare_ram > 8 else 8192 if spare_ram > 2 else 4096
     ctx = int(max(4096, min(ctx, cap)) // 1024 * 1024)
     return ctx
+
+
+_OV = {"t": 0.0, "gb": 0.0}
+
+
+def _ollama_vram_gb():
+    """GB de VRAM que ocupan los modelos que Ollama tiene cargados ahora (caché 15 s)."""
+    if time.time() - _OV["t"] < 15:
+        return _OV["gb"]
+    gb = 0.0
+    try:
+        p = CONFIG["providers"].get("ollama") or {}
+        if p.get("enabled"):
+            r = requests.get(root_url(p) + "/api/ps", timeout=2)
+            gb = sum(float(m.get("size_vram") or 0) for m in (r.json().get("models") or [])) / 1e9
+    except Exception:
+        gb = 0.0
+    _OV.update(t=time.time(), gb=gb)
+    return gb
 
 
 def context_window(model_id):

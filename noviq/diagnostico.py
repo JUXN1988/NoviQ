@@ -19,6 +19,7 @@ import re
 from pathlib import Path
 
 from . import texto as TX
+from .indice import omitir_dir
 
 SKIP = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".next", ".gradle", "bin", "obj",
         ".idea", ".vs", ".noviq", ".noviq_logs", ".pytest_cache", ".mypy_cache", "imagenes", "capturas"}
@@ -34,7 +35,7 @@ JS_EXT = {".js", ".mjs", ".cjs", ".jsx"}
 def _files(root: Path, exts, limit=400):
     out = []
     for dp, dns, fns in os.walk(root):
-        dns[:] = [d for d in dns if d not in SKIP and not d.startswith(".")]
+        dns[:] = [d for d in dns if not omitir_dir(dp, d)]
         for f in fns:
             if Path(f).suffix.lower() in exts and not f.startswith(".noviq_tmp"):
                 out.append(Path(dp) / f)
@@ -453,7 +454,9 @@ def check_web(root, htmls, js_files):
                 if _is_remote(s["src"]):
                     remote.append(s["src"])
                     continue
-                p = (h.parent / s["src"].split("?")[0].split("#")[0]).resolve()
+                ref_ = s["src"].split("?")[0].split("#")[0]
+                # «/static/app.js» = ruta del servidor (Flask, etc.): se busca desde la raíz del proyecto
+                p = ((Path(root) / ref_.lstrip("/")) if ref_.startswith("/") else (h.parent / ref_)).resolve()
                 if not p.exists():
                     continue  # lo informa check_html del agente de pruebas
                 raw, code, defs = js_info(p)
@@ -639,6 +642,11 @@ def run(root, ctx=None, only=None, dinamico=True, web=True, ejecutar=False, repa
                              "Corrige la ruta en el <script>/<link>/<img> (relativa al HTML) o crea el archivo que falta.")
                     issues.append(_issue(c["archivo"], 0, f"Al abrir la página no cargó {c['archivo']} ({c['motivo']})",
                                          pista, "carga", 0))
+                if r.get("fuga"):
+                    issues.append(_issue(_rel(root, entry), 0, "Al abrir la página: " + "; ".join(r["fuga"]), NAV.FUGA_PISTA,
+                                         "navegador", 0))
+                if r.get("fatal"):
+                    issues.append(_issue(_rel(root, entry), 0, r["fatal"][:300], "", "navegador", 0))
                 if (r.get("blanca") or r.get("casi_vacia")) and not r.get("errores"):
                     issues.append(_issue(_rel(root, entry), 0, "La página abre sin errores pero " +
                                          (("el canvas del juego está " + ("VACÍO (no se dibuja nada)" if r.get("blanca") else

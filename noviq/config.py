@@ -18,10 +18,10 @@ def user_data_dir():
     if os.environ.get("NOVIQ_DATOS"):
         return Path(os.environ["NOVIQ_DATOS"]).expanduser()
     if platform.system() == "Windows":
-        return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "NoviQ"
+        return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "Noviq"
     if platform.system() == "Darwin":
-        return Path.home() / "Library" / "Application Support" / "NoviQ"
-    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "NoviQ"
+        return Path.home() / "Library" / "Application Support" / "Noviq"
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "Noviq"
 
 
 if FROZEN:
@@ -44,7 +44,7 @@ _py_cache = []
 
 def python_exe():
     """Python con el que se ejecuta el código de los proyectos. En el programa instalado (.exe/.app) no se puede usar
-    el propio ejecutable de NoviQ: se busca el Python del sistema. Devuelve None si no hay ninguno."""
+    el propio ejecutable de Noviq: se busca el Python del sistema. Devuelve None si no hay ninguno."""
     if not FROZEN:
         return sys.executable
     if _py_cache:
@@ -127,7 +127,7 @@ DEFAULT_PROVIDERS = {
     "custom": {"name": "Otro (compatible OpenAI)", "base_url": "", "enabled": False, "context_chars": 200000},
     "remoto": {"name": "Servidor GPU en la nube (Kaggle)", "base_url": "", "enabled": False, "context_chars": 100000,
                "web": "https://www.kaggle.com/code", "remoto": True},
-    # No es de chat: decisiones rápidas tipadas (System One). Lo usa el decisor de NoviQ si tiene clave.
+    # No es de chat: decisiones rápidas tipadas (System One). Lo usa el decisor de Noviq si tiene clave.
     "typesafe": {"name": "TypeSafe Jev (decisiones)", "base_url": "https://api.typesafe.ai/v1", "enabled": False,
                  "decisor": True, "web": "https://typesafe.ai", "modelo": "jev-latest"},
 }
@@ -169,7 +169,44 @@ DEFAULT_CONFIG = {
     "guardian": {"activo": True, "max_razonamiento": 16000, "max_seg_razonamiento": 150, "repeticion": True},
     # escalador: si la IA se atasca, pasa el trabajo a la IA más capaz habilitada y con cuota
     "escalado": {"activo": True, "umbral": 5, "max_escalados": 2, "permitir_pago": True},
-    "proyectos_externos": {},         # nombre -> carpeta de proyectos que ya existían en la PC                  # agentes en paralelo en planificar_en_equipo / trabajar_en_equipo       # True = la IA principal recibe todas las herramientas del navegador             # si ninguna IA responde, reintenta la cadena completa N veces              # segundos sin recibir datos = la IA no responde
+    # 🏆 evaluador: ranking de IAs por tipo de tarea (estadísticas propias + 👍/👎). elegir_al_inicio: si_falla | siempre | nunca
+    "evaluador": {"activo": True, "elegir_al_inicio": "si_falla", "min_datos": 6},
+    # 🧭 director: si el trabajo queda a medias, lo continúa solo (con la mejor IA) dentro de estos límites
+    "director": {"activo": True, "max_continuaciones": 4, "max_minutos": 120, "espera_error_seg": 30},
+    # 📦 entregas: al terminar un trabajo con las pruebas OK se guarda un ZIP de la versión estable en <proyecto>/entregas
+    "entregas": {"auto": True, "max": 10},
+    # 🗂 copias de respaldo de cada archivo antes de cambiarlo (versiones_archivo); se guardan las últimas N por archivo
+    "respaldos": {"max_por_archivo": 40},
+    # ⚙ rendimiento: no colapsar la PC. perfil: auto (según la RAM LIBRE) | basico | equilibrado | potente | personalizado
+    "recursos": {"perfil": "auto", "reserva_gb": 0, "limitar_wsl": True, "limitar_procesos": True, "preferir_nativo": True,
+                 "usar_gpu": "auto", "vista_previa_auto": False, "vista_max_gb": 2.5, "vm_gb": 4, "vm_cpus": 2, "swap_gb": 2,
+                 "navegadores": 1, "proc_mb": 2048, "cpu_pct": 75},
+    "proyectos_externos": {},         # nombre -> carpeta de proyectos que ya existían en la PC
+    # 🎮 Estudio de juegos: detector de intención (auto = abre el estudio al enviar · preguntar = solo sugiere · apagado)
+    "juegos": {"detector": "auto", "solo_cc0": False, "buscar_activos": True},
+    "modelo_rapido": "",              # IA para tareas cortas (mejorar prompts, diseñar juegos); "" = la más rápida del banco de pruebas
+    "prompt_tools": {"barra": True, "correccion_local": True},
+    # 🖥 PC: navegador para el agente (auto = el automático; real = tu Chrome abierto con sesiones si está conectado)
+    "pc": {"navegador": "auto"},
+    "permisos_siempre": [],           # herramientas que el usuario ya permitió «siempre» (se recuerdan entre conversaciones)
+    # 🛡 guardia: acciones que SIEMPRE piden aprobación (Noviq + Telegram), aun en automático; sin respuesta en espera_min → se cancela
+    "guardia": {"activo": True, "enviar": True, "eliminar": True, "instalar": True, "pagos": True, "espera_min": 30},
+    # ✉ cuentas de correo (las claves van cifradas en la bóveda)
+    "correo": {"cuentas": [], "predeterminada": ""},
+    # 📱 Telegram (el token va cifrado en la bóveda)
+    "telegram": {"activo": False, "bot": "", "chat_id": "", "usuario": "", "codigo": "",
+                 "avisos": {"tareas": True, "errores": True, "terminado": True, "aprobaciones": True, "notas": False}},
+    # 🤖 avatar flotante (carpeta noviq-avatar): cara, voz y oído de Noviq. escuchar: apagado | palabra («Noviq…») | siempre | pulsar
+    # motor_voz: auto | local (faster-whisper) | nvidia (Whisper en build.nvidia.com) | nube (Groq/OpenAI) | windows
+    "avatar": {"activo": True, "voz": True, "sonidos": True, "volumen": 0.5, "escuchar": "palabra", "motor_voz": "auto",
+               "modelo_local": "auto", "herramientas": True, "burbujas_herramientas": False, "anunciar_inicio": False,
+               "que_mas": True, "dormir_min": 15, "cerrar_con_noviq": True, "ofrecer_continuar": True, "puerto": 0,
+               "limite_nube_hora": 150,
+               # 🧠 mente: nombre del bot, personalidad (combinable), autonomía 0-3, portapapeles (observar | pregunta | apagado)
+               "nombre_bot": "Noviq", "personalidad": ["animado", "curioso", "divertido"], "autonomia": 2,
+               "portapapeles": "observar", "ayuda_portapapeles": True, "modelo_charla": "", "instrucciones_extra": "",
+               # 🗣 voz: microsoft (neuronales, gratis) | nvidia (Magpie) | piper (sin internet) | windows
+               "voz_motor": "microsoft", "voz_id": "es-EC-LuisNeural", "voz_vel": 1.0, "voz_tono": 1.0, "detector_local": True},
 }
 
 _lock = threading.RLock()
@@ -188,13 +225,45 @@ def _merge(base, extra):
 CONFIG_VERSION = 4
 
 
+CONFIG_AVISOS = []  # problemas al leer/guardar la configuración (se muestran en ⚙ Ajustes)
+
+
+def _leer_json(path):
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
 def load_config():
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
+    user = None
     if CONFIG_FILE.exists():
         try:
-            cfg = _merge(cfg, json.loads(CONFIG_FILE.read_text(encoding="utf-8")))
-        except Exception:
-            pass
+            user = _leer_json(CONFIG_FILE)
+            if not isinstance(user, dict):
+                raise ValueError("no es un objeto JSON")
+        except Exception as e:
+            # Antes un config.json dañado se ignoraba EN SILENCIO y el siguiente guardado lo pisaba con los valores por
+            # defecto: parecía que «no se guardaba nada». Ahora se recupera la copia sana y se aparta el archivo dañado.
+            import time as _t
+            danado = CONFIG_FILE.with_name(f"config.danado_{_t.strftime('%Y%m%d_%H%M%S')}.json")
+            try:
+                shutil.copy2(CONFIG_FILE, danado)
+            except OSError:
+                pass
+            user = None
+            bak = CONFIG_FILE.with_suffix(".json.bak")
+            if bak.exists():
+                try:
+                    user = _leer_json(bak)
+                    CONFIG_AVISOS.append(f"config.json estaba dañado ({e}); recuperé la última copia buena. "
+                                         f"El archivo dañado quedó en {danado.name}.")
+                except Exception:
+                    user = None
+            if user is None:
+                CONFIG_AVISOS.append(f"config.json estaba dañado ({e}) y no había copia; se usan los valores por defecto. "
+                                     f"El archivo dañado quedó en {danado.name}.")
+            print("[config]", CONFIG_AVISOS[-1])
+    if user:
+        cfg = _merge(cfg, user)
     if cfg.get("config_version", 0) < CONFIG_VERSION:
         # v2.1: más tokens por respuesta (los modelos con razonamiento se cortaban antes de actuar)
         cfg["max_tokens"] = max(int(cfg.get("max_tokens") or 0), 16384)
@@ -209,6 +278,8 @@ def load_config():
 
 def migrate_keys(cfg):
     """Mueve las claves que estuvieran en texto plano a la bóveda cifrada."""
+    if os.environ.get("NOVIQ_SIN_BOVEDA"):  # procesos auxiliares (MCP del programador): nunca tocan la bóveda
+        return False
     from . import vault
     changed = False
     for pid, p in cfg["providers"].items():
@@ -234,13 +305,52 @@ def migrate_keys(cfg):
 
 
 CONFIG = load_config()
-if migrate_keys(CONFIG):
-    CONFIG_FILE.write_text(json.dumps(CONFIG, indent=2, ensure_ascii=False), encoding="utf-8")
+_MIGRADO = migrate_keys(CONFIG)
 
 
 def save_config():
+    """Guarda la configuración de forma SEGURA: escribe un temporal y lo cambia por el real en un solo paso (si el
+    programa se cierra a mitad, config.json no queda cortado) y deja config.json.bak con la versión anterior.
+    Devuelve True si se guardó; si no, anota el motivo en CONFIG_AVISOS y devuelve False."""
+    import time as _t
     with _lock:
-        CONFIG_FILE.write_text(json.dumps(CONFIG, indent=2, ensure_ascii=False), encoding="utf-8")
+        texto = None
+        for _ in range(5):  # otro hilo puede estar cambiando CONFIG justo ahora («dictionary changed size…»)
+            try:
+                texto = json.dumps(CONFIG, indent=2, ensure_ascii=False)
+                break
+            except RuntimeError:
+                _t.sleep(0.05)
+        if texto is None:
+            CONFIG_AVISOS.append("No se pudo guardar la configuración (estaba cambiando); se reintentará.")
+            return False
+        tmp = CONFIG_FILE.with_suffix(".json.tmp")
+        try:
+            tmp.write_text(texto, encoding="utf-8")
+            for i in range(8):  # en Windows el antivirus u OneDrive bloquean el archivo un instante
+                try:
+                    tmp.replace(CONFIG_FILE)
+                    break
+                except PermissionError:
+                    if i == 7:
+                        raise
+                    _t.sleep(0.25)
+            try:  # copia espejo de la última versión buena (se usa si config.json aparece dañado)
+                bak_tmp = CONFIG_FILE.with_suffix(".json.bak.tmp")
+                bak_tmp.write_text(texto, encoding="utf-8")
+                bak_tmp.replace(CONFIG_FILE.with_suffix(".json.bak"))
+            except OSError:
+                pass
+            return True
+        except OSError as e:
+            CONFIG_AVISOS.append(f"No se pudo guardar config.json: {e}")
+            print("[config] no se pudo guardar:", e)
+            return False
+    return True
+
+
+if _MIGRADO:
+    save_config()
 
 
 def model_override(model_id):
@@ -263,14 +373,22 @@ def documents_dir() -> Path:
         return _documents
     p = None
     if IS_WINDOWS:
-        try:
-            r = subprocess.run(["powershell", "-NoProfile", "-Command",
-                                "[Environment]::GetFolderPath('MyDocuments')"],
-                               capture_output=True, text=True, timeout=15, creationflags=NO_WINDOW)
-            if r.stdout.strip():
-                p = Path(r.stdout.strip())
+        try:  # directo con la API de Windows (sin abrir PowerShell: más rápido y sin procesos extra)
+            import ctypes
+            buf = ctypes.create_unicode_buffer(1024)
+            if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buf) == 0 and buf.value:  # 5 = CSIDL_PERSONAL
+                p = Path(buf.value)
         except Exception:
-            pass
+            p = None
+        if not p:
+            try:
+                r = subprocess.run(["powershell", "-NoProfile", "-Command",
+                                    "[Environment]::GetFolderPath('MyDocuments')"],
+                                   capture_output=True, text=True, timeout=15, creationflags=NO_WINDOW)
+                if r.stdout.strip():
+                    p = Path(r.stdout.strip())
+            except Exception:
+                pass
     if not p:
         p = Path.home() / "Documents"
         if not p.exists() and (Path.home() / "Documentos").exists():

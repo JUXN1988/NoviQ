@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Tu propio servidor de IA con GPU gratis en la nube (Kaggle): la nube hace el trabajo pesado, no tu PC.
 
-NoviQ genera un cuaderno de Kaggle listo para ejecutar que:
+Noviq genera un cuaderno de Kaggle listo para ejecutar que:
   1. instala Ollama y descarga el modelo elegido en la GPU gratuita de Kaggle (2 × T4 = 32 GB de VRAM, el doble que tu PC),
   2. pone delante un pequeño guardián con contraseña (token) para que nadie más use tu servidor,
-  3. abre un túnel seguro de Cloudflare y muestra la URL y el token para pegarlos en NoviQ.
+  3. abre un túnel seguro de Cloudflare y muestra la URL y el token para pegarlos en Noviq.
 Límites de Kaggle (pueden cambiar): cuenta verificada con teléfono para usar GPU e internet, ~30 h de GPU por semana,
 sesiones de hasta 12 h. La URL cambia cada vez que reinicias el cuaderno. Revisa las condiciones de uso de Kaggle.
 """
@@ -46,9 +46,9 @@ def cuaderno(modelo="qwen3-coder:30b", token=None):
     def mdc(src):
         return {"cell_type": "markdown", "metadata": {}, "source": src}
     cells = [
-        mdc(f"# Servidor de IA para NoviQ ({modelo})\n"
+        mdc(f"# Servidor de IA para Noviq ({modelo})\n"
             "1. Arriba a la derecha: **Settings → Accelerator → GPU T4 x2** y **Internet → On** (necesitas la cuenta verificada con teléfono).\n"
-            "2. Pulsa **Run All**. Al final aparecerán la **URL** y el **token**: pégalos en NoviQ → 🎁 IA gratis → *Servidor GPU en la nube*.\n"
+            "2. Pulsa **Run All**. Al final aparecerán la **URL** y el **token**: pégalos en Noviq → 🎁 IA gratis → *Servidor GPU en la nube*.\n"
             "3. Deja esta pestaña abierta mientras trabajas. La URL cambia cada vez que reinicias."),
         code("import subprocess, os, time\n"
              "subprocess.run('curl -fsSL https://ollama.com/install.sh | sh', shell=True, check=True)\n"
@@ -73,8 +73,8 @@ def cuaderno(modelo="qwen3-coder:30b", token=None):
              "    if m:\n"
              "        url = m.group(0); break\n"
              "print('\\n' + '=' * 60)\n"
-             "print('URL para NoviQ  :', url)\n"
-             f"print('Token para NoviQ:', {token!r})\n"
+             "print('URL para Noviq  :', url)\n"
+             f"print('Token para Noviq:', {token!r})\n"
              "print('=' * 60)"),
         code("# Mantiene el servidor vivo mientras la pestaña esté abierta\n"
              "import time\n"

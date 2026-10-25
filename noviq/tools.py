@@ -23,11 +23,12 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
+from . import texto as TX
 from .config import (CONFIG, IS_WINDOWS, MEMORY_FILE, NO_WINDOW, OS_NAME, general_dir, meta_dir, meta_file, project_path, all_roots,
                      powershell_exe, projects_root)
 
 MAX_OUT = 30000
-SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".idea", ".vs", "dist", "build", ".next",
+SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".idea", ".vs", "dist", "build", ".next", "entregas",
              ".gradle", "bin", "obj", ".mypy_cache", ".pytest_cache"}
 TEXT_EXT_BIN = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".exe", ".dll", ".zip", ".7z", ".rar",
                 ".mp3", ".mp4", ".wav", ".pdf", ".docx", ".xlsx", ".pptx", ".bin", ".so", ".pyc", ".class", ".jar"}
@@ -105,6 +106,7 @@ TIPOS = {
     "arduino": ["docs"],
     "android": ["app/src/main/java", "app/src/main/res"],
     "datos": ["datos", "notebooks", "resultados"],
+    "juego": ["assets/modelos", "assets/texturas", "lib"],
     "documentos": ["documentos", "recursos"],
     "general": [],
 }
@@ -116,6 +118,7 @@ GITIGNORE = {
     "csharp": "bin/\nobj/\n.vs/\n",
     "android": ".gradle/\nbuild/\nlocal.properties\n*.apk\n",
     "datos": "__pycache__/\n.ipynb_checkpoints/\n.venv/\n",
+    "juego": "entregas/\ncapturas/\n",
 }
 
 
@@ -295,8 +298,9 @@ def t_cambiar_proyecto(a, ctx):
 
 
 # ═════════════════════════════ ARCHIVOS ═════════════════════════════
-def _backup(ctx, p: Path, data=None):
-    """Guarda una copia antes de modificar un archivo (para deshacer_cambio). data = contenido anterior ya leído."""
+def _backup(ctx, p: Path, data=None, nota="", forzar=False):
+    """Guarda una copia antes de modificar un archivo (para deshacer_cambio y versiones_archivo). data = contenido
+    anterior ya leído. Las copias quedan en <proyecto>/.noviq/respaldos con un índice (sirven entre conversaciones)."""
     if data is None and (not p.exists() or not p.is_file() or p.stat().st_size > 5_000_000):
         return None
     base = meta_dir(ctx.conv["project"]) if ctx.conv.get("project") else general_dir() / ".noviq"
@@ -306,7 +310,7 @@ def _backup(ctx, p: Path, data=None):
     prev = next((h for h in reversed(hist) if h.get("ruta") == str(p)), None)
     try:  # si la última copia es idéntica no se duplica (así deshacer_cambio vuelve a la versión anterior real)
         cur = data if data is not None else p.read_bytes()
-        if prev and Path(prev["copia"]).exists() and Path(prev["copia"]).read_bytes() == cur:
+        if not forzar and prev and Path(prev["copia"]).exists() and Path(prev["copia"]).read_bytes() == cur:
             return Path(prev["copia"])
     except OSError:
         cur = None
@@ -317,6 +321,8 @@ def _backup(ctx, p: Path, data=None):
         shutil.copy2(p, dest)
     hist.append({"ruta": str(p), "copia": str(dest), "t": datetime.now().isoformat(timespec="seconds")})
     del hist[:-200]
+    from . import versiones as VR
+    VR.registrar_copia(ctx, p, dest, nota=nota or "antes de un cambio de la IA")
     return dest
 
 
@@ -406,13 +412,14 @@ def t_editar_archivo(a, ctx):
             rango = None
     if a.get("texto_anterior"):
         ediciones = [{"texto_anterior": a.get("texto_anterior"), "texto_nuevo": a.get("texto_nuevo", ""),
-                      "reemplazar_todo": a.get("reemplazar_todo")}] + list(ediciones)
+                      "reemplazar_todo": a.get("reemplazar_todo"), "ocurrencia": a.get("ocurrencia")}] + list(ediciones)
     if ediciones:
         for i, ed in enumerate(ediciones, 1):
             if not isinstance(ed, dict):
                 return f"ERROR en la edición {i}: cada edición debe ser un objeto {{texto_anterior, texto_nuevo}}."
             result, n, err, nota = ED.aplicar(result, ed.get("texto_anterior"), ed.get("texto_nuevo"),
-                                               bool(ed.get("reemplazar_todo")), rango if len(ediciones) == 1 else None)
+                                               bool(ed.get("reemplazar_todo")), rango if len(ediciones) == 1 else None,
+                                               ed.get("ocurrencia") or (a.get("ocurrencia") if len(ediciones) == 1 else None))
             if err:
                 return f"ERROR en la edición {i} de {len(ediciones)} (no se modificó nada): {err}"
             if nota:
@@ -462,17 +469,20 @@ def t_deshacer_cambio(a, ctx):
         Path(last["copia"]).unlink(missing_ok=True)
         file_event(ctx, p, action="restaurado")
         return f"Restaurado {p} a la versión del {last['t']}. Quedan {len(hist) - 1} copias anteriores."
-    # copias de otras conversaciones (carpeta .noviq/respaldos del proyecto)
-    base = meta_dir(ctx.conv["project"], create=False) if ctx.conv.get("project") else general_dir() / ".noviq"
-    folder = base / "respaldos"
-    cands = sorted(folder.glob(p.name + ".*.bak"), reverse=True) if folder.exists() else []
-    if cands:
-        dest = cands[0]
-        cur = _backup(ctx, p) if p.exists() else None
-        shutil.copy2(dest, p)
+    # copias de otras conversaciones (índice de .noviq/respaldos del proyecto): la más reciente que sea DISTINTA a la actual
+    from . import versiones as VR
+    actual = p.read_bytes() if p.exists() else None
+    for e in VR._versiones(ctx, p):
+        try:
+            if actual is not None and e["_f"].read_bytes() == actual:
+                continue
+        except OSError:
+            continue
+        cur = _backup(ctx, p, nota="antes de deshacer") if p.exists() else None
+        shutil.copy2(e["_f"], p)
         file_event(ctx, p, action="restaurado")
-        return (f"Restaurado {p} con la copia {dest.name} (de un trabajo anterior)."
-                + (f" La versión que había quedó guardada como {cur.name}." if cur else ""))
+        return (f"Restaurado {p} con la copia del {e.get('t', '').replace('T', ' ')} (de un trabajo anterior)."
+                + (" La versión que había quedó guardada (versiones_archivo accion='listar' para verlas todas)." if cur else ""))
     return (f"ERROR: no hay copias de respaldo de {p}. Prueba puntos_restauracion (accion='listar' y luego 'volver' con "
             "archivos=[...]) para recuperar una versión anterior, o reescríbelo completo con escribir_archivo.")
 
@@ -638,7 +648,9 @@ def t_leer_archivo(a, ctx):
         a0, b0 = 1, min(len(lines), 2000)
     if lines and a0 > len(lines):
         return f"ERROR: {p.name} solo tiene {len(lines)} líneas (pediste desde la {a0}). Lee con desde_linea entre 1 y {len(lines)}."
-    body = "\n".join(f"{i:>5}\t{lines[i - 1]}" for i in range(a0, b0 + 1))
+    def _ln(t):  # una línea minificada de 200 KB no debe llenar el contexto de una IA pequeña
+        return t if len(t) <= 2000 else t[:2000] + f" …[línea de {len(t):,} caracteres recortada]"
+    body = "\n".join(f"{i:>5}\t{_ln(lines[i - 1])}" for i in range(a0, b0 + 1))
     more = f"\n... ({len(lines) - b0} líneas más; usa desde_linea={b0 + 1})" if b0 < len(lines) else ""
     head = f"{p} ({len(lines)} líneas)"
     probs = TX.problemas(data, text, enc)
@@ -684,61 +696,168 @@ def t_listar_directorio(a, ctx):
     return f"{p}\n" + ("\n".join(out) or "(vacío)")
 
 
+def _omitir_dir(dp, d):
+    from .indice import omitir_dir
+    return omitir_dir(dp, d)
+
+
 def _iter_files(root: Path, pattern="*"):
     for dp, dns, fns in os.walk(root):
-        dns[:] = [d for d in dns if d not in SKIP_DIRS and not d.startswith(".")]
+        dns[:] = [d for d in dns if d not in SKIP_DIRS and not _omitir_dir(dp, d)]
         for f in fns:
             rel = os.path.relpath(os.path.join(dp, f), root)
             if fnmatch.fnmatch(f, pattern) or fnmatch.fnmatch(rel.replace("\\", "/"), pattern):
                 yield Path(dp) / f
 
 
+def _glob_rx(pat):
+    """Glob con ** de verdad (como Glob de Claude): «src/**/*.js» incluye src/main.js y src/a/b/c.js."""
+    pat = pat.replace("\\", "/").lstrip("./") if pat not in (".", "./") else "*"
+    i, out = 0, ""
+    while i < len(pat):
+        c = pat[i]
+        if pat.startswith("**/", i):
+            out += "(?:.*/)?"
+            i += 3
+            continue
+        if pat.startswith("**", i):
+            out += ".*"
+            i += 2
+            continue
+        out += {"*": "[^/]*", "?": "[^/]"}.get(c, re.escape(c))
+        i += 1
+    return re.compile("(?i)^" + out + "$")
+
+
 def t_buscar_archivos(a, ctx):
     root = ctx.resolve(a.get("ruta") or ".")
-    pat = a.get("patron") or "*"
-    pat = pat[3:] if pat.startswith("**/") else pat
+    pat = str(a.get("patron") or "*").strip() or "*"
+    rx = _glob_rx(pat)
+    solo_nombre = "/" not in pat.replace("\\", "/")
     res = []
-    for f in _iter_files(root, pat):
-        res.append(str(f.relative_to(root)) if str(f).startswith(str(root)) else str(f))
-        if len(res) >= 300:
-            res.append("... (más resultados)")
-            break
-    return f"{len(res)} archivo(s) en {root}:\n" + "\n".join(res) if res else f"Sin coincidencias para '{pat}' en {root}"
+    for f in _iter_files(root, "*"):
+        rel = os.path.relpath(f, root).replace("\\", "/")
+        if rx.match(rel) or (solo_nombre and rx.match(f.name)):
+            try:
+                mt = f.stat().st_mtime
+            except OSError:
+                mt = 0
+            res.append((mt, rel))
+            if len(res) >= 2000:
+                break
+    if not res:
+        return f"Sin coincidencias para '{pat}' en {root}"
+    res.sort(key=lambda x: -x[0])  # los cambiados hace menos primero (como Glob de Claude)
+    lista = [r for _, r in res[:300]]
+    mas = f"\n... ({len(res) - 300} más)" if len(res) > 300 else ""
+    return f"{len(res)} archivo(s) en {root} (los más recientes primero):\n" + "\n".join(lista) + mas
+
+
+def _sin_tildes(s):
+    import unicodedata
+    return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
 
 
 def t_buscar_en_archivos(a, ctx):
+    """Como Grep de Claude: modo 'lineas' (archivo:línea: texto), 'archivos' (solo qué archivos) o 'conteo';
+    contexto, filtro glob, límite y multilínea. Si la regex está mal escrita busca el texto literal; si no hay
+    resultados, prueba sin tildes ni mayúsculas antes de decir «sin coincidencias»."""
     root = ctx.resolve(a.get("ruta") or ".")
+    patron = str(a.get("regex") or "")
+    if not patron:
+        return "ERROR: indica qué buscar en 'regex' (texto o expresión regular)."
+    flags = 0 if a.get("mayusculas") else re.I
+    notas = []
+    if a.get("multilinea"):
+        flags |= re.S | re.M
     try:
-        rx = re.compile(a.get("regex", ""), 0 if a.get("mayusculas") else re.I)
+        rx = re.compile(patron, flags)
     except re.error as e:
-        return f"ERROR en la expresión regular: {e}"
-    files = [root] if root.is_file() else _iter_files(root, a.get("incluir") or "*")
-    out = []
-    for f in files:
-        if f.suffix.lower() in TEXT_EXT_BIN:
-            continue
-        try:
-            if f.stat().st_size > 3_000_000:
+        rx = re.compile(re.escape(patron), flags)
+        notas.append(f"la regex tenía un error ({e}); busqué el texto literal")
+    modo = str(a.get("modo") or "lineas").lower()
+    modo = {"files_with_matches": "archivos", "files": "archivos", "count": "conteo", "content": "lineas", "contenido": "lineas"}.get(modo, modo)
+    if modo not in ("lineas", "archivos", "conteo"):
+        modo = "lineas"
+    incluir = str(a.get("incluir") or "*").strip() or "*"
+    if re.fullmatch(r"\.?[A-Za-z0-9]{1,6}", incluir):  # «js» o «.py» (type de Grep) → «*.js»
+        incluir = "*." + incluir.lstrip(".")
+    try:
+        limite = max(1, min(1000, int(a.get("limite") or 250)))
+    except (TypeError, ValueError):
+        limite = 250
+    try:
+        desde = max(0, int(a.get("desde") or 0))
+    except (TypeError, ValueError):
+        desde = 0
+    try:
+        ctxn = min(int(a.get("contexto") or 0), 8)
+    except (TypeError, ValueError):
+        ctxn = 0
+    if not root.exists():
+        return f"ERROR: no existe {root}"
+
+    def correr(rx, transformar=None):
+        files = [root] if root.is_file() else _iter_files(root, incluir)
+        out, cuenta, n_arch = [], {}, 0
+        for f in files:
+            if f.suffix.lower() in TEXT_EXT_BIN:
                 continue
-            lines = _read_text(f).splitlines()
-            ctxn = min(int(a.get("contexto") or 0), 6)
-            for i, line in enumerate(lines, 1):
-                if rx.search(line):
-                    rel = f.relative_to(root) if root.is_dir() else f.name
-                    if ctxn:
-                        blk = [f"{rel}:{j}{'>' if j == i else '-'} {lines[j - 1].rstrip()[:200]}"
-                               for j in range(max(1, i - ctxn), min(len(lines), i + ctxn) + 1)]
-                        out.append("\n".join(blk) + "\n--")
-                    else:
-                        out.append(f"{rel}:{i}: {line.strip()[:240]}")
-                    if len(out) >= 250:
-                        break
-        except (OSError, ValueError):
-            continue
-        if len(out) >= 250:
-            out.append("... (más coincidencias)")
-            break
-    return "\n".join(out) if out else "Sin coincidencias."
+            try:
+                if f.stat().st_size > 3_000_000:
+                    continue
+                texto = _read_text(f)
+            except (OSError, ValueError):
+                continue
+            base = transformar(texto) if transformar else texto
+            rel = f.relative_to(root) if root.is_dir() else f.name
+            if a.get("multilinea"):
+                hits = [base.count("\n", 0, m.start()) + 1 for m in rx.finditer(base)]
+            else:
+                hits = [i for i, ln in enumerate(base.splitlines(), 1) if rx.search(ln)]
+            if not hits:
+                continue
+            n_arch += 1
+            cuenta[str(rel)] = len(hits)
+            if modo != "lineas":
+                continue
+            lines = texto.splitlines()
+            for i in hits:
+                if ctxn:
+                    blk = [f"{rel}:{j}{'>' if j == i else '-'} {lines[j - 1].rstrip()[:200]}"
+                           for j in range(max(1, i - ctxn), min(len(lines), i + ctxn) + 1)]
+                    out.append("\n".join(blk) + "\n--")
+                else:
+                    out.append(f"{rel}:{i}: {lines[i - 1].strip()[:240] if i - 1 < len(lines) else ''}")
+            if len(out) >= desde + limite:
+                break
+        return out, cuenta
+
+    out, cuenta = correr(rx)
+    if not cuenta and not a.get("mayusculas"):
+        # sin tildes: «funcion» encuentra «función» y al revés (las IAs pequeñas escriben sin tildes)
+        p2 = _sin_tildes(patron)
+        try:
+            rx2 = re.compile(p2, flags)
+        except re.error:
+            rx2 = re.compile(re.escape(p2), flags)
+        out, cuenta = correr(rx2, _sin_tildes)
+        if cuenta:
+            notas.append("encontré coincidencias ignorando las tildes")
+    pie = ("\n(" + "; ".join(notas) + ")") if notas else ""
+    donde = f"en {root.name if root.is_file() else root}"
+    if not cuenta:
+        return (f"Sin coincidencias de «{patron}» {donde}." +
+                " Prueba explorar_codigo con una pregunta en palabras normales (busca sinónimos español/inglés)." + pie)
+    if modo == "archivos":
+        ls = sorted(cuenta, key=lambda k: -cuenta[k])
+        return f"{len(ls)} archivo(s) con «{patron}» {donde}:\n" + "\n".join(ls[desde:desde + limite]) + pie
+    if modo == "conteo":
+        return f"Coincidencias de «{patron}» {donde} (total {sum(cuenta.values())}):\n" + \
+            "\n".join(f"{k}: {v}" for k, v in sorted(cuenta.items(), key=lambda x: -x[1])[desde:desde + limite]) + pie
+    sel = out[desde:desde + limite]
+    mas = f"\n... (hay más: usa desde={desde + limite})" if len(out) > desde + limite else ""
+    return "\n".join(sel) + mas + pie
 
 
 def t_mover_o_copiar(a, ctx):
@@ -792,7 +911,9 @@ def _env():
 
 def run_streaming(cmd, ctx, timeout=300):
     """Ejecuta mostrando la salida en vivo en el chat."""
-    proc = subprocess.Popen(cmd, cwd=str(ctx.cwd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    from . import recursos as R
+    # nativo (sin máquina virtual) pero dentro de un Job Object: memoria y CPU máximas → no puede colapsar la PC
+    proc = R.popen_limitado(cmd, nombre="comando", cwd=str(ctx.cwd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             stdin=subprocess.DEVNULL, env=_env(), creationflags=NO_WINDOW)
     chunks, pending, last = [], [], [time.time()]
 
@@ -822,10 +943,10 @@ def run_streaming(cmd, ctx, timeout=300):
     th.join(timeout=3)
     if pending:
         ctx.emit("tool_output", {"id": ctx.call_id, "text": "".join(pending)})
-    out = "".join(chunks).strip()
+    out = TX.arreglar_mojibake("".join(chunks).strip())  # «Â¡Listo!» (script UTF-8 leído como ANSI) → «¡Listo!»
     code = proc.returncode
     head = status or f"Código de salida: {code}"
-    return cut(f"{head}\n{out if out else '(sin salida)'}")
+    return cut(f"{head}\n{out if out else '(sin salida)'}" + R.nota_limite(proc.pid, code))
 
 
 def run_background(cmd, ctx, label):
@@ -834,11 +955,12 @@ def run_background(cmd, ctx, label):
     logdir.mkdir(exist_ok=True)
     log = logdir / f"proceso_{pid}.log"
     fh = open(log, "wb")
-    proc = subprocess.Popen(cmd, cwd=str(ctx.cwd), stdout=fh, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                            env=_env(), creationflags=NO_WINDOW)
+    from . import recursos as R
+    proc = R.popen_limitado(cmd, nombre="segundo plano", cwd=str(ctx.cwd), stdout=fh, stderr=subprocess.STDOUT,
+                            stdin=subprocess.DEVNULL, env=_env(), creationflags=NO_WINDOW)
     PROCS[pid] = {"proc": proc, "log": log, "cmd": label, "cwd": str(ctx.cwd), "start": time.time(), "fh": fh}
     time.sleep(2.5)
-    first = log.read_bytes().decode("utf-8", errors="replace")[-3000:]
+    first = TX.arreglar_mojibake(log.read_bytes().decode("utf-8", errors="replace")[-3000:])
     state = "en ejecución" if proc.poll() is None else f"terminó con código {proc.returncode}"
     return f"Proceso en segundo plano id={pid} ({state}).\nPrimeras líneas:\n{first or '(sin salida aún)'}\n\nUsa procesos(accion='salida', id='{pid}') para ver más."
 
@@ -968,7 +1090,7 @@ def t_procesos(a, ctx):
     if not pr:
         return "ERROR: id de proceso desconocido. Usa accion='listar'."
     if acc == "salida":
-        txt = pr["log"].read_bytes().decode("utf-8", errors="replace")
+        txt = TX.arreglar_mojibake(pr["log"].read_bytes().decode("utf-8", errors="replace"))
         st = "activo" if pr["proc"].poll() is None else f"terminado (código {pr['proc'].returncode})"
         return f"Estado: {st}\n" + cut(txt[-15000:], 15000)
     if acc == "detener":
@@ -1084,10 +1206,16 @@ def t_generar_imagen(a, ctx):
         payload = {"prompt": prompt, "width": w, "height": h}
     base = os.environ.get("NVIDIA_IMAGE_BASE", "https://ai.api.nvidia.com/v1/genai")
     url = f"{base}/{model}"
-    headers = {"Authorization": f"Bearer {keys[0]}", "Accept": "application/json"}
-    r = requests.post(url, headers=headers, json=payload, timeout=240)
-    if r.status_code in (400, 422):
-        r = requests.post(url, headers=headers, json={"prompt": prompt}, timeout=240)
+    from .providers import clave_actual
+    start = clave_actual("nvidia") % len(keys)
+    r = None
+    for k in keys[start:] + keys[:start]:  # con varias claves: si una no sirve (401/403/429) se usa la siguiente
+        headers = {"Authorization": f"Bearer {k}", "Accept": "application/json"}
+        r = requests.post(url, headers=headers, json=payload, timeout=240)
+        if r.status_code in (400, 422):
+            r = requests.post(url, headers=headers, json={"prompt": prompt}, timeout=240)
+        if r.status_code not in (401, 403, 429):
+            break
     if r.status_code != 200:
         return f"ERROR {r.status_code} generando imagen: {r.text[:800]}"
     d = r.json()
@@ -1155,7 +1283,93 @@ def t_actualizar_tareas(a, ctx):
     ctx.conv["tasks"] = norm
     ctx.emit("tasks", {"tasks": norm})
     done = sum(t["estado"] == "completada" for t in norm)
-    return f"Lista de tareas actualizada ({done}/{len(norm)} completadas)."
+    return f"Lista de tareas actualizada ({done}/{len(norm)} completadas)." + (
+        " Para marcar UNA tarea después, usa marcar_tarea(numero, estado) (no hace falta reenviar toda la lista)." if done < len(norm) else "")
+
+
+_ICON_T = {"completada": "●", "en_progreso": "◐", "pendiente": "○"}
+
+
+def _buscar_tarea(tasks, a):
+    """Índice de la tarea indicada por número (1, 2…) o por su texto (aunque sea aproximado)."""
+    n = a.get("numero")
+    if n not in (None, ""):
+        try:
+            i = int(str(n).strip().lstrip("#")) - 1
+            if 0 <= i < len(tasks):
+                return i
+        except ValueError:
+            pass
+    q = str(a.get("tarea") or "").strip().lower()
+    if q:
+        for i, t in enumerate(tasks):
+            if t["contenido"].strip().lower() == q:
+                return i
+        for i, t in enumerate(tasks):
+            c = t["contenido"].lower()
+            if q in c or c in q:
+                return i
+        qw = set(re.findall(r"\w{4,}", q))
+        best, bi = 0, None
+        for i, t in enumerate(tasks):
+            sc = len(qw & set(re.findall(r"\w{4,}", t["contenido"].lower())))
+            if sc > best:
+                best, bi = sc, i
+        if bi is not None:
+            return bi
+        return None
+    for est in ("en_progreso", "pendiente"):  # sin número ni texto: la tarea actual
+        for i, t in enumerate(tasks):
+            if t.get("estado") == est:
+                return i
+    return None
+
+
+def t_marcar_tarea(a, ctx):
+    """Como TaskUpdate de Claude: cambia UNA tarea (o agrega una nueva) sin reenviar la lista entera.
+    Las IAs pequeñas se equivocaban al reescribir toda la lista (o no la actualizaban) y el trabajo quedaba «a medias»."""
+    tasks = [dict(t) for t in ctx.conv.get("tasks") or []]
+    estado = str(a.get("estado") or "completada").strip().lower().replace(" ", "_")
+    estado = {"hecha": "completada", "hecho": "completada", "terminada": "completada", "done": "completada",
+              "completed": "completada", "in_progress": "en_progreso", "en_curso": "en_progreso", "todo": "pendiente"}.get(estado, estado)
+    if estado not in ("pendiente", "en_progreso", "completada"):
+        return "ERROR: estado debe ser 'pendiente', 'en_progreso' o 'completada'."
+    if a.get("nueva"):
+        tasks.append({"contenido": str(a["nueva"]).strip()[:300], "estado": estado})
+        i = len(tasks) - 1
+    else:
+        if not tasks:
+            return "ERROR: todavía no hay lista de tareas. Crea el plan con actualizar_tareas (o agrega una con marcar_tarea(nueva='…'))."
+        i = _buscar_tarea(tasks, a)
+        if i is None:
+            return ("ERROR: no encontré esa tarea. Usa su número:\n"
+                    + "\n".join(f"{k + 1}. {_ICON_T.get(t['estado'], '○')} {t['contenido']}" for k, t in enumerate(tasks)))
+        tasks[i]["estado"] = estado
+    if estado == "en_progreso":  # solo una tarea en progreso a la vez
+        for k, t in enumerate(tasks):
+            if k != i and t["estado"] == "en_progreso":
+                t["estado"] = "pendiente"
+    if estado == "completada" and not any(t["estado"] == "en_progreso" for t in tasks):
+        for t in tasks:  # la siguiente pendiente pasa sola a «en progreso»
+            if t["estado"] == "pendiente":
+                t["estado"] = "en_progreso"
+                break
+    ctx.conv["tasks"] = tasks
+    ctx.emit("tasks", {"tasks": tasks})
+    done = sum(t["estado"] == "completada" for t in tasks)
+    lista = "\n".join(f"{k + 1}. {_ICON_T.get(t['estado'], '○')} {t['contenido']}" for k, t in enumerate(tasks))
+    sig = next((t["contenido"] for t in tasks if t["estado"] == "en_progreso"), None)
+    return (f"Tarea {i + 1} → {estado}: «{tasks[i]['contenido']}». Progreso {done}/{len(tasks)}.\n{lista}\n"
+            + (f"Siguiente: «{sig}». Hazla ahora con las herramientas." if sig else
+               "✅ Todas las tareas completadas: verifica el resultado (probar_proyecto / probar_web / ejecutar) y entrega el resumen final."))
+
+
+def t_pedir_relevo(a, ctx):
+    """La IA reconoce que no puede con algo: el programa pasa el trabajo a la IA mejor valorada (🏆 evaluador)."""
+    motivo = str(a.get("motivo") or "no pude resolverlo").strip()[:300]
+    ctx.conv["_relevo"] = {"motivo": motivo, "intentado": str(a.get("intentado") or "")[:500]}
+    return ("Relevo solicitado. El programa pasará el trabajo a la IA mejor valorada para esta tarea con todo lo hecho. "
+            "No hagas nada más en este turno: responde solo con una línea de resumen de lo que intentaste.")
 
 
 def read_memory():
@@ -1196,23 +1410,8 @@ def read_project_log(project, n=25):
 
 
 def t_memoria(a, ctx):
-    acc = a.get("accion", "ver")
-    proj = ctx.conv.get("project") if a.get("alcance") == "proyecto" else None
-    if a.get("alcance") == "proyecto" and not proj:
-        return "ERROR: no hay proyecto activo; usa alcance='usuario' o crea/abre un proyecto."
-    f = (project_meta_dir(proj) / "memoria.md") if proj else MEMORY_FILE
-    mem = f.read_text(encoding="utf-8") if f.exists() else ""
-    donde = f"del proyecto {proj}" if proj else "del usuario"
-    if acc == "ver":
-        return mem or f"(memoria {donde} vacía)"
-    if acc == "agregar":
-        texto = (a.get("texto") or "").strip()
-        f.write_text((mem.rstrip() + "\n" if mem.strip() else "") + f"- {texto}\n", encoding="utf-8")
-        return f"Guardado en la memoria {donde}."
-    if acc == "reemplazar_todo":
-        f.write_text(a.get("texto") or "", encoding="utf-8")
-        return f"Memoria {donde} reescrita."
-    return "ERROR: acción inválida (ver | agregar | reemplazar_todo)."
+    from .experto import memoria as MEM
+    return MEM.tool(a, ctx)
 
 
 # ═════════════════════════════ AYUDA DEL USUARIO Y NAVEGADOR ═════════════════════════════
@@ -1246,7 +1445,7 @@ def t_agente_navegador(a, ctx):
                 "(requiere Node.js). Mientras tanto usa pedir_ayuda_usuario para pedirle que haga los pasos en su "
                 "navegador y te envíe capturas.")
     with subagente.recurso("navegador", ctx):
-        res = subagente.run(ctx.conv, ctx, tarea, tools, subagente.BROWSER_SYSTEM, label="Agente navegador")
+        res = subagente.run(ctx.conv, ctx, tarea, tools, subagente.sistema_navegador(), label="Agente navegador")
     if res is None:
         return ("ERROR: ningún modelo disponible pudo controlar el navegador (se necesitan herramientas nativas). "
                 "Usa pedir_ayuda_usuario para que el usuario lo haga y te envíe capturas.")
@@ -1421,8 +1620,10 @@ BUILTIN = [
        "texto_nuevo": S("Texto que lo reemplaza (o que se inserta)"), "reemplazar_todo": B("Reemplazar todas las apariciones"),
        "ediciones": {"type": "array", "description": "Varias ediciones en orden", "items": {"type": "object", "properties": {
            "texto_anterior": {"type": "string"}, "texto_nuevo": {"type": "string"}}, "required": ["texto_anterior", "texto_nuevo"]}},
-       "desde_linea": I("Primera línea a reemplazar (modo rango)"), "hasta_linea": I("Última línea a reemplazar (modo rango)"),
-       "despues_de_linea": I("Insertar texto_nuevo después de esta línea (0 = al principio)")},
+       "desde_linea": I("Primera línea a reemplazar (modo rango); con texto_anterior repetido, la línea de la aparición a cambiar"),
+       "hasta_linea": I("Última línea a reemplazar (modo rango)"),
+       "despues_de_linea": I("Insertar texto_nuevo después de esta línea (0 = al principio)"),
+       "ocurrencia": I("Si texto_anterior aparece varias veces: cuál cambiar (1 = la primera)")},
       ["ruta"]),
     T("diagnosticar", "🩺 Diagnóstico COMPLETO del proyecto como lo haría un programador experto: codificación dañada (la repara), código incompleto ('...'), funciones que se llaman pero no existen o no se cargan, orden de los <script>, ids de HTML que no existen, librerías (THREE, jQuery…) sin cargar, sintaxis, nombres no definidos, dependencias, y ABRE la página en un navegador invisible para ver los errores reales de la consola y si la pantalla queda vacía. Devuelve la lista PRIORIZADA de problemas con archivo:línea y cómo arreglar cada uno. Úsalo PRIMERO cuando algo no funciona o el usuario pide revisar/arreglar.",
       {"ruta": S("Carpeta o archivo (vacío = proyecto activo)"),
@@ -1452,11 +1653,14 @@ BUILTIN = [
       ["ruta"]),
     T("listar_directorio", "Lista archivos y carpetas. Vacío = proyecto activo.",
       {"ruta": S("Carpeta"), "recursivo": B("Incluir subcarpetas (árbol)")}),
-    T("buscar_archivos", "Busca archivos por nombre con comodines (glob), ej. '*.py' o 'src/*.js'.",
+    T("buscar_archivos", "Busca archivos por nombre con comodines (glob), ej. '*.py', 'src/**/*.js' o '**/test_*.py'. Los más recientes primero.",
       {"patron": S("Patrón glob"), "ruta": S("Carpeta raíz (opcional)")}, ["patron"]),
-    T("buscar_en_archivos", "Busca texto o expresión regular dentro de los archivos (como grep). Devuelve archivo:línea: texto.",
+    T("buscar_en_archivos", "Busca texto o expresión regular dentro de los archivos (como grep). modo='lineas' (archivo:línea: texto), 'archivos' (solo qué archivos) o 'conteo'. Ignora tildes si no encuentra nada.",
       {"regex": S("Texto o regex"), "ruta": S("Carpeta o archivo (opcional)"), "incluir": S("Filtro glob, ej. '*.py'"),
-       "mayusculas": B("Distinguir mayúsculas"), "contexto": I("Líneas de contexto antes/después (0-6)")}, ["regex"]),
+       "modo": {"type": "string", "enum": ["lineas", "archivos", "conteo"]},
+       "mayusculas": B("Distinguir mayúsculas"), "contexto": I("Líneas de contexto antes/después (0-8)"),
+       "limite": I("Máximo de resultados (def. 250)"), "desde": I("Saltar los primeros N resultados"),
+       "multilinea": B("La regex puede abarcar varias líneas")}, ["regex"]),
     T("mover_o_copiar", "Mueve/renombra o copia archivos o carpetas.",
       {"origen": S("Ruta origen"), "destino": S("Ruta destino"), "copiar": B("true = copiar, false = mover")},
       ["origen", "destino"]),
@@ -1480,10 +1684,17 @@ BUILTIN = [
       {"todas_las_pantallas": B("Capturar todos los monitores")}),
     T("abrir", "Abre un archivo con su programa predeterminado o una URL en el navegador (ej. para mostrar una página web creada).",
       {"ruta_o_url": S("Ruta o URL")}, ["ruta_o_url"]),
-    T("actualizar_tareas", "Crea/actualiza tu lista de tareas visible para el usuario. Úsala en trabajos de varios pasos: planifica, marca 'en_progreso' la actual y 'completada' al terminar.",
+    T("actualizar_tareas", "Crea (o reemplaza) tu lista de tareas COMPLETA, visible para el usuario. Úsala al empezar un trabajo de varios pasos para registrar el plan. Para marcar UNA tarea después usa marcar_tarea (más simple).",
       {"tareas": {"type": "array", "items": {"type": "object", "properties": {
           "contenido": {"type": "string"}, "estado": {"type": "string", "enum": ["pendiente", "en_progreso", "completada"]}},
           "required": ["contenido", "estado"]}}}, ["tareas"]),
+    T("marcar_tarea", "Marca UNA tarea del plan como completada / en_progreso / pendiente (por su número, 1 = la primera) o agrega una tarea nueva. Úsala cada vez que termines una tarea: si no la marcas, el trabajo queda «a medias». Si la tarea era un informe o resumen, escríbelo y márcala completada.",
+      {"numero": I("Número de la tarea (1 = la primera). Vacío = la tarea en progreso"),
+       "tarea": S("O el texto de la tarea (si no sabes el número)"),
+       "estado": {"type": "string", "enum": ["completada", "en_progreso", "pendiente"], "description": "Nuevo estado (def. completada)"},
+       "nueva": S("Texto de una tarea NUEVA para agregar al plan (opcional)")}),
+    T("pedir_relevo", "Si después de intentarlo de verdad NO puedes resolver algo (el error sigue, no entiendes el código, te falta capacidad), pide que otra IA más capaz continúe. El programa pasa el trabajo a la IA mejor valorada con todo lo hecho. No lo uses para trabajos normales.",
+      {"motivo": S("Qué no pudiste resolver y por qué"), "intentado": S("Qué intentaste ya (para que no se repita)")}, ["motivo"]),
     T("probar_proyecto", "Agente de pruebas: revisa sintaxis, nombres no definidos y dependencias (las instala), ejecuta las pruebas del proyecto y, si es una web, la abre en un navegador invisible. Devuelve un reporte corto con archivo:línea, el código alrededor y cómo arreglarlo. Úsalo después de escribir o corregir código.",
       {"archivos": {"type": "array", "items": {"type": "string"}, "description": "Solo estos archivos (vacío = todo el proyecto)"},
        "ejecutar_pruebas": B("Ejecutar también las pruebas (pytest, npm test…); por defecto sí")}),
@@ -1506,25 +1717,38 @@ BUILTIN = [
        "ref": S("Referencia eN de 'elementos'"), "x": I("Coordenada X"), "y": I("Coordenada Y"),
        "objetivo": S("Programa/ruta/URL para abrir, o título de la ventana para enfocar"), "texto": S("Texto a escribir"),
        "enter": B("Pulsar Enter tras escribir"), "teclas": S("Atajo: ctrl+s, alt+f4, enter…"), "segundos": {"type": "number"}}, ["accion"]),
-    T("programar_tarea", "Programa un trabajo para que NoviQ lo haga solo más tarde o repetidamente (una vez, cada día, ciertos días o cada N minutos), o lista/pausa/reanuda/elimina las tareas programadas.",
+    T("programar_tarea", "Programa un trabajo para que Noviq lo haga solo más tarde o repetidamente (una vez, cada día, ciertos días o cada N minutos), o lista/pausa/reanuda/elimina las tareas programadas.",
       {"accion": {"type": "string", "enum": ["crear", "listar", "eliminar", "pausar", "reanudar"]},
        "nombre": S("Nombre corto"), "instruccion": S("Qué debe hacer la IA en cada ejecución (completo)"),
        "tipo": {"type": "string", "enum": ["una_vez", "diario", "semanal", "intervalo"]},
        "fecha": S("una_vez: AAAA-MM-DDTHH:MM"), "hora": S("diario/semanal: HH:MM"),
        "dias": {"type": "array", "items": {"type": "integer"}, "description": "0=lunes … 6=domingo"},
        "cada_min": I("intervalo en minutos"), "id": S("id para eliminar/pausar/reanudar")}, ["accion"]),
-    T("ejecutar_linux", "Ejecuta comandos bash en Linux (WSL de Windows) en la carpeta del proyecto: compilar con gcc/make, usar herramientas de Linux, scripts .sh, apt (con como_root=true). Si Linux no está instalado, lo indica.",
+    T("ejecutar_linux", "Ejecuta comandos bash en Linux (máquina virtual WSL de Windows): SOLO cuando hace falta Linux de verdad (gcc/make, scripts .sh, apt con como_root=true). Consume más memoria: para Python, Node, pip o npm usa ejecutar_python/ejecutar_powershell (nativo, más rápido y liviano). Tiene límites de memoria/CPU para no colapsar la PC.",
       {"comando": S("Comando bash"), "como_root": B("Ejecutar como root (para apt-get install, sin contraseña)"),
        "segundo_plano": B("Servidores/procesos largos"), "timeout_segundos": I("Máximo de espera")}, ["comando"]),
-    T("contenedor", "Ejecuta un comando dentro de un contenedor Docker limpio con el proyecto montado en /work: prueba en un sistema aislado (otra versión de Python/Node, Linux puro) sin tocar la PC.",
+    T("contenedor", "Ejecuta un comando dentro de un contenedor Docker limpio con el proyecto montado en /work: SOLO si hace falta aislamiento u otra versión de Python/Node/Linux. Es lo más pesado: por defecto prueba NATIVO (ejecutar_python/ejecutar_powershell/probar_proyecto). Se ejecuta con límites de memoria/CPU y usa la GPU si hay (gpu=true).",
       {"imagen": S("Imagen, ej. python:3.12-slim, node:22, ubuntu:24.04"), "comando": S("Comando sh"),
-       "red": B("Permitir internet (por defecto sí)"), "puertos": {"type": "array", "items": {"type": "string"}, "description": "ej. ['8000:8000']"},
+       "red": B("Permitir internet (por defecto sí)"), "gpu": B("Dar acceso a la tarjeta gráfica NVIDIA (IA, CUDA)"), "puertos": {"type": "array", "items": {"type": "string"}, "description": "ej. ['8000:8000']"},
        "timeout_segundos": I("Máximo de espera")}, ["comando"]),
     T("entorno", "Entornos del proyecto: accion='info' (qué hay instalado: Python/.venv, Node, git, Docker, Linux), 'crear' (entorno virtual .venv o package.json), 'instalar' (paquetes o requirements.txt), 'congelar' (requirements.txt), 'instalar_linux' (instala WSL+Ubuntu).",
       {"accion": {"type": "string", "enum": ["info", "crear", "instalar", "congelar", "instalar_linux"]},
        "lenguaje": {"type": "string", "enum": ["python", "node"]}, "paquetes": {"type": "array", "items": {"type": "string"}}}, ["accion"]),
     T("instalar_herramienta", "Agente instalador: instala programas que falten (git, node, python, java, dotnet, go, rust, ffmpeg, docker, cmake, php, gh, uv…) con winget en Windows, apt en Linux/WSL, o paquetes pip/npm globales.",
       {"nombre": S("Nombre del programa o paquete"), "gestor": {"type": "string", "enum": ["auto", "winget", "apt", "pip", "npm"]}}, ["nombre"]),
+    T("versiones_archivo", "🗂 Historial de versiones de UN archivo (se guardan solas antes de cada cambio, en todas las conversaciones): listar, ver una versión, diferencias con la actual, restaurar CUALQUIER versión (no solo la última) o guardar la versión actual como «buena». accion='todas' muestra qué archivos tienen versiones.",
+      {"accion": {"type": "string", "enum": ["listar", "ver", "diferencias", "restaurar", "guardar", "todas"]},
+       "ruta": S("Archivo"), "version": I("Número de la lista (1 = la más reciente)"), "contra": I("Comparar contra esta otra versión (opcional)"),
+       "nota": S("Nota al guardar (ej. 'funciona el login')"), "desde_linea": I("ver: línea inicial"), "hasta_linea": I("ver: línea final")},
+      ["accion"]),
+    T("empaquetar_proyecto", "📦 Crea un ZIP limpio y numerado de la versión actual del proyecto en <proyecto>/entregas (sin node_modules, .venv, .git, capturas ni temporales) con ENTREGA.txt (lista de archivos y huellas). Úsalo cuando el programa YA FUNCIONA y está probado, o cuando el usuario pida el ZIP/entregable. accion='listar' muestra las entregas.",
+      {"accion": {"type": "string", "enum": ["crear", "listar"]}, "nota": S("Qué versión es (ej. 'v1 con niveles')")}),
+    T("biblioteca", "📚 Biblioteca de código reutilizable entre proyectos: guardar un archivo o carpeta que funciona (login, conector, componente, script), listar/buscar lo guardado, ver y USAR (copiarlo al proyecto activo; si ya existe algo se respalda). Revisa la biblioteca antes de programar algo que ya hiciste en otro proyecto.",
+      {"accion": {"type": "string", "enum": ["listar", "buscar", "guardar", "ver", "usar"]},
+       "nombre": S("Nombre en la biblioteca"), "ruta": S("guardar: archivo o carpeta del proyecto"),
+       "descripcion": S("guardar: qué es y cómo se usa"), "etiquetas": {"type": "array", "items": {"type": "string"}},
+       "texto": S("buscar: palabras"), "destino": S("usar: carpeta del proyecto donde copiarlo (def. la raíz)"),
+       "reemplazar": B("guardar: reemplazar si ya existe")}, ["accion"]),
     T("puntos_restauracion", "Puntos de restauración del proyecto (se crean solos antes de cada trabajo): listar, crear, ver diferencias o VOLVER a un punto si algo se rompió.",
       {"accion": {"type": "string", "enum": ["listar", "crear", "diferencias", "volver"]}, "id": S("Id del punto"),
        "mensaje": S("Descripción (crear)"), "archivos": {"type": "array", "items": {"type": "string"}, "description": "Solo estos archivos (opcional)"}}, ["accion"]),
@@ -1534,9 +1758,6 @@ BUILTIN = [
     T("pedir_ayuda_usuario", "Pide al usuario que haga algo que tú no puedes (iniciar sesión, un paso manual en el navegador o en un programa, conectar un equipo) o que te dé un dato; espera su respuesta y las capturas de pantalla que envíe.",
       {"instrucciones": S("Instrucciones claras y numeradas de lo que debe hacer el usuario"),
        "pedir_captura": B("Pedirle que adjunte una captura del resultado")}, ["instrucciones"]),
-    T("memoria", "Memoria permanente. alcance='usuario': datos del usuario (preferencias, nombres, equipos). alcance='proyecto': decisiones, estado, pendientes y cómo ejecutar el proyecto activo (la leerá cualquier IA que continúe el trabajo).",
-      {"accion": {"type": "string", "enum": ["ver", "agregar", "reemplazar_todo"]},
-       "alcance": {"type": "string", "enum": ["usuario", "proyecto"]}, "texto": S("Texto a guardar")}, ["accion"]),
 ]
 
 FUNCS = {
@@ -1548,6 +1769,7 @@ FUNCS = {
     "buscar_en_internet": t_buscar_en_internet, "leer_pagina_web": t_leer_pagina_web,
     "descargar_archivo": t_descargar_archivo, "generar_imagen": t_generar_imagen,
     "captura_pantalla": t_captura_pantalla, "abrir": t_abrir, "actualizar_tareas": t_actualizar_tareas,
+    "marcar_tarea": t_marcar_tarea, "pedir_relevo": t_pedir_relevo,
     "memoria": t_memoria, "deshacer_cambio": t_deshacer_cambio, "localizar_error": t_localizar_error,
     "mapa_codigo": t_mapa_codigo, "agente_navegador": t_agente_navegador,
     "planificar_en_equipo": t_planificar_en_equipo, "probar_proyecto": t_probar_proyecto, "trabajar_en_equipo": t_trabajar_en_equipo, "pedir_ayuda_usuario": t_pedir_ayuda_usuario,
@@ -1556,7 +1778,53 @@ FUNCS = {
     "ejecutar_linux": lambda a, c: _ent().t_ejecutar_linux(a, c), "contenedor": lambda a, c: _ent().t_contenedor(a, c),
     "entorno": lambda a, c: _ent().t_entorno(a, c), "instalar_herramienta": lambda a, c: _ent().t_instalar_herramienta(a, c),
     "puntos_restauracion": lambda a, c: _ent().t_puntos_restauracion(a, c), "peticion_http": lambda a, c: _ent().t_peticion_http(a, c),
+    "versiones_archivo": lambda a, c: _vr().t_versiones_archivo(a, c), "empaquetar_proyecto": lambda a, c: _vr().t_empaquetar_proyecto(a, c),
+    "biblioteca": lambda a, c: _vr().t_biblioteca(a, c),
 }
+# 🎮 Estudio de juegos y 🟩 herramientas NVIDIA (módulo aparte para no tocar lo que ya funciona)
+from . import herr_juegos as _HJ  # noqa: E402
+BUILTIN += _HJ.DEFS
+FUNCS.update(_HJ.FUNCS)
+# 🪟 Windows (oficina, correo, agenda, Telegram, agentes MCP): módulo aparte
+from . import herr_windows as _HW  # noqa: E402
+BUILTIN += _HW.DEFS
+FUNCS.update(_HW.FUNCS)
+# 🤖 avatar (robot flotante): la IA puede avisar algo corto en voz alta; solo aparece si el avatar está abierto
+FUNCS["avatar"] = lambda a, c: __import__("noviq.avatar_agente", fromlist=["tool"]).tool(a, c)
+# 🧑‍💻 programador experto: memoria en 3 lugares, explorar_codigo, rutas tolerantes, crear_carpeta/verificar_codigo ocultas
+from .experto import memoria as _MEM  # noqa: E402
+from .experto import herramientas as _EX  # noqa: E402
+BUILTIN.append(_MEM.TOOL_DEF)
+_EX.instalar(BUILTIN, FUNCS)
+
+
+def esquema_de(nombre):
+    """Propiedades del esquema de una herramienta (las usa el traductor de llamadas de las IAs pequeñas)."""
+    return _EX.esquema(nombre, BUILTIN)
+
+
+def defs_para(conv):
+    """Herramientas que ve la IA en esta conversación: las de juegos solo en modo videojuego (ahorra tokens)."""
+    out = list(BUILTIN) if _HJ.modo_juego(conv) else [t for t in BUILTIN if t["function"]["name"] not in _HJ.GAME_TOOLS]
+    try:
+        d = _HW.def_agente_mcp()  # solo si hay servidores MCP «agente» conectados
+        if d:
+            out.append(d)
+    except Exception:
+        pass
+    try:
+        from . import avatar_agente as _AV
+        d = _AV.tool_def()  # solo si el avatar está abierto (ahorra tokens)
+        if d:
+            out.append(d)
+    except Exception:
+        pass
+    return out
+
+
+def _vr():
+    from . import versiones
+    return versiones
 
 
 def _ent():
@@ -1571,13 +1839,19 @@ LABELS = {
     "ejecutar_python": "🐍 Python", "procesos": "⚙ Procesos", "buscar_en_internet": "🔎 Buscando en internet",
     "leer_pagina_web": "🌐 Leyendo página", "descargar_archivo": "⬇ Descargando", "generar_imagen": "🎨 Generando imagen",
     "captura_pantalla": "🖥 Captura de pantalla", "abrir": "↗ Abriendo", "actualizar_tareas": "✅ Tareas",
-    "memoria": "🧠 Memoria", "deshacer_cambio": "↩ Deshaciendo cambio", "localizar_error": "🎯 Localizando error",
+    "marcar_tarea": "✅ Tarea", "pedir_relevo": "🤝 Pidiendo relevo a una IA más capaz",
+    "memoria": "🧠 Memoria", "explorar_codigo": "🔎 Explorando el código", "crear_carpeta": "📁 Creando carpeta",
+    "verificar_codigo": "🧪 Verificando código", "deshacer_cambio": "↩ Deshaciendo cambio", "localizar_error": "🎯 Localizando error",
     "mapa_codigo": "🗺 Mapa del código", "probar_proyecto": "🧪 Agente de pruebas", "planificar_en_equipo": "🧠 Plan en equipo (varias IAs)",
     "trabajar_en_equipo": "👥 Equipo de agentes trabajando", "agente_navegador": "🌐 Agente navegador", "pedir_ayuda_usuario": "🙋 Ayuda del usuario",
     "agente_pc": "🖥 Agente del PC", "control_pc": "🖱 Control del PC", "programar_tarea": "⏰ Tarea programada",
     "ejecutar_linux": "🐧 Linux", "contenedor": "🐳 Contenedor", "entorno": "🧰 Entorno", "instalar_herramienta": "📦 Instalador",
     "puntos_restauracion": "⏪ Puntos de restauración", "peticion_http": "🌐 Petición HTTP",
+    "versiones_archivo": "🗂 Versiones del archivo", "empaquetar_proyecto": "📦 Empaquetando (ZIP)", "biblioteca": "📚 Biblioteca",
     "diagnosticar": "🩺 Diagnóstico del proyecto", "probar_web": "🌐 Probando la web en el navegador",
+    **_HJ.LABELS,
+    **_HW.LABELS,
+    "avatar": "🤖 Avatar",
 }
 
 DANGER = {"ejecutar_powershell", "ejecutar_python", "eliminar", "ejecutar_linux", "contenedor", "instalar_herramienta"}
@@ -1607,8 +1881,11 @@ def needs_permission(name, args, ctx):
         if mode == "auto_seguro":
             return nivel != "bajo" or name == "eliminar"
         return True
-    if mode == "auto" or name in (ctx.conv.get("allowed_tools") or []):
+    if mode == "auto" or name in (ctx.conv.get("allowed_tools") or []) or name in (CONFIG.get("permisos_siempre") or []):
         return False
+    hw = _HW.necesita_permiso(name, args, mode)
+    if hw is not None:
+        return hw
     if name in DANGER:
         return True
     if name.startswith("mcp__"):
@@ -1619,11 +1896,18 @@ def needs_permission(name, args, ctx):
         return args.get("accion") != "info"
     if name == "puntos_restauracion":
         return args.get("accion") == "volver" and mode == "preguntar"
+    if name == "versiones_archivo":
+        return args.get("accion") == "restaurar" and mode == "preguntar" and not inside_root(ctx.resolve(args.get("ruta") or "."))
+    if name == "biblioteca":
+        return args.get("accion") == "usar" and mode == "preguntar" and not inside_root(ctx.resolve(args.get("destino") or "."))
+    if name == "nvidia_ia":  # cara_voz descarga el cliente oficial e instala paquetes
+        return args.get("accion") == "cara_voz" and mode == "preguntar"
     if name == "peticion_http":
         return (args.get("metodo") or "GET").upper() != "GET" and mode == "preguntar"
     if name in ("agente_pc", "control_pc"):
         # leer la pantalla no cambia nada; actuar sobre el escritorio sí pide permiso (salvo modo automático)
-        return not (name == "control_pc" and args.get("accion") in ("ventanas", "elementos", "esperar"))
+        return not (name == "control_pc" and (args.get("accion") in ("ventanas", "elementos", "esperar", "leer_texto", "captura")
+                                              or (args.get("accion") == "portapapeles" and not args.get("texto"))))
     if name in WRITE_PATH_ARGS:
         path = args.get(WRITE_PATH_ARGS[name]) or "."
         if name == "mover_o_copiar" and not inside_root(ctx.resolve(args.get("origen") or ".")):

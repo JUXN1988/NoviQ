@@ -13,7 +13,8 @@ from datetime import datetime
 from .config import meta_dir, project_path, projects_root
 
 READONLY = {"leer_archivo", "listar_directorio", "buscar_archivos", "buscar_en_archivos", "buscar_en_internet",
-            "leer_pagina_web", "procesos", "memoria", "actualizar_tareas", "captura_pantalla", "probar_web", "mapa_codigo"}
+            "leer_pagina_web", "procesos", "memoria", "actualizar_tareas", "marcar_tarea", "pedir_relevo", "captura_pantalla",
+            "probar_web", "mapa_codigo"}
 ICON = {"completada": "✔", "en_progreso": "▶", "pendiente": "○"}
 
 
@@ -85,7 +86,7 @@ def record_action(conv, name, args, result):
         st["errores"].append({"k": key, "txt": f"{name} ({str(arg)[:80]}): {str(result)[:400]}"})
         st["errores"] = st["errores"][-6:]
     # recordatorio de mantener el plan al día
-    if name == "actualizar_tareas":
+    if name in ("actualizar_tareas", "marcar_tarea"):
         st["desde_tareas"] = 0
         return ""
     if name in READONLY:
@@ -96,7 +97,7 @@ def record_action(conv, name, args, result):
         return "\n\n[Recordatorio del sistema: registra el plan completo con actualizar_tareas para que el trabajo pueda continuarse si algo falla.]"
     if tasks and st["desde_tareas"] >= 6:
         st["desde_tareas"] = 0
-        return "\n\n[Recordatorio del sistema: actualiza la lista de tareas (actualizar_tareas) marcando lo completado y lo que está en progreso.]"
+        return "\n\n[Recordatorio del sistema: marca lo que ya terminaste con marcar_tarea (número de la tarea, estado='completada').]"
     return ""
 
 
@@ -210,18 +211,27 @@ def read_project_file(project):
     return f.read_text(encoding="utf-8") if f.exists() else ""
 
 
+def _pendientes_txt(conv):
+    pend = pending_tasks(conv)
+    return (f"\nTareas pendientes: {'; '.join(t['contenido'] for t in pend[:8])}." if pend else "")
+
+
 def handoff_message(conv, prev, new, reason=""):
+    """Aviso de relevo. El ESTADO DEL TRABAJO completo ya va en las instrucciones del sistema: aquí NO se repite
+    (antes cada relevo copiaba el estado entero y en un «Continuar» con 3 relevos había 4-6 copias en el contexto)."""
     verbo = "no avanzaba" if str(reason).startswith("se atascó") else "dejó de responder"
     return (f"[RELEVO DE IA] La IA anterior ({prev}) {verbo}{(' (' + reason + ')') if reason else ''}. "
             f"Tú ({new}) continúas EL MISMO trabajo: NO empieces de cero, NO vuelvas a planificar lo que ya está planificado "
-            "y NO repitas lo que ya está hecho.\n\n" + build(conv) +
+            "y NO repitas lo que ya está hecho. El 📋 ESTADO DEL TRABAJO de tus instrucciones es la fuente de verdad."
+            + _pendientes_txt(conv) + f"\nSiguiente paso: {next_step(conv)}"
             "\n\nQué hacer ahora:\n1. Si hace falta, verifica rápido lo existente (listar_directorio / leer_archivo).\n"
-            "2. Si la lista de tareas no refleja lo ya hecho, corrígela con actualizar_tareas.\n"
+            "2. Si la lista de tareas no refleja lo ya hecho, corrígela con marcar_tarea o actualizar_tareas.\n"
             "3. Continúa INMEDIATAMENTE con el SIGUIENTE PASO usando las herramientas.")
 
 
 def continue_message(conv):
-    est = build(conv) or read_project_file(conv.get("project"))
-    return ("[CONTINUAR] El usuario pide continuar el trabajo exactamente donde quedó (sin empezar de cero ni repetir).\n\n"
-            + (est or "(no hay estado previo registrado; revisa el historial)")
-            + "\n\nContinúa AHORA con el siguiente paso usando las herramientas.")
+    est = "" if build(conv) else read_project_file(conv.get("project"))
+    return ("[CONTINUAR] El usuario pide continuar el trabajo exactamente donde quedó (sin empezar de cero ni repetir). "
+            "El 📋 ESTADO DEL TRABAJO de tus instrucciones dice lo pedido, lo hecho y lo que falta."
+            + ("\n\n" + est[:6000] if est else "") + _pendientes_txt(conv) + f"\nSiguiente paso: {next_step(conv)}"
+            + "\n\nContinúa AHORA con el siguiente paso usando las herramientas (marca cada tarea terminada con marcar_tarea).")

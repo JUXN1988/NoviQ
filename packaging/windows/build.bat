@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================
-REM  NoviQ - crea el instalador de Windows
-REM  Resultado: dist\NoviQ-Setup-Windows.exe (instalador) y dist\NoviQ-Windows-portable.zip
+REM  Noviq - crea el instalador de Windows
+REM  Resultado: dist\Noviq-Setup-Windows.exe (instalador) y dist\Noviq-Windows-portable.zip
 REM  Requisitos: Python 3.10+ (https://python.org) e Inno Setup 6 (https://jrsoftware.org/isdl.php)
 REM  El script instala Inno Setup solo con winget si no lo encuentra.
 REM ============================================================
@@ -11,10 +11,10 @@ echo [1/4] Preparando entorno de compilacion...
 if not exist .build-venv\Scripts\python.exe ( py -3 -m venv .build-venv || python -m venv .build-venv )
 .build-venv\Scripts\python -m pip install -q --upgrade pip
 .build-venv\Scripts\python -m pip install -q -r packaging\requirements-build.txt || goto :error
-echo [2/4] Compilando NoviQ.exe con PyInstaller...
+echo [2/4] Compilando Noviq.exe con PyInstaller...
 .build-venv\Scripts\python -m PyInstaller --noconfirm --clean --distpath dist --workpath build packaging\noviq.spec || goto :error
 echo [3/4] Version portable (zip)...
-powershell -NoProfile -Command "Compress-Archive -Force -Path dist\NoviQ\* -DestinationPath dist\NoviQ-Windows-portable.zip"
+powershell -NoProfile -Command "Compress-Archive -Force -Path dist\Noviq\* -DestinationPath dist\Noviq-Windows-portable.zip"
 echo [4/4] Creando el instalador con Inno Setup...
 set ISCC="%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
 if not exist %ISCC% set ISCC="%ProgramFiles%\Inno Setup 6\ISCC.exe"
@@ -24,10 +24,10 @@ if not exist %ISCC% (
   set ISCC="%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
 )
 if not exist %ISCC% set ISCC="%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
-if not exist %ISCC% ( echo No encontre Inno Setup. El programa portable esta en dist\NoviQ & goto :fin )
+if not exist %ISCC% ( echo No encontre Inno Setup. El programa portable esta en dist\Noviq & goto :fin )
 %ISCC% /Q packaging\windows\noviq.iss || goto :error
 echo.
-echo LISTO: dist\NoviQ-Setup-Windows.exe
+echo LISTO: dist\Noviq-Setup-Windows.exe
 goto :fin
 :error
 echo.

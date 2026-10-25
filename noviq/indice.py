@@ -11,6 +11,26 @@ from pathlib import Path
 
 SKIP = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".next", ".gradle", "bin", "obj",
         ".idea", ".vs", ".noviq", ".rurak", ".nvchat", ".pytest_cache", ".mypy_cache", "imagenes", "capturas"}
+# Carpetas que NO son código del proyecto aunque estén dentro: perfiles de navegador (WebView2/Chrome/Edge, con sus
+# extensiones de terceros), cachés y paquetes instalados. Antes probar_proyecto revisaba datos/ventana_app/…/Extensions
+# y reportaba errores de la extensión «Claude Options» como si fueran del proyecto.
+PERFIL_DIRS = {"EBWebView", "User Data", "Crashpad", "GPUCache", "Code Cache", "GrShaderCache", "ShaderCache",
+               "Service Worker", "site-packages", "__pypackages__", ".noviq_logs"}
+
+
+def omitir_dir(dp, d):
+    """¿Hay que saltarse la carpeta `d` (dentro de `dp`) al revisar/indexar un proyecto?"""
+    if d in SKIP or d.startswith(".") or d in PERFIL_DIRS:
+        return True
+    try:
+        p = os.path.join(dp, d)
+        if os.path.isfile(os.path.join(p, "Local State")):  # raíz de un perfil de Chromium/WebView2
+            return True
+        return os.path.isfile(os.path.join(p, "Preferences")) and os.path.isdir(os.path.join(p, "Extensions"))
+    except OSError:
+        return False
+
+
 CODE_EXT = {".py", ".js", ".mjs", ".jsx", ".ts", ".tsx", ".html", ".htm", ".css", ".json", ".cs", ".java", ".kt",
             ".php", ".ps1", ".go", ".rs", ".dart", ".ino", ".cpp", ".c", ".h", ".vue", ".sql", ".bat", ".sh", ".md",
             ".toml", ".yml", ".yaml", ".txt", ".ini", ".xml", ".gradle"}
@@ -99,7 +119,7 @@ def summarize_other(path: Path, src):
 def iter_files(root: Path, limit=400):
     n = 0
     for dp, dns, fns in os.walk(root):
-        dns[:] = sorted(d for d in dns if d not in SKIP and not d.startswith("."))
+        dns[:] = sorted(d for d in dns if not omitir_dir(dp, d))
         for f in sorted(fns):
             p = Path(dp) / f
             if p.suffix.lower() in CODE_EXT and not f.startswith(".noviq_tmp"):

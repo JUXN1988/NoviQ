@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title NoviQ
+title Noviq
 cd /d "%~dp0"
 
 where python >nul 2>nul

@@ -20,9 +20,10 @@ from . import indice
 from .config import CONFIG, meta_dir, model_override
 
 COMPACT_TOOLS = ["crear_proyecto", "cambiar_proyecto", "escribir_archivo", "editar_archivo", "leer_archivo",
-                 "listar_directorio", "buscar_en_archivos", "ejecutar_powershell", "ejecutar_python",
-                 "actualizar_tareas", "localizar_error", "probar_proyecto", "deshacer_cambio", "pedir_ayuda_usuario",
-                 "memoria", "agente_pc", "diagnosticar", "probar_web"]
+                 "listar_directorio", "explorar_codigo", "buscar_en_archivos", "ejecutar_powershell", "ejecutar_python",
+                 "actualizar_tareas", "marcar_tarea", "pedir_relevo", "localizar_error", "probar_proyecto", "deshacer_cambio", "pedir_ayuda_usuario",
+                 "memoria", "agente_pc", "diagnosticar", "probar_web", "versiones_archivo", "empaquetar_proyecto",
+                 "crear_juego", "nvidia_ia"]
 
 
 def is_compact(model_id):
@@ -65,7 +66,8 @@ def compact_tools(tool_defs):
         props = {}
         for k, v in (f.get("parameters", {}).get("properties") or {}).items():
             nv = {kk: vv for kk, vv in v.items() if kk in ("type", "enum", "items")}
-            if k in ("ruta", "comando", "codigo", "texto_error", "ruta_o_url", "desde_linea", "despues_de_linea", "acciones"):
+            if k in ("ruta", "comando", "codigo", "texto_error", "ruta_o_url", "desde_linea", "despues_de_linea", "acciones",
+                     "pregunta", "ocurrencia", "alcance"):
                 nv["description"] = (v.get("description") or "")[:60]
             props[k] = nv
         out.append({"type": "function", "function": {"name": f["name"], "description": desc, "parameters": {
@@ -77,15 +79,17 @@ def system_prompt(conv, cwd, text_tools=None, handoff=None, map_chars=1500):
     tasks = conv.get("tasks") or []
     cur = next((t for t in tasks if t.get("estado") == "en_progreso"), None) or \
         next((t for t in tasks if t.get("estado") == "pendiente"), None)
-    s = f"""Eres NoviQ, un agente de programación que trabaja con herramientas reales en la PC del usuario. Responde en español.
+    s = f"""Eres Noviq, un agente de programación que trabaja con herramientas reales en la PC del usuario. Responde en español.
 REGLAS (tu memoria es corta, sigue esto al pie de la letra):
 1. ACTÚA con herramientas; piensa poco. Nunca termines solo con un plan.
 2. Si el trabajo tiene varios pasos y no hay plan, primero `actualizar_tareas` con 3-8 tareas pequeñas.
-3. Trabaja SOLO en el PASO ACTUAL. Al terminarlo, `actualizar_tareas` marcándolo completada (y el siguiente en_progreso).
+3. Trabaja SOLO en el PASO ACTUAL. Al terminarlo, `marcar_tarea` con su número y estado='completada' (el siguiente pasa solo a en_progreso). Si es un informe/resumen, escríbelo y márcalo completado.
 4. Archivos: SOLO con escribir_archivo/editar_archivo (NUNCA con PowerShell). Escribe COMPLETO; si pasa de ~150 líneas, por partes (escribir_archivo modo='agregar'). No escribas código dentro del razonamiento.
 5. Si algo no funciona: 1) `diagnosticar` (o `probar_web` en webs/juegos) para ver los errores REALES; 2) `leer_archivo` de esas líneas; 3) `editar_archivo` con desde_linea/hasta_linea o texto exacto SIN números de línea; 4) vuelve a `diagnosticar`/`probar_web` para verificar. Si un archivo está casi vacío o dañado, reescríbelo completo (sobrescribir=true).
+5b. Para encontrar código («¿dónde está el salto?») usa `explorar_codigo` con una pregunta normal: te da archivo y líneas en UNA llamada.
 6. NO repitas lo hecho ni la misma llamada: el ESTADO y el MAPA de abajo son la verdad. Si una herramienta falla, lee su error: dice qué hacer.
 7. No digas «listo» ni marques completada una tarea sin verificarla con una herramienta.
+8. Si tras intentarlo de verdad no puedes resolver algo, `pedir_relevo` (otra IA más capaz continúa).
 Carpeta de trabajo: {cwd}
 """
     if cur:
@@ -96,8 +100,20 @@ Carpeta de trabajo: {cwd}
     mp = indice.compact_map(cwd, meta_dir(conv["project"]) if conv.get("project") else None, map_chars) if cwd.exists() else ""
     if mp:
         s += "\n### MAPA DEL CÓDIGO (nombre@línea; usa leer_archivo con desde_linea/hasta_linea para ver detalles)\n" + mp + "\n"
+    try:
+        from .experto import memoria as MEM
+        s += MEM.para_prompt(conv, compacto=True)
+    except Exception:
+        pass
     if handoff:
         s += f"\n(Relevo: la IA anterior {handoff} falló; continúa donde quedó.)\n"
+    try:
+        from . import herr_juegos as HJ
+        if HJ.modo_juego(conv):
+            s += ("\nVIDEOJUEGO: si es nuevo usa crear_juego (motor listo). Cambia solo juego.config.js y juego.js (ganchos REGLAS); "
+                  "no reescribas motor*.js. Prueba con probar_web 'index.html?prueba=1'.\n")
+    except Exception:
+        pass
     if conv.get("idioma") == "en":
         s += "\nLANGUAGE: reply in English (the user's interface is in English).\n"
     try:
@@ -203,4 +219,4 @@ def step_message(conv):
     done = sum(t.get("estado") == "completada" for t in tasks)
     return (f"[PASO {cur + 1}/{n}] ({done} completadas) Tarea actual: «{tasks[cur]['contenido']}». "
             "Lo anterior ya está hecho (ver ESTADO y MAPA). Hazla AHORA con las herramientas y, al terminar, "
-            "márcala completada con actualizar_tareas.")
+            "márcala con marcar_tarea(numero=" + str(cur + 1) + ", estado='completada').")
