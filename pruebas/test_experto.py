@@ -30,13 +30,18 @@ JUGADOR = "class Jugador {\n  constructor() {\n    this.vida = 3;\n  }\n  jump()
 
 @pytest.fixture()
 def proyecto(tmp_path):
+    # Antes la carpeta de prueba quedaba en tu carpeta de proyectos para siempre: además de ensuciarla, la siguiente
+    # corrida con el mismo nombre fallaba («Carpeta ya existía…»). Ahora empieza limpia y se borra al terminar.
+    import shutil
     root = Path(T.projects_root()) / ("p_" + tmp_path.name[-12:])
+    shutil.rmtree(root, ignore_errors=True)
     (root / "src" / "js").mkdir(parents=True, exist_ok=True)
     (root / "src" / "js" / "jugador.js").write_text(JUGADOR, encoding="utf-8")
     (root / "calc.py").write_text("def sumar(a, b):\n    return a + b\n", encoding="utf-8")
     conv = {"id": "t", "project": root.name, "messages": [], "display": [], "tasks": [], "respaldos": []}
     ctx = T.ToolContext(conv, lambda *a, **k: None, threading.Event())
-    return root, ctx
+    yield root, ctx
+    shutil.rmtree(root, ignore_errors=True)
 
 
 VALIDOS = set(T.FUNCS)

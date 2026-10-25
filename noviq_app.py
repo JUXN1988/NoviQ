@@ -110,7 +110,7 @@ def ventana_nativa(url):
                 os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = R.args_ventana()
             except Exception:
                 pass
-        webview.create_window("Noviq", url, width=1380, height=880, min_size=(900, 600), js_api=ApiVentana(),
+        webview.create_window("NoviQ", url, width=1380, height=880, min_size=(900, 600), js_api=ApiVentana(),
                               text_select=True, background_color="#0a0f14")
         webview.start(private_mode=False, storage_path=str(DATA_DIR / "ventana"))  # bloquea hasta cerrar la ventana
         return True

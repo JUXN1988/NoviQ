@@ -1,5 +1,15 @@
 # Changelog / Historial de cambios
 
+## v4.7.0 — 2026-10-25
+- **📥 Requests while it works / Peticiones en caliente.** Messages sent while a conversation is working are no longer rejected (HTTP 409). They go to that conversation's inbox and the agent merges them into its plan at the next step; if the job had just finished, a new turn starts with them. Works from the window (button «📥 Agregar», queue bar with ✕), the avatar, Telegram and MCP (`noviq_agregar`). / Lo que pides mientras trabaja entra en la bandeja y se integra al plan en el siguiente paso, sin detenerlo.
+- **🧭 Conversation router / Enrutador de conversaciones.** Each request goes to the same conversation, resumes another one, opens a new one (also inside the project you name) or creates a new project. Rules first, the fastest AI only when in doubt. The avatar and Telegram no longer put everything into a single conversation; Telegram no longer answers «busy» (other topics run in parallel). MCP: `noviq_enrutar`. / Cada pedido va a su conversación o proyecto.
+- **🏷 Automatic titles / Títulos automáticos** with the fastest AI (`"titulos_ia": false` turns it off).
+- Fixes / Arreglos: the release workflow now uploads the files the build scripts really produce (`Noviq-*`); test fixtures no longer leave folders in your projects folder; visible name «NoviQ» in the window title.
+- Ideas studied from DeepSeek Harness and Hermes Agent: see `docs/BANDEJA_Y_ENRUTADOR.md`.
+
+## v4.3 – v4.6 — 2026-09/10
+Game studio (2D, 3D, voxel, 2D/3D figures), avatar 2.x (connected, own mind and voices, independent, bots, MCP, vision, fast lane), efficient programmer MCP, Telegram, email, schedule, office tools, test bench, AI evaluator and director. / Estudio de juegos, avatar 2.x, programador eficiente, Telegram, correo, agenda, oficina, banco de pruebas, evaluador y director.
+
 ## v4.2.0 — 2026-09
 **New name: NoviQ** (formerly Noviq, Rurak and NVIDIA Chat). Your data and key vault keep working.
 **Nuevo nombre: NoviQ** (antes Noviq, Rurak y NVIDIA Chat). Tus datos y tu bóveda de claves siguen funcionando.
@@ -11,7 +21,7 @@
 - Model list shows only working models, best first; several keys per provider / Solo modelos operativos; varias claves por proveedor.
 - Live editable plan, live writing, per-project screens and models, environments, smoke tests and secret scanner / Plan en vivo editable, escritura en vivo, entornos, pruebas y escáner de secretos.
 - "System One" decider for fast typed decisions; Kaggle GPU server; 20+ providers / Decisor, servidor GPU en Kaggle, 20+ proveedores.
-- Installers for Windows (.exe + portable), Ubuntu/Debian (.deb + .tar.gz) and macOS (Apple Silicon and Intel .dmg), built by GitHub Actions / Instaladores para los 3 sistemas.
+- Build scripts for installers (Windows .exe + portable, Ubuntu/Debian .deb, macOS .dmg) and a GitHub Actions workflow; no installers are published yet / Scripts para compilar instaladores (aún no hay instaladores publicados).
 - English and Spanish UI with automatic detection / Interfaz en inglés y español.
 
 ## v4.1

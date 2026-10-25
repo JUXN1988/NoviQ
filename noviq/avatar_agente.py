@@ -484,7 +484,7 @@ def apagar():
 def evento(cid, kind, payload, conv):
     """Rápido y sin bloquear: la IA sigue trabajando mientras el agente decide qué mostrar."""
     if kind in ("token", "reasoning", "tool_delta", "tool_output", "tool_result", "plan_stream", "plan_done", "usage", "assistant_break",
-                "reset_segment", "notice", "status", "image", "file", "project", "error"):
+                "reset_segment", "notice", "status", "image", "file", "project", "error", "inbox_tomado", "relevo_turno", "ruta"):
         return
     try:
         _cola.put_nowait(("ev", cid, kind, payload or {}, conv))
@@ -897,35 +897,64 @@ def _existe_conv(cid):
 
 
 def _pedir_backend(texto, nueva=False, aviso_ocupado=False, proyecto=None):
-    """Noviq hace el pedido en la conversación de voz de ese proyecto (o la general), SIN tocar lo que tienes abierto en la
-    ventana: así las consultas del avatar no se mezclan con tus chats de proyecto. Devuelve el id de la conversación."""
+    """Noviq hace el pedido SIN tocar lo que tienes abierto en la ventana. El 🧭 enrutador decide a dónde va:
+    la misma conversación (si sigues el tema), otra conversación anterior (si es ese tema o dices «sigue con…»),
+    una conversación nueva (tema distinto o «nueva conversación…»), dentro del proyecto que nombraste, o la 📥 bandeja
+    de una conversación que está trabajando (se integra a su plan sin detenerla). Devuelve el id de la conversación."""
     try:
-        ocupados = {x.get("id") for x in _trabajando()}
+        from . import enrutador as ENR
         est = _estado()
         convs = est.get("convs_voz") or {}
         clave = proyecto or ""
-        cid = None
+        actual = None
         if not nueva:
-            c0 = convs.get(clave) or (est.get("conv") if not proyecto else None)
-            if c0 and c0 not in ocupados and _existe_conv(c0):
-                cid = c0
-        if aviso_ocupado:
-            decir(fr("ocupado"), "info")
-        nuevo = cid or uuid.uuid4().hex[:16]   # id propio: se sabe al instante (sin esperar al trabajo)
-        body = {"text": texto, "conversation_id": nuevo, "origen": "voz",
-                "titulo": "🎙 " + (f"[{proyecto}] " if proyecto else "") + _corto(texto.split("\n\n(Pedido")[0], 50)}
-        if proyecto and not cid:
-            body["project"] = proyecto
+            c0 = convs.get(clave) if proyecto else (est.get("ultima") or convs.get("") or est.get("conv"))
+            if c0 and _existe_conv(c0):
+                actual = c0
+        base = texto.split("\n\n(Pedido")[0]          # el pedido, sin la nota «(Pedido por voz…)» que agrega el avatar
+        sufijo = texto[len(base):]
+        if nueva:
+            dec = {"accion": "nueva", "conv": None, "proyecto": proyecto, "motivo": "pediste una conversación nueva",
+                   "nuevo_proyecto": False, "titulo": "", "texto": None}
+        else:
+            dec = ENR.decidir(base, conv_actual=actual, proyecto=proyecto, modo="auto")
+        texto_ia = ENR.preparar_texto(dec, base) + sufijo
+        destino_proj = dec.get("proyecto") or (proyecto if dec["accion"] != "nueva" else None)
+        cid = dec.get("conv") if dec["accion"] in ("misma", "continuar", "en_caliente") else None
         _E["voz_backend_t"] = time.time()
-        r = _mcp()._api("POST", "/api/chat", body, stream=True, timeout=(10, 20))
-        try:
-            if r.status_code != 200:
+        if cid:
+            # a una conversación existente: la ruta de la bandeja decide sola si se integra en caliente o arranca un turno
+            r = _mcp()._api("POST", f"/api/conversations/{cid}/bandeja", {"text": texto_ia, "origen": "voz"}, timeout=(10, 20))
+            if r.status_code not in (200, 202):
                 raise RuntimeError(f"{r.status_code}: {r.text[:200]}")
-        finally:
-            r.close()   # el trabajo sigue en Noviq (su propio hilo); el avatar lo sigue por los eventos
-        convs[clave] = nuevo
-        _guardar_estado(convs_voz=convs, **({} if proyecto else {"conv": nuevo}))
-        _ui_push({"tipo": "trabajo", "conv": nuevo, "texto": _corto(texto.split("\n\n(Pedido")[0], 80), "proyecto": proyecto or ""})
+            if r.status_code == 202:
+                decir("📥 Lo agrego a lo que estoy haciendo; lo integro en el siguiente paso." if not _en() else
+                      "📥 Adding it to what I'm doing; it goes in at the next step.", "trabajando")
+            elif dec["accion"] == "continuar":
+                decir(("Retomo «" + _corto(dec.get("motivo", "").replace("retomo ", ""), 50) + "».") if not _en() else
+                      "Picking that conversation back up.", "trabajando")
+            nuevo = cid
+        else:
+            if aviso_ocupado:
+                decir(fr("ocupado"), "info")
+            nuevo = uuid.uuid4().hex[:16]   # id propio: se sabe al instante (sin esperar al trabajo)
+            titulo = dec.get("titulo") or _corto(texto.split("\n\n(Pedido")[0], 50)
+            body = {"text": texto_ia, "conversation_id": nuevo, "origen": "voz", "sin_enrutar": True,
+                    "titulo": "🎙 " + (f"[{destino_proj}] " if destino_proj else "") + _corto(titulo, 50)}
+            if destino_proj:
+                body["project"] = destino_proj
+            r = _mcp()._api("POST", "/api/chat", body, stream=True, timeout=(10, 20))
+            try:
+                if r.status_code not in (200, 202):
+                    raise RuntimeError(f"{r.status_code}: {r.text[:200]}")
+            finally:
+                r.close()   # el trabajo sigue en Noviq (su propio hilo); el avatar lo sigue por los eventos
+            if destino_proj and destino_proj != proyecto:
+                decir(("Lo hago en el proyecto «" + destino_proj + "».") if not _en() else
+                      f"Doing it in the «{destino_proj}» project.", "trabajando")
+        convs[destino_proj or ""] = nuevo
+        _guardar_estado(convs_voz=convs, ultima=nuevo, **({} if destino_proj else {"conv": nuevo}))
+        _ui_push({"tipo": "trabajo", "conv": nuevo, "texto": _corto(texto.split("\n\n(Pedido")[0], 80), "proyecto": destino_proj or ""})
         return nuevo
     except Exception as e:
         _log(f"pedir a Noviq: {type(e).__name__}: {e}")

@@ -31,6 +31,8 @@ from noviq.mcp import MANAGER
 from noviq.providers import APIError, list_models
 from noviq.server_state import conv_path, list_convs, load_conv, new_conv, save_conv
 from noviq import avatar_agente as AV  # 🤖 avatar: cara, voz y oído de Noviq
+from noviq import bandeja as BJ        # 📥 peticiones en caliente (lo que pides mientras la IA trabaja)
+from noviq import enrutador as ENR     # 🧭 a qué conversación/proyecto va cada pedido
 
 PORT = int(os.environ.get("NVIDIA_CHAT_PORT", "7860"))
 TOKEN = secrets.token_urlsafe(24)
@@ -41,6 +43,7 @@ app.register_blueprint(AV.bp)  # rutas /api/avatar/* (usan el mismo token que el
 STOP = {}
 RUNNING = set()
 JOBS = {}  # conversación → trabajo en curso (eventos para reengancharse)
+ENR.registrar_ocupados(lambda: set(RUNNING))
 
 
 # ───────────── Seguridad: solo esta PC y solo esta página ─────────────
@@ -283,6 +286,7 @@ def convs():
     out = list_convs()
     for c in out:
         c["running"] = c["id"] in RUNNING
+        c["en_cola"] = BJ.pendientes(c["id"])
     return jsonify(out)
 
 
@@ -358,10 +362,120 @@ def stop():
     return jsonify({"ok": True})
 
 
+def _enrutar(d):
+    """🧭 Decide a qué conversación/proyecto va el pedido y ajusta `d` (conversation_id, project, text).
+    → la decisión (o None si no aplica). En la ventana nunca se cambia de chat salvo que lo pidas («nueva conversación…»)."""
+    texto = (d.get("text") or "").strip()
+    if d.get("regenerate") or d.get("continuar") or not texto or d.get("sin_enrutar"):
+        return None
+    try:
+        cid0 = d.get("conversation_id") or None
+        canal_proj = d.get("project") or ((load_conv(cid0) or {}).get("project") if cid0 else None)
+        modo = "ventana" if (d.get("origen") or "ventana") == "ventana" else "auto"
+        ruta = ENR.decidir(texto, conv_actual=cid0, proyecto=canal_proj, modo=modo)
+    except Exception as e:  # el enrutador ayuda; si falla, el pedido sigue como antes
+        print(f"[enrutador] {type(e).__name__}: {e}")
+        return None
+    acc = ruta.get("accion")
+    if acc in ("continuar", "en_caliente") and ruta.get("conv"):
+        d["conversation_id"] = ruta["conv"]
+    elif acc == "nueva":
+        if d.get("conversation_id"):
+            d["conversation_id"] = None
+            d.pop("project", None)
+        if ruta.get("proyecto"):
+            d["project"] = ruta["proyecto"]
+        d["text"] = ENR.preparar_texto(ruta, d.get("text") or "")
+        if ruta.get("titulo") and not d.get("titulo"):
+            d["titulo"] = ruta["titulo"]
+    ruta["cambio"] = bool((acc in ("continuar", "en_caliente") and ruta.get("conv") != cid0)
+                          or (acc == "nueva" and (cid0 or ruta.get("nuevo_proyecto")
+                                                  or (ruta.get("proyecto") and ruta.get("proyecto") != canal_proj))))
+    return ruta
+
+
+_TITULO_SIS = ("Escribe un título MUY corto (de 2 a 6 palabras) para una conversación que empieza con el pedido del usuario. "
+               "Usa el idioma del pedido, sin comillas, sin emojis y sin punto final. Responde SOLO el título.")
+
+
+def _titulo_ia(cid, titulo_auto, texto):
+    """🏷 Título automático: la IA más rápida resume el primer pedido en pocas palabras (antes el título eran los primeros
+    60 caracteres del pedido). Los títulos claros ayudan a ti en la barra lateral y al 🧭 enrutador a reconocer temas.
+    Idea de DeepSeek Harness (dsh-session-title-first-prompt-llm, MIT); implementación propia. Si falla, queda el de siempre."""
+    if not texto or len(texto) < 25:   # pedidos cortos ya son un buen título
+        return
+    try:
+        from noviq import rapida as R
+        raw, _m, _ms = R.responder(_TITULO_SIS, texto[:1200], max_tokens=40, limite_seg=15, intentos=1, temperatura=0.2)
+    except Exception:
+        return
+    t = re.sub(r"\s+", " ", re.sub(r"[\"«»“”*#`]", "", (raw or "").splitlines()[0] if raw else "")).strip(" .:-")
+    if not (2 <= len(t) <= 70) or len(t.split()) > 9:
+        return
+    pref = re.match(r"^((?:🎙|📱|🤖)\s*(?:\[[^\]]{1,40}\]\s*)?)", titulo_auto or "")   # conserva «🎙 [proyecto] » / «📱 »
+    nuevo = ((pref.group(1) if pref else "") + t)[:60]
+    jb = JOBS.get(cid)
+    if jb and not jb["done"]:
+        if jb["conv"].get("title") == titulo_auto:   # el agente guarda la conversación seguido: lo lleva con él
+            jb["conv"]["title"] = nuevo
+        return
+    with BJ.LOCK:
+        if cid in RUNNING:
+            return
+        c = load_conv(cid)
+        if c and c.get("title") == titulo_auto:
+            c["title"] = nuevo
+            save_conv(c)
+
+
+def _avisar_ruta(job, conv, ruta):
+    """Muestra en el chat a dónde se mandó el pedido (y le dice a la ventana que abra esa conversación al terminar)."""
+    if not ruta or not (ruta.get("cambio") or ruta.get("sugerencia")):
+        return
+    if ruta.get("cambio"):
+        acc = ruta["accion"]
+        txt = {"nueva": "🧭 Conversación nueva", "continuar": "🧭 Retomo una conversación anterior",
+               "en_caliente": "🧭 Lo agrego a un trabajo en curso"}.get(acc, "🧭 Enrutado")
+        txt += (f" · proyecto «{ruta['proyecto']}»" if ruta.get("proyecto") else "") + f" ({ruta.get('motivo', '')})."
+    else:
+        sug = ruta["sugerencia"]
+        txt = ("💡 Esto parece de otro proyecto («" + sug.split(":", 1)[1] + "»). Si quieres, dilo así: «en el proyecto "
+               + sug.split(":", 1)[1] + ", …» o abre ese proyecto.") if sug.startswith("proyecto:") else \
+            "💡 Esto parece un tema distinto de esta conversación. Si prefieres separarlo, empieza con «nueva conversación: …»."
+    payload = {"text": txt}
+    conv["display"].append({"type": "notice", **payload})
+    with job["cond"]:
+        job["events"].append(("notice", payload))
+        if ruta.get("cambio"):
+            job["events"].append(("ruta", {"conversation_id": conv["id"], "accion": ruta["accion"], "proyecto": ruta.get("proyecto"),
+                                           "motivo": ruta.get("motivo", ""), "abrir": True}))
+        job["cond"].notify_all()
+
+
+def _encolar(cid, d, ruta=None):
+    """📥 La conversación está trabajando: el pedido va a su bandeja y se integra en el siguiente paso."""
+    it = BJ.agregar(cid, d.get("text"), d.get("images"), d.get("files"), d.get("origen") or "ventana")
+    if not it:
+        return jsonify({"error": "No hay nada que agregar."}), 400
+    return jsonify({"ok": True, "encolado": True, "conversation_id": cid, "id": it["id"], "pendientes": BJ.pendientes(cid),
+                    "texto": "📥 Recibido: lo integro al trabajo en curso en el siguiente paso, sin detenerlo.",
+                    "ruta": {k: ruta.get(k) for k in ("accion", "motivo", "proyecto")} if ruta else None}), 202
+
+
 @app.post("/api/chat")
 def chat():
     d = J()
+    ruta = _enrutar(d)
     cid = d.get("conversation_id") or uuid.uuid4().hex[:16]
+    with BJ.LOCK:  # «¿está trabajando?» y «encolar o empezar» en un solo paso (el trabajo puede estar terminando ahora mismo)
+        if cid in RUNNING:
+            if d.get("regenerate") or d.get("continuar"):
+                return jsonify({"error": "Esta conversación ya está trabajando."}), 409
+            return _encolar(cid, d, ruta)
+        return _chat_iniciar(d, cid, ruta)
+
+
+def _chat_iniciar(d, cid, ruta):
     conv = load_conv(cid) or new_conv(cid, d.get("project"), d.get("model") or CONFIG["model"])
     if d.get("model"):
         conv["model"] = d["model"]
@@ -386,8 +500,6 @@ def chat():
                 conv["modo_juego"] = True
     except Exception:
         pass
-    if cid in RUNNING:
-        return jsonify({"error": "Esta conversación ya está trabajando."}), 409
 
     conv["_turno_modelos"] = {}  # IAs que trabajan en este turno (para repartir el 👍/👎 del usuario)
     if d.get("regenerate"):
@@ -418,9 +530,13 @@ def chat():
         conv["messages"].append({"role": "user", "content": content})
         if conv["title"] == "Nueva conversación":
             conv["title"] = (d.get("text") or "Imagen").strip()[:60] or "Conversación"
+    primer_turno = sum(1 for m in conv["messages"] if m.get("role") == "user") == 1
     save_conv(conv)
 
-    start_job(conv)
+    job = start_job(conv)
+    _avisar_ruta(job, conv, ruta)
+    if primer_turno and not d.get("regenerate") and CONFIG.get("titulos_ia", True):
+        threading.Thread(target=_titulo_ia, args=(cid, conv["title"], (d.get("text") or "").strip()), daemon=True).start()
     return _stream_response(cid, 0)
 
 
@@ -468,18 +584,35 @@ def start_job(conv):
             conv["display"].append({"type": "error", "text": f"{type(e).__name__}: {e}"})
         finally:
             job["detenido"] = stop_ev.is_set()
+            hay_cola = BJ.pendientes(cid) > 0
+            if not hay_cola or job["detenido"]:   # si hay más pedidos en cola, todavía no se anuncia «¡Ya terminé!»
+                try:
+                    _fin_trabajo(conv, job, error)
+                except Exception:
+                    pass
             try:
-                _fin_trabajo(conv, job, error)
-            except Exception:
-                pass
-            try:
+                if hay_cola and job["detenido"]:
+                    # pulsaste Detener: lo que estaba en cola queda escrito en el chat y «▶ Continuar» lo retoma
+                    BJ.inyectar(conv, lambda *a: None, en_curso=False)
+                    conv["en_progreso"] = True
                 save_conv(conv)
             finally:
-                RUNNING.discard(cid)
-                STOP.pop(cid, None)
-                with job["cond"]:
-                    job["done"], job["t_end"] = True, time.time()
-                    job["cond"].notify_all()
+                with BJ.LOCK:   # atómico con /api/chat: o se encola en este trabajo, o arranca el siguiente
+                    RUNNING.discard(cid)
+                    STOP.pop(cid, None)
+                    if BJ.pendientes(cid) and not job["detenido"]:
+                        # 📥 llegó un pedido justo cuando el trabajo terminaba: se arranca solo un turno nuevo con él
+                        conv["_bandeja_turno_nuevo"] = True
+                        with job["cond"]:
+                            job["events"].append(("relevo_turno", {"conversation_id": cid, "pendientes": BJ.pendientes(cid)}))
+                        try:
+                            start_job(conv)
+                        except Exception as e:
+                            print(f"[bandeja] no pude arrancar el turno siguiente: {type(e).__name__}: {e}")
+                            RUNNING.discard(cid)
+                    with job["cond"]:
+                        job["done"], job["t_end"] = True, time.time()
+                        job["cond"].notify_all()
 
     threading.Thread(target=worker, daemon=True, name=f"agente-{cid}").start()
     return job
@@ -551,6 +684,47 @@ def chat_stream(cid):
     if cid not in JOBS:
         return jsonify({"error": "Esta conversación no está trabajando."}), 404
     return _stream_response(cid, int(request.args.get("since") or 0))
+
+
+# ───────────── 📥 Bandeja de peticiones en caliente ─────────────
+@app.get("/api/conversations/<cid>/bandeja")
+def bandeja_ver(cid):
+    return jsonify({"items": BJ.ver(cid), "running": cid in RUNNING})
+
+
+@app.post("/api/conversations/<cid>/bandeja")
+def bandeja_agregar(cid):
+    """Agregar un pedido a una conversación SIN detenerla: si está trabajando se integra en el siguiente paso; si ya
+    terminó (o terminó justo ahora), arranca un turno nuevo con el pedido. La ventana se reengancha con /stream."""
+    d = J()
+    with BJ.LOCK:
+        if cid in RUNNING:
+            return _encolar(cid, d)
+        conv = load_conv(cid)
+        if not conv:
+            abort(404)
+        if not BJ.agregar(cid, d.get("text"), d.get("images"), d.get("files"), d.get("origen") or "ventana"):
+            return jsonify({"error": "No hay nada que agregar."}), 400
+        conv["_bandeja_turno_nuevo"] = True
+        start_job(conv)
+    return jsonify({"ok": True, "iniciado": True, "conversation_id": cid,
+                    "texto": "▶ La conversación ya había terminado: empiezo un turno nuevo con tu pedido."})
+
+
+@app.delete("/api/conversations/<cid>/bandeja/<iid>")
+def bandeja_quitar(cid, iid):
+    return jsonify({"ok": BJ.quitar(cid, iid)})
+
+
+@app.post("/api/enrutar")
+def enrutar_api():
+    """🧭 Solo consulta: a qué conversación/proyecto iría un pedido (no ejecuta nada). Lo usan el avatar y el MCP."""
+    d = J()
+    try:
+        return jsonify(ENR.decidir(d.get("text") or "", conv_actual=d.get("conversation_id"), proyecto=d.get("project"),
+                                   modo=d.get("modo") or "auto", usar_ia=d.get("usar_ia")))
+    except Exception as e:
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
 
 
 # ───────────── 🏆 Evaluador de IAs ─────────────

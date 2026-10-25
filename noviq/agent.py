@@ -10,6 +10,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime
 
+from . import bandeja as BJ
 from . import compacto as C
 from . import diagnostico as D
 from . import director as DIR
@@ -502,6 +503,10 @@ def run_agent(conv, emit_raw, stop_ev):
         if kind in PERSIST:
             conv["display"].append({"type": kind, **payload})
 
+    # 📥 Turno nuevo arrancado por la bandeja (el usuario pidió algo justo cuando el trabajo anterior terminaba):
+    #    se trata como un pedido normal, ANTES del plan y del tipo de pedido, para que todo se base en lo nuevo
+    if conv.pop("_bandeja_turno_nuevo", False):
+        BJ.inyectar(conv, emit, en_curso=False)
     conv.pop("_tipo", None)
     conv["_tipo"] = EV.tipo_conv(conv)  # tipo del pedido actual (crear, arreglar, web, analizar, general)
     conv.setdefault("_turno_modelos", {})
@@ -588,6 +593,12 @@ def _run_once(conv, emit_raw, stop_ev):
         emit("status", {"text": f"(diagnóstico automático omitido: {type(ex).__name__}: {str(ex)[:80]})"})
     while step < max_steps:
         step += 1
+        # ── 📥 Peticiones en caliente: lo que el usuario pidió MIENTRAS se trabajaba entra en este paso (sin detener nada) ──
+        if BJ.pendientes(conv.get("id")) and not stop_ev.is_set():
+            if BJ.inyectar(conv, emit, en_curso=True):
+                emit_raw("assistant_break", {})
+                nudges = 0          # lo nuevo puede necesitar otra ronda de avisos si la IA no actúa
+                save_conv(conv)
         # ── 🤝 La propia IA pidió relevo (pedir_relevo): reconoce que no puede → escalado inmediato ──
         rel = conv.pop("_relevo", None)
         if rel:
@@ -946,6 +957,12 @@ def _run_once(conv, emit_raw, stop_ev):
                                         f"{len(calls)} acción(es) por ella y le devuelvo los resultados para que continúe."})
 
         if not calls:
+            # ── 📥 Antes de dar el trabajo por terminado: ¿el usuario pidió algo más mientras tanto? → se integra y sigue ──
+            if BJ.pendientes(conv.get("id")) and not stop_ev.is_set() and step < max_steps:
+                if BJ.inyectar(conv, emit, en_curso=True):
+                    emit_raw("assistant_break", {})
+                    save_conv(conv)
+                    continue
             pending = [t for t in conv.get("tasks") or [] if t.get("estado") != "completada"]
             # ── 📝 Informe entregado: si lo único pendiente es un informe/resumen y la IA acaba de escribirlo, esa tarea
             #    ESTÁ hecha (antes quedaba «en progreso», se le insistía, repetía el informe 3 veces y el trabajo se pausaba) ──

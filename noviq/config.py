@@ -9,7 +9,7 @@ import sys
 import threading
 from pathlib import Path
 
-VERSION = "4.2.0"
+VERSION = "4.7.0"
 # Empaquetado (PyInstaller): los archivos del programa van en _MEIPASS y los datos del usuario en su carpeta personal
 FROZEN = bool(getattr(sys, "frozen", False))
 

@@ -47,13 +47,13 @@ jobs:
         run: bash packaging/macos/build.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: noviark-${{ matrix.name }}
+          name: noviq-${{ matrix.name }}
           path: |
-            dist/NoviQ-Setup-Windows.exe
-            dist/NoviQ-Windows-portable.zip
-            dist/NoviQ-Linux-*.deb
-            dist/NoviQ-Linux-*.tar.gz
-            dist/NoviQ-macOS-*.dmg
+            dist/Noviq-Setup-Windows.exe
+            dist/Noviq-Windows-portable.zip
+            dist/Noviq-Linux-*.deb
+            dist/Noviq-Linux-*.tar.gz
+            dist/Noviq-macOS-*.dmg
           if-no-files-found: error
   release:
     needs: build
@@ -68,21 +68,21 @@ jobs:
         run: cd out && ls -lh && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v4.2.0' }}
-          name: NoviQ ${{ github.ref_type == 'tag' && github.ref_name || 'v4.2.0' }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v4.7.0' }}
+          name: NoviQ ${{ github.ref_type == 'tag' && github.ref_name || 'v4.7.0' }}
           body: |
             ## ⬇ Download / Descargar
             | System / Sistema | File / Archivo |
             |---|---|
-            | **Windows 10/11** | `NoviQ-Setup-Windows.exe` (installer / instalador) · `NoviQ-Windows-portable.zip` |
-            | **macOS Apple Silicon** (M1–M4) | `NoviQ-macOS-arm64.dmg` |
-            | **macOS Intel** | `NoviQ-macOS-x86_64.dmg` |
-            | **Ubuntu / Debian** | `NoviQ-Linux-amd64.deb` → `sudo apt install ./NoviQ-Linux-amd64.deb` · other distros / otras: `NoviQ-Linux-x86_64.tar.gz` |
+            | **Windows 10/11** | `Noviq-Setup-Windows.exe` (installer / instalador) · `Noviq-Windows-portable.zip` |
+            | **macOS Apple Silicon** (M1–M4) | `Noviq-macOS-arm64.dmg` |
+            | **macOS Intel** | `Noviq-macOS-x86_64.dmg` |
+            | **Ubuntu / Debian** | `Noviq-Linux-amd64.deb` → `sudo apt install ./Noviq-Linux-amd64.deb` · other distros / otras: `Noviq-Linux-x86_64.tar.gz` |
 
             **First launch / Primera vez**
             - Windows: SmartScreen → *More info → Run anyway* / *Más información → Ejecutar de todas formas*.
             - macOS: right-click NoviQ → *Open* / clic derecho → *Abrir*.
-            - Linux: open **NoviQ** from the apps menu or run `noviark`.
+            - Linux: open **NoviQ** from the apps menu or run `noviq`.
 
             What's new / Novedades: see [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md). Checksums: `SHA256SUMS.txt`.
           files: out/*

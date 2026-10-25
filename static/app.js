@@ -84,6 +84,7 @@ function userMsg(it) {
   if (it.images?.length) { const u = document.createElement("div"); u.className = "uimgs"; it.images.forEach(src => { const i = new Image(); i.loading = "lazy"; i.decoding = "async"; i.src = src; i.onclick = () => lightbox(src); u.append(i); }); b.append(u); }
   b.append(document.createTextNode(it.text || ""));
   if (it.files?.length) { const f = document.createElement("div"); f.className = "files"; f.textContent = "📎 " + it.files.map(x => x.split(/[\\/]/).pop()).join(", "); b.append(f); }
+  if (it.en_caliente) { const f = document.createElement("div"); f.className = "files"; f.textContent = "📥 agregado mientras trabajaba (se integró al plan)"; b.append(f); }
   thread.append(d); return d;
 }
 function aiMsg() {
@@ -372,7 +373,7 @@ async function loadConvs() {
   $("#convHead").textContent = curProject ? "Chats de " + curProject : "Conversaciones";
   list.filter(c => curProject === null || c.project === curProject).forEach(c => {
     const d = document.createElement("div"); d.className = "item" + (c.id === convId ? " active" : "");
-    d.innerHTML = `${c.running ? '<span class="run" title="Trabajando en segundo plano"></span>' : ""}<span class="t" title="${esc(c.title)}${c.model ? " · " + esc(c.model) : ""}">${esc(c.title || "Sin título")}</span>${c.project && curProject === null ? `<span class="small">${esc(c.project)}</span>` : ""}<button class="del" title="Borrar">🗑</button>`;
+    d.innerHTML = `${c.running ? '<span class="run" title="Trabajando en segundo plano"></span>' : ""}<span class="t" title="${esc(c.title)}${c.model ? " · " + esc(c.model) : ""}">${esc(c.title || "Sin título")}</span>${c.en_cola ? `<span class="small" title="Pedidos en cola: se integran al plan en el siguiente paso">📥${c.en_cola}</span>` : ""}${c.project && curProject === null ? `<span class="small">${esc(c.project)}</span>` : ""}<button class="del" title="Borrar">🗑</button>`;
     d.onclick = () => openConv(c.id);
     d.querySelector(".del").onclick = async e => { e.stopPropagation(); if (!confirm("¿Borrar esta conversación?")) return;
       await api("/api/conversations/" + c.id, {method: "DELETE"}); if (c.id === convId) newChat(); loadConvs(); };
@@ -388,7 +389,7 @@ function setProjectChip(name) {
 function newChat() {
   document.dispatchEvent(new CustomEvent("noviq:conv", {detail: null}));
   detachView(); FT.custom = null; HOME = null; stopHtmlPreview("", true);
-  convId = null; setProjectChip(curProject); showEmpty(); loadConvs(); $("#inp").focus(); $("#side").classList.remove("open");
+  convId = null; setProjectChip(curProject); showEmpty(); loadConvs(); renderCola(); $("#inp").focus(); $("#side").classList.remove("open");
 }
 async function openConv(id) {
   document.dispatchEvent(new CustomEvent("noviq:conv", {detail: id}));
@@ -426,7 +427,7 @@ async function openConv(id) {
     }
   }
   renderTasks(c.tasks || []);
-  loadConvs(); scrollEnd(true);
+  loadConvs(); scrollEnd(true); cargarCola(id);
   if (c.running) { attachStream(id); return; }
   if (lastBody) addMsgActions(lastBody, c.calif);
   showContinue(!!c.en_progreso && !c.running);
@@ -515,8 +516,52 @@ function detachView() {  // deja de mostrar el chat actual SIN detener su trabaj
   viewSeq++; if (viewCtrl) { try { viewCtrl.abort(); } catch (e) {} viewCtrl = null; }
   setBusy(false); clearFase();
 }
+/* 📥 Peticiones en caliente: lo que escribes mientras la IA trabaja se integra a su plan en el siguiente paso (sin detenerla) */
+const COLAS = {};                 // conversación → [{id, texto}] pendientes de integrar
+let REENGANCHAR = null, ABRIR_LUEGO = null;
+function inpTieneAlgo() { return !!($("#inp").value.trim() || attachments.length || attFiles.length); }
+function updSendBtn() {
+  const s = $("#send"); if (!s) return;
+  const agregar = busy && inpTieneAlgo();
+  s.textContent = !busy ? "Enviar" : (agregar ? "📥 Agregar" : "■ Detener");
+  s.classList.toggle("stop", busy && !agregar);
+  s.title = !busy ? "" : (agregar ? "Agregar al trabajo en curso: se integra al plan sin detener a la IA" : "Detener el trabajo");
+}
+function renderCola() {
+  let bar = $("#colaBar");
+  if (!bar) { bar = document.createElement("div"); bar.id = "colaBar"; bar.className = "small";
+    bar.style.cssText = "display:none;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0 6px;padding:6px 10px;border:1px dashed var(--border);border-radius:10px;background:var(--panel2)";
+    const box = $("#box"); box.parentNode.insertBefore(bar, box); }
+  const items = (convId && COLAS[convId]) || [];
+  bar.style.display = items.length ? "flex" : "none";
+  bar.innerHTML = items.length ? `<b>📥 En cola (${items.length}):</b> ` : "";
+  items.forEach(x => { const s = document.createElement("span"); s.style.cssText = "padding:2px 8px;border-radius:8px;border:1px solid var(--border)";
+    s.textContent = "«" + (x.texto || "🖼").slice(0, 60) + "»"; const q = document.createElement("button"); q.className = "ibtn"; q.textContent = "✕"; q.title = "Quitar antes de que la IA lo lea";
+    q.onclick = async () => { const cid = convId; await api(`/api/conversations/${cid}/bandeja/${x.id}`, {method: "DELETE"}); COLAS[cid] = (COLAS[cid] || []).filter(y => y.id !== x.id); renderCola(); };
+    s.append(q); bar.append(s); });
+}
+async function cargarCola(id) {
+  try { const j = await jget(`/api/conversations/${id}/bandeja`); COLAS[id] = (j.items || []).map(x => ({id: x.id, texto: x.texto})); } catch (e) { COLAS[id] = []; }
+  if (id === convId) renderCola();
+}
+async function encolarPedido() {
+  if (!convId) return;
+  if (!inpTieneAlgo()) { toast("⏳ La IA está trabajando. Escribe lo que quieres agregar o cambiar y se integra sin detenerla; ■ Detener la para."); return; }
+  const cid = convId, text = $("#inp").value.trim();
+  const body = {text, images: attachments.slice(), files: attFiles.slice()};
+  attachments = []; attFiles = []; renderAtt(); $("#inp").value = ""; autoGrow(); updSendBtn();
+  try {
+    const j = await jpost(`/api/conversations/${cid}/bandeja`, body);
+    if (j.encolado) { (COLAS[cid] = COLAS[cid] || []).push({id: j.id, texto: text}); renderCola(); toast(j.texto || "📥 Recibido: se integra en el siguiente paso."); }
+    else if (j.iniciado) { REENGANCHAR = cid; toast(j.texto || "▶ Empiezo un turno nuevo con tu pedido."); }
+    else toast("No pude agregarlo: " + (j.error || "error desconocido"));
+  } catch (e) { toast("No pude agregarlo: " + e.message); }
+}
 async function send(opts = {}) {
-  if (busy) { toast("⏳ La IA está trabajando en este chat. Para detenerla pulsa ■ Detener; para trabajar en paralelo abre otro chat o proyecto."); return; }
+  if (busy) {
+    if (opts.regenerate || opts.continuar) { toast("⏳ La IA está trabajando en este chat. Pulsa ■ Detener o espera a que termine."); return; }
+    return encolarPedido();
+  }
   const text = opts.continuar ? "" : $("#inp").value.trim();
   if (!opts.regenerate && !opts.continuar && !text && !attachments.length && !attFiles.length) return;
   showContinue(false);
@@ -556,6 +601,13 @@ async function runStream(url, init, r, body) {
     let lost = null, gotDone = false;
     try {
       const res = await api(url, Object.assign({signal: viewCtrl.signal}, init));
+      if (res.status === 202) {  // 📥 el 🧭 enrutador lo mandó a una conversación que está trabajando: quedó en su bandeja
+        const j = await res.json().catch(() => ({}));
+        r.notice({text: (j.texto || "📥 Recibido: se integra al trabajo en curso.") + (j.ruta && j.ruta.motivo ? " (🧭 " + j.ruta.motivo + ")" : "")});
+        r.finish(); clearFase(); setBusy(false); viewCtrl = null;
+        if (j.conversation_id) { if (j.id) (COLAS[j.conversation_id] = COLAS[j.conversation_id] || []).push({id: j.id, texto: ""}); openConv(j.conversation_id); }
+        return;
+      }
       if (!res.ok) { const j = await res.json().catch(() => ({})); const er = new Error(j.error || res.statusText); er.http = res.status; throw er; }
       const reader = res.body.getReader(), dec = new TextDecoder();
       let buf = "";
@@ -603,6 +655,9 @@ async function runStream(url, init, r, body) {
   }
   if (aborted || seq !== viewSeq) return;  // el usuario cambió de chat: el trabajo sigue en segundo plano
   r.finish(); clearFase(); addMsgActions(body); setBusy(false); viewCtrl = null; loadConvs(); refreshContinue();
+  // 🧭 el pedido se hizo en otra conversación → se abre completa · 📥 arrancó un turno nuevo con lo que estaba en cola → se sigue en vivo
+  if (ABRIR_LUEGO && ABRIR_LUEGO !== "_") { const c = ABRIR_LUEGO; ABRIR_LUEGO = null; REENGANCHAR = null; openConv(c); return; }
+  if (REENGANCHAR && REENGANCHAR === convId) { REENGANCHAR = null; openConv(convId); }
 }
 function handleEvent(ev, p, r) {
   if (window.estudioEvento) { try { window.estudioEvento(ev, p); } catch (e) { console.warn(e); } }
@@ -631,6 +686,11 @@ function handleEvent(ev, p, r) {
     case "notice": r.notice(p); break;
     case "error": r.error(p); break;
     case "tasks": renderTasks(p.tasks); break;
+    case "inbox_tomado": { const ids = new Set((p.items || []).map(x => x.id));
+      if (convId) { COLAS[convId] = (COLAS[convId] || []).filter(x => !ids.has(x.id)); renderCola(); REENGANCHAR = convId; }  // al terminar se redibuja con tu pedido en su lugar
+      break; }
+    case "relevo_turno": REENGANCHAR = p.conversation_id || convId; break;
+    case "ruta": if (p.abrir && p.conversation_id) ABRIR_LUEGO = p.conversation_id; break;
     case "project": r.project(p); setProjectChip(p.name); loadProjects().then(() => { if ($("#preview").classList.contains("show") && $("#pvFiles").style.display !== "none") { FT.root = null; loadTree(); } }); break;
   }
 }
@@ -649,7 +709,7 @@ function showFase(p) {
 }
 function clearFase() { clearInterval(FASE.timer); FASE.tAll = 0; const el = $("#fase"); if (el) el.style.display = "none"; }
 function stopGen() { jpost("/api/stop", {conversation_id: convId}); }
-function setBusy(b) { busy = b; const s = $("#send"); s.textContent = b ? "■ Detener" : "Enviar"; s.classList.toggle("stop", b); }
+function setBusy(b) { busy = b; updSendBtn(); }
 function hasAnyProvider() { return PROVIDERS.some(p => p.ok) || Object.values(CFG.providers || {}).some(p => p.has_key); }
 
 /* ───────────── Adjuntos ───────────── */
@@ -688,8 +748,9 @@ document.addEventListener("drop", e => { e.preventDefault(); dragN = 0; $("#drop
 const inp = $("#inp");
 function autoGrow() { inp.style.height = "auto"; inp.style.height = Math.min(inp.scrollHeight, 240) + "px"; }
 inp.addEventListener("input", autoGrow);
+inp.addEventListener("input", updSendBtn);
 inp.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
-$("#send").onclick = () => busy ? stopGen() : send();
+$("#send").onclick = () => busy ? (inpTieneAlgo() ? send() : stopGen()) : send();
 $("#newChat").onclick = newChat;
 $("#menuBtn").onclick = () => $("#side").classList.toggle("open");
 const projPath = name => (PROJECTS.find(p => p.name === name) || {}).path;

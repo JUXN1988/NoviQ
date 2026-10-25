@@ -65,7 +65,12 @@ Luego entra en **⚙ Ajustes → Proveedores y claves**, pega la API key de un p
 
 ### ✨ Qué hace
 
-- **Agente con 40 herramientas**: crear y editar archivos, buscar en el código, ejecutar PowerShell, Python y comandos de Linux, administrar procesos, hacer peticiones HTTP, buscar y leer páginas web, descargar archivos, generar imágenes, captura de pantalla, abrir archivos y programas, y usar un navegador automatizado.
+- **📥 Pídele más mientras trabaja (nuevo en 4.7)**: si la IA o los agentes están trabajando y escribes algo más (en la ventana, por voz al avatar, por Telegram o por MCP), el pedido entra en la bandeja de esa conversación y se **integra al plan en el siguiente paso**, sin detener nada. En la ventana, el botón cambia a **📥 Agregar** y ves lo que está en cola.
+- **🧭 Conversaciones que no se mezclan (nuevo en 4.7)**: cada pedido va a donde corresponde: sigue la misma conversación, retoma otra («sigue con lo del login»), abre una nueva («nueva conversación: …» / «otro tema…»), trabaja dentro del proyecto que nombras o crea un proyecto nuevo. Con el avatar y Telegram decide solo; en la ventana nunca te cambia de chat sin pedirlo.
+- **🏷 Títulos automáticos (nuevo en 4.7)**: el primer pedido de cada conversación se resume en un título corto.
+- **Agente con 62 herramientas**: crear y editar archivos, buscar en el código, ejecutar PowerShell, Python y comandos de Linux, administrar procesos, hacer peticiones HTTP, buscar y leer páginas web, descargar archivos, generar imágenes, captura de pantalla, abrir archivos y programas, usar un navegador automatizado, y herramientas de juegos, oficina y Windows.
+- **Estudio de juegos** 2D, 3D y voxel, con modelos 3D propios.
+- **Telegram, correo y agenda**: pídele trabajos y aprueba permisos desde el celular, y programa tareas.
 - **Plan antes de actuar**: el agente hace un plan de trabajo que puedes editar o aprobar. Si no haces nada, se aprueba automáticamente tras una cuenta regresiva.
 - **Se prueba a sí mismo**: `diagnosticar` revisa el proyecto y reporta problemas con archivo y línea; `probar_web` abre webs y juegos en un navegador invisible y revisa errores de JavaScript, archivos que no cargan y si los controles responden.
 - **Guardián de razonamiento**: si un modelo piensa demasiado sin actuar o entra en bucle, NoviQ lo corta y lo obliga a actuar.
@@ -152,7 +157,12 @@ Then go to **⚙ Settings → Providers & keys**, paste an API key from a provid
 
 ### ✨ What it does
 
-- **Agent with 40 tools**: create and edit files, search code, run PowerShell, Python and Linux commands, manage processes, make HTTP requests, search and read web pages, download files, generate images, take screenshots, open files and programs, and use an automated browser.
+- **📥 Ask for more while it works (new in 4.7)**: if the AI or the agents are working and you type something else (in the window, by voice to the avatar, by Telegram or by MCP), the request goes into that conversation's inbox and is **merged into the plan at the next step**, without stopping anything. In the window, the button turns into **📥 Add** and you see what is queued.
+- **🧭 Conversations that don't mix (new in 4.7)**: each request goes where it belongs: it continues the same conversation, resumes another one («continue with the login»), opens a new one («new conversation: …»), works inside the project you name, or creates a new project. With the avatar and Telegram it decides on its own; in the window it never switches your chat unless you ask.
+- **🏷 Automatic titles (new in 4.7)**: the first request of each conversation is summarized in a short title.
+- **Agent with 62 tools**: create and edit files, search code, run PowerShell, Python and Linux commands, manage processes, make HTTP requests, search and read web pages, download files, generate images, take screenshots, open files and programs, use an automated browser, plus game, office and Windows tools.
+- **Game studio** for 2D, 3D and voxel games, with its own 3D models.
+- **Telegram, email and schedule**: send jobs and approve permissions from your phone, and schedule tasks.
 - **Plan before acting**: the agent drafts a work plan you can edit or approve. If you do nothing, it is approved automatically after a countdown.
 - **Tests its own work**: `diagnosticar` checks the project and reports problems with file and line; `probar_web` opens web apps and games in an invisible browser and checks for JavaScript errors, files that fail to load and whether controls respond.
 - **Reasoning guardian**: if a model thinks too long without acting or loops, NoviQ stops it and makes it act.

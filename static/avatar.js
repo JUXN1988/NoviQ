@@ -44,8 +44,8 @@
   };
 
   /* ── Pedido por voz → al chat abierto (se ve igual que si lo escribieras) ── */
-  function tomarVoz(d) {
-    let ok = false;
+  async function tomarVoz(d) {
+    let ok = false, enCola = false;
     try {
       const caja = $("#inp");
       if (!busy && typeof send === "function" && hasAnyProvider() && !(attachments && attachments.length) && !(attFiles && attFiles.length)) {
@@ -55,10 +55,20 @@
         caja.value = borrador;  // tu borrador vuelve a su lugar
         autoGrow();
         ok = true;
+      } else if (busy && convId) {
+        // 📥 el chat abierto está trabajando: si el pedido es de ese mismo trabajo, se integra a su plan sin detenerlo;
+        //    si es otro tema, Noviq lo hace aparte (en su propia conversación)
+        const cid = convId;
+        const ru = await jpost("/api/enrutar", {text: d.texto, conversation_id: cid, modo: "auto", usar_ia: false}).catch(() => null);
+        if (ru && ru.conv === cid && (ru.accion === "en_caliente" || ru.accion === "misma")) {
+          const j = await jpost(`/api/conversations/${cid}/bandeja`, {text: d.texto, origen: "voz"});
+          if (j && j.encolado) { (COLAS[cid] = COLAS[cid] || []).push({id: j.id, texto: d.texto}); renderCola(); ok = enCola = true; }
+          else if (j && j.iniciado) { REENGANCHAR = cid; ok = true; }
+        }
       }
     } catch (e) { console.warn("voz", e); }
     jpost("/api/avatar/tomado", {id: d.id, ok}).catch(() => {});
-    if (ok) toast("🎙 " + d.texto);
+    if (ok) toast((enCola ? "📥 🎙 " : "🎙 ") + d.texto);
   }
 
   let es = null;

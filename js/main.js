@@ -19,14 +19,14 @@
 
     strip_t: "AI providers you can connect",
 
-    n1: "agent tools: files, code, PowerShell, Python, Linux, web and browser",
+    n1: "agent tools: files, code, PowerShell, Python, Linux, web, browser, games and office",
     n2: "permission modes; the default one asks before acting",
     n3: "interface languages: Spanish and English",
     n4: "minimum Python version to run it",
 
     feat_k: "Features", feat_t: "What it does, today",
     feat_p: "These are the features that exist in the current program.",
-    f1t: "40 tools", f1d: "Files, code search, PowerShell, Python, Linux, processes, HTTP, web search and reading, images, screenshots, automated browser and more.",
+    f1t: "62 tools", f1d: "Files, code search, PowerShell, Python, Linux, processes, HTTP, web search and reading, images, screenshots, automated browser and more.",
     f2t: "Plan before acting", f2d: "You can edit or approve the plan. If you do nothing, it is approved automatically after a countdown.",
     f3t: "Tests itself", f3d: "The diagnosticar tool reviews the project with file and line; probar_web tests web apps and games in an invisible browser.",
     f4t: "Reasoning guardian", f4d: "If a model thinks too long without acting or loops, NoviQ stops it and makes it act.",
@@ -35,6 +35,8 @@
     f7t: "Local AI", f7d: "Ollama and LM Studio, with context sized to your computer's memory. Your code stays on your PC.",
     f8t: "Security", f8d: "Permission modes, backups and restore points, deletes go to the Recycle Bin, secret scanner and key vault.",
     f9t: "Providers and MCP", f9d: "NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq and more. MCP servers with the same format as Claude Desktop.",
+    f10t: "Ask for more while it works", f10d: "If you type something while the AI works, it goes into the inbox and joins its plan at the next step, without stopping it. In the window the button turns into «📥 Add».",
+    f11t: "Conversations that don't mix", f11d: "Each request goes to its place: it follows the topic, resumes another conversation, opens a new one or works in the project you name. With the avatar and Telegram it decides on its own.",
 
     shots_k: "Real screenshots", shots_t: "What the program looks like",
     gal_1: "Building live", gal_2: "Editable plan", gal_3: "Choosing a model", gal_4: "Projects", gal_5: "Home",

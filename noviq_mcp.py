@@ -156,8 +156,16 @@ def t_ver(a):
 def t_enviar(a):
     body = {"text": a["texto"], "conversation_id": a.get("conversation_id") or None, "project": a.get("proyecto") or None,
             "model": a.get("modelo") or None, "permiso": a.get("permiso") or None, "origen": a.get("origen") or None,
-            "titulo": a.get("titulo") or None, "images": a.get("imagenes") or None}
+            "titulo": a.get("titulo") or None, "images": a.get("imagenes") or None,
+            "sin_enrutar": True if a.get("sin_enrutar") else None}
     r = _api("POST", "/api/chat", {k: v for k, v in body.items() if v is not None}, stream=True, timeout=(10, 600))
+    if r.status_code == 202:   # 📥 esa conversación estaba trabajando: el pedido quedó en su bandeja y se integra solo
+        try:
+            j = r.json()
+        finally:
+            r.close()
+        return (f"Conversación: {j.get('conversation_id')}\n📥 La conversación estaba trabajando: el pedido quedó en su bandeja "
+                f"y se integra en el siguiente paso ({j.get('pendientes', 1)} en cola). Sigue su avance con noviq_ver_conversacion.")
     if r.status_code != 200:
         return f"ERROR {r.status_code}: {r.text[:300]}"
     return _consume(r, int(a.get("max_segundos") or 300) if a.get("esperar", True) else 3)
@@ -169,6 +177,30 @@ def t_continuar(a):
     if r.status_code != 200:
         return f"ERROR {r.status_code}: {r.text[:300]}"
     return _consume(r, int(a.get("max_segundos") or 300) if a.get("esperar", True) else 3)
+
+
+def t_agregar(a):
+    """📥 Agrega un pedido a una conversación SIN detenerla (se integra en su siguiente paso)."""
+    r = _api("POST", f"/api/conversations/{a['conversation_id']}/bandeja",
+             {"text": a["texto"], "origen": a.get("origen") or "mcp"}, timeout=(10, 30))
+    try:
+        j = r.json()
+    except ValueError:
+        j = {}
+    finally:
+        r.close()
+    if r.status_code == 202:
+        return f"📥 Agregado a la conversación {a['conversation_id']} (está trabajando): se integra en el siguiente paso ({j.get('pendientes', 1)} en cola)."
+    if r.status_code == 200 and j.get("iniciado"):
+        return f"▶ La conversación {a['conversation_id']} ya había terminado: empezó un turno nuevo con el pedido."
+    return f"ERROR {r.status_code}: {(j.get('error') if j else '') or r.text[:300]}"
+
+
+def t_enrutar(a):
+    """🧭 Solo consulta a qué conversación/proyecto iría un pedido (no ejecuta nada)."""
+    j = _json("POST", "/api/enrutar", {"text": a["texto"], "conversation_id": a.get("conversation_id") or None,
+                                       "project": a.get("proyecto") or None, "modo": "auto"})
+    return json.dumps(j, ensure_ascii=False, indent=1)
 
 
 def t_detener(a):
@@ -345,6 +377,10 @@ TOOLS = [
       "max_segundos": {"type": "integer", "description": "máximo a esperar (def. 300); el trabajo sigue aunque se deje de esperar"}}, ["texto"], t_enviar),
     ("noviq_continuar", "Continúa un trabajo que quedó a medias, exactamente donde quedó.",
      {"conversation_id": S("id"), "esperar": {"type": "boolean"}, "max_segundos": {"type": "integer"}}, ["conversation_id"], t_continuar),
+    ("noviq_agregar", "Agrega un pedido a una conversación que está trabajando SIN detenerla: los agentes lo integran a su plan en el siguiente paso. Si ya terminó, empieza un turno nuevo con el pedido.",
+     {"conversation_id": S("id de la conversación"), "texto": S("Lo que hay que agregar o cambiar")}, ["conversation_id", "texto"], t_agregar),
+    ("noviq_enrutar", "Consulta (sin ejecutar) a qué conversación o proyecto iría un pedido: misma, continuar otra, en caliente o nueva.",
+     {"texto": S("El pedido"), "conversation_id": S("Conversación actual (opcional)"), "proyecto": S("Proyecto actual (opcional)")}, ["texto"], t_enrutar),
     ("noviq_detener", "Detiene el trabajo en curso de una conversación.", {"conversation_id": S("id")}, ["conversation_id"], t_detener),
     ("noviq_ranking", "Ranking de IAs del evaluador de Noviq por tipo de tarea (crear, arreglar, web, analizar, general) y últimos eventos (fallos, bucles, 👍/👎…).",
      {"tipo": S("crear | arreglar | web | analizar | general (vacío = todos)"), "n": {"type": "integer"}, "eventos": {"type": "boolean"}}, [], t_ranking),

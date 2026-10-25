@@ -303,30 +303,62 @@ def _descargar(file_id):
     return p
 
 
+def _ruta(texto, cid):
+    """🧭 ¿Este mensaje sigue la conversación de Telegram, retoma otra, o es un tema nuevo? (y 📥 si está trabajando)."""
+    try:
+        from . import enrutador as ENR
+        dec = ENR.decidir(texto, conv_actual=cid, modo="auto")
+        return dec, ENR.preparar_texto(dec, texto), dec.get("conv") in ENR.ocupados()
+    except Exception:
+        return {"accion": "misma" if cid else "nueva", "conv": cid, "proyecto": None}, texto, False
+
+
 def _trabajar(texto, imagenes=None, continuar=False):
-    """Manda el pedido a Noviq (herramienta noviq_enviar del MCP de control) y contesta con el resultado."""
-    if not _ocupado.acquire(blocking=False):
+    """Manda el pedido a Noviq (herramienta noviq_enviar del MCP de control) y contesta con el resultado.
+    Si llega otro mensaje mientras trabaja: si es del mismo trabajo se integra en caliente (📥 bandeja, sin detener
+    nada); si es otro tema, se hace EN PARALELO en otra conversación (antes se rechazaba con «sigo con el anterior»)."""
+    F = _mcp()
+    cid = _conv_id()
+    dec, texto_ia, ocupada = ({"accion": "misma", "conv": cid}, texto, False) if continuar else _ruta(texto, cid)
+    destino = dec.get("conv") if dec.get("accion") in ("misma", "continuar", "en_caliente") else None
+    if not continuar and destino and ocupada:
+        try:
+            import noviq_mcp
+            r = noviq_mcp._api("POST", f"/api/conversations/{destino}/bandeja",
+                               {"text": texto_ia, "images": imagenes or [], "origen": "telegram"}, timeout=(10, 20))
+            if r.status_code in (200, 202):
+                enviar("📥 Lo agrego al trabajo en curso: lo integro en el siguiente paso, sin detenerlo. Te aviso al terminar.")
+                return
+        except Exception as e:
+            _hilo["error"] = f"bandeja: {e}"
+    principal = _ocupado.acquire(blocking=False)
+    if not principal and continuar:
         enviar("⏳ Sigo con el pedido anterior. Te aviso al terminar (o usa /detener).")
         return
     try:
-        enviar("⏳ Trabajando en eso…", silencioso=True)
-        F = _mcp()
-        cid = _conv_id()
+        if principal:
+            enviar("⏳ Trabajando en eso…", silencioso=True)
+        else:
+            enviar("🧭 Es otro tema: lo empiezo en paralelo en otra conversación mientras sigo con el anterior.", silencioso=True)
         if continuar:
             if not cid:
                 enviar("No hay ningún trabajo de Telegram para continuar.")
                 return
             res = F["noviq_continuar"]({"conversation_id": cid, "esperar": True, "max_segundos": 3600})
         else:
-            args = {"texto": texto, "esperar": True, "max_segundos": 3600, "permiso": "auto", "origen": "telegram",
-                    "titulo": "📱 " + (texto or "Telegram")[:50]}
-            if cid:
-                args["conversation_id"] = cid
+            args = {"texto": texto_ia, "esperar": True, "max_segundos": 3600, "permiso": "auto", "origen": "telegram",
+                    "titulo": "📱 " + (dec.get("titulo") or texto or "Telegram")[:50], "sin_enrutar": True}
+            if destino:
+                args["conversation_id"] = destino
+            elif dec.get("proyecto"):
+                args["proyecto"] = dec["proyecto"]
             if imagenes:
                 args["imagenes"] = imagenes
+            if dec.get("accion") == "continuar" or (dec.get("accion") == "nueva" and (dec.get("proyecto") or dec.get("nuevo_proyecto"))):
+                enviar("🧭 " + (dec.get("motivo") or "enrutado"), silencioso=True)
             res = F["noviq_enviar"](args)
         m = re.search(r"Conversación: (\w+)", res or "")
-        if m and m.group(1) != "None":
+        if m and m.group(1) != "None" and principal:
             _guardar_estado(conv=m.group(1))
         final = res.split("Respuesta de la IA:\n", 1)[-1] if "Respuesta de la IA:" in (res or "") else res
         errores = re.search(r"ERRORES:\n(.*?)(\n\n|$)", res or "", re.S)
@@ -334,7 +366,8 @@ def _trabajar(texto, imagenes=None, continuar=False):
     except Exception as e:
         enviar(f"❌ No pude hacerlo: {e}")
     finally:
-        _ocupado.release()
+        if principal:
+            _ocupado.release()
 
 
 def _comando(cmd, arg, chat):
