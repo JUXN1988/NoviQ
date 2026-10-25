@@ -1,4 +1,4 @@
-# Noviark roadmap / Hoja de ruta
+# NoviQ roadmap / Hoja de ruta
 
 Dates are targets, not promises. Enterprise customers help prioritize.
 Las fechas son objetivos. Los clientes Enterprise ayudan a priorizar.
@@ -29,5 +29,5 @@ Las fechas son objetivos. Los clientes Enterprise ayudan a priorizar.
 - MCP connector catalog / Catálogo de conectores MCP
 
 ## v6 — Own models / Modelos propios (2027 Q3+)
-- Compact models fine-tuned by Noviark Labs for local coding / Modelos compactos afinados para programar en local
+- Compact models fine-tuned by NoviQ Labs for local coding / Modelos compactos afinados para programar en local
 - Mobile app to supervise agents / App móvil para supervisar agentes

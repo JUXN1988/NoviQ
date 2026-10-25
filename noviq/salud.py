@@ -76,7 +76,7 @@ def classify(status, body, pid="", model="", local=False):
                 "Espera a que se renueve la cuota, recarga saldo o usa un modelo gratuito de otro proveedor.")
     if status == 429 or "rate limit" in t or "too many requests" in t:
         return ("limite", f"Llegaste al límite de uso de {pname} (por minuto o por día).",
-                "Noviark continúa con otra IA del respaldo; este modelo se reintenta en unos minutos.")
+                "NoviQ continúa con otra IA del respaldo; este modelo se reintenta en unos minutos.")
     if local:
         if "requires more system memory" in t or "out of memory" in t or "insufficient memory" in t \
                 or "not enough memory" in t or "failed to allocate" in t or "cudamalloc" in t or "exceeds" in t and "memory" in t:
@@ -96,7 +96,7 @@ def classify(status, body, pid="", model="", local=False):
                       "(«Function not found for account»: el modelo fue retirado, está en otra región o no está habilitado para ti).")
         else:
             motivo = f"El modelo {model} no existe o ya no está disponible en {pname}."
-        return ("no_disponible", motivo, "Elige otro modelo: Noviark lo salta automáticamente durante 24 h y sigue con el respaldo.")
+        return ("no_disponible", motivo, "Elige otro modelo: NoviQ lo salta automáticamente durante 24 h y sigue con el respaldo.")
     return (None, None, None)
 
 

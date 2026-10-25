@@ -1,8 +1,8 @@
 # Changelog / Historial de cambios
 
 ## v4.2.0 — 2026-09
-**New name: Noviark** (formerly Noviq, Rurak and NVIDIA Chat). Your data and key vault keep working.
-**Nuevo nombre: Noviark** (antes Noviq, Rurak y NVIDIA Chat). Tus datos y tu bóveda de claves siguen funcionando.
+**New name: NoviQ** (formerly Noviq, Rurak and NVIDIA Chat). Your data and key vault keep working.
+**Nuevo nombre: NoviQ** (antes Noviq, Rurak y NVIDIA Chat). Tus datos y tu bóveda de claves siguen funcionando.
 
 - Reasoning guardian: stops models that think too long or loop, and makes them act / Guardián de razonamiento.
 - Escalation to the most capable enabled model when the agent gets stuck / Escalado a la IA más capaz.

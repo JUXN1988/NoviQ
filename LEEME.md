@@ -1,25 +1,25 @@
-# Noviark 4.2: agente de IA de escritorio
+# NoviQ 4.2: agente de IA de escritorio
 
-Noviark es un programa para trabajar con IA en tu PC al estilo de Claude. La IA no solo conversa: crea proyectos, escribe y edita código, lo prueba, ejecuta PowerShell y Python, busca en internet, dibuja, ve tu pantalla y recuerda lo que haces. Funciona con **NVIDIA (build.nvidia.com)**, **Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral y xAI**, y con **IA local mediante Ollama y LM Studio**. Si una IA falla, **continúa con otra sin perder nada**.
+NoviQ es un programa para trabajar con IA en tu PC al estilo de Claude. La IA no solo conversa: crea proyectos, escribe y edita código, lo prueba, ejecuta PowerShell y Python, busca en internet, dibuja, ve tu pantalla y recuerda lo que haces. Funciona con **NVIDIA (build.nvidia.com)**, **Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral y xAI**, y con **IA local mediante Ollama y LM Studio**. Si una IA falla, **continúa con otra sin perder nada**.
 
 ## Instalar (recomendado)
-Descarga el instalador de tu sistema desde la web de Noviark Labs o desde GitHub → Releases:
-- **Windows 10/11**: `Noviark-Setup-Windows.exe` (o la versión portable `.zip`). Crea accesos en el menú Inicio y, si quieres, en el Escritorio.
-- **Ubuntu / Debian**: `sudo apt install ./Noviark-Linux-amd64.deb` y luego busca **Noviark** en tus aplicaciones.
-- **macOS (Apple Silicon)**: abre `Noviark-macOS-arm64.dmg` y arrastra Noviark a Aplicaciones. La primera vez: clic derecho → Abrir.
+Descarga el instalador de tu sistema desde la web de NoviQ Labs o desde GitHub → Releases:
+- **Windows 10/11**: `NoviQ-Setup-Windows.exe` (o la versión portable `.zip`). Crea accesos en el menú Inicio y, si quieres, en el Escritorio.
+- **Ubuntu / Debian**: `sudo apt install ./NoviQ-Linux-amd64.deb` y luego busca **NoviQ** en tus aplicaciones.
+- **macOS (Apple Silicon)**: abre `NoviQ-macOS-arm64.dmg` y arrastra NoviQ a Aplicaciones. La primera vez: clic derecho → Abrir.
 
-Noviark se abre en **su propia ventana nativa**, como cualquier programa (no en el navegador). El idioma (**español o inglés**) se elige solo según tu sistema; puedes cambiarlo en ⚙ Ajustes. Para cerrarlo por completo usa **⏻ Apagar Noviark**. Tus datos se guardan en `%APPDATA%\Noviark` (Windows), `~/Library/Application Support/Noviark` (macOS) o `~/.local/share/Noviark` (Linux).
+NoviQ se abre en **su propia ventana nativa**, como cualquier programa (no en el navegador). El idioma (**español o inglés**) se elige solo según tu sistema; puedes cambiarlo en ⚙ Ajustes. Para cerrarlo por completo usa **⏻ Apagar NoviQ**. Tus datos se guardan en `%APPDATA%\NoviQ` (Windows), `~/Library/Application Support/NoviQ` (macOS) o `~/.local/share/NoviQ` (Linux).
 
 ## Iniciar desde el código (Windows)
 1. Instala **Python 3.10 o superior** (https://www.python.org/downloads/). Al instalarlo, marca **"Add Python to PATH"**.
 2. Haz doble clic en **`iniciar.bat`**. La primera vez tarda 1 o 2 minutos porque instala todo en `.venv`. Después se abre en su ventana.
 3. Entra en **⚙ Ajustes → Proveedores y claves**, pega tus API keys y marca **activo** (o usa 🎁 IA gratis).
-4. Opcional: `crear_acceso_directo.bat` pone un acceso directo **Noviark** con su icono en tu Escritorio.
+4. Opcional: `crear_acceso_directo.bat` pone un acceso directo **NoviQ** con su icono en tu Escritorio.
 
 ## Compilar los instaladores
-- Windows: `packaging\windows\build.bat` → `dist\Noviark-Setup-Windows.exe` y `dist\Noviark-Windows-portable.zip`
-- Ubuntu: `bash packaging/linux/build.sh` → `dist/Noviark-Linux-amd64.deb`
-- macOS: `bash packaging/macos/build.sh` → `dist/Noviark-macOS-<arch>.dmg`
+- Windows: `packaging\windows\build.bat` → `dist\NoviQ-Setup-Windows.exe` y `dist\NoviQ-Windows-portable.zip`
+- Ubuntu: `bash packaging/linux/build.sh` → `dist/NoviQ-Linux-amd64.deb`
+- macOS: `bash packaging/macos/build.sh` → `dist/NoviQ-macOS-<arch>.dmg`
 - Automático: al subir una etiqueta `v4.2.0` a GitHub, Actions compila los tres y los publica en Releases.
 
 ## Claves y proveedores
@@ -63,7 +63,7 @@ Cuando se le pedía arreglar un programa, la IA a veces se quedaba **razonando s
 ### 🩺 Herramientas nuevas para depurar (como las de Claude)
 - **diagnosticar**: revisa el proyecto completo y devuelve la lista PRIORIZADA de problemas con archivo:línea y cómo arreglarlos: codificación dañada (la repara a UTF-8 con respaldo), código omitido («// ... resto del código»), funciones que se llaman pero no existen o están en un archivo que la página no carga, orden de los `<script>`, `getElementById` de ids que no existen, librerías (THREE, jQuery, Phaser…) usadas sin cargarlas, módulos ES abiertos con doble clic, sintaxis, nombres y dependencias, y abre la página en un navegador invisible.
 - **probar_web**: abre la web o el juego en Edge/Chrome **invisible** (sin instalar nada) y reporta errores de JavaScript con archivo:línea, archivos que no cargan, la consola, una captura (la IA la ve) y si la pantalla o el canvas quedan vacíos. Simula teclas, clics, arrastrar el mouse, rueda y texto, e indica si la imagen cambió (¿los controles funcionan?).
-- **Diagnóstico automático**: si dices «no funciona», «revisa», «arregla»…, Noviark diagnostica el proyecto antes de que la IA empiece y le entrega los errores reales como punto de partida.
+- **Diagnóstico automático**: si dices «no funciona», «revisa», «arregla»…, NoviQ diagnostica el proyecto antes de que la IA empiece y le entrega los errores reales como punto de partida.
 - El **agente de pruebas final** también abre las webs en el navegador invisible antes de dar el trabajo por terminado.
 
 ### ✏️ Archivos más seguros
@@ -76,7 +76,7 @@ Cuando se le pedía arreglar un programa, la IA a veces se quedaba **razonando s
 
 ### ✅ La lista de modelos muestra solo los que funcionan (y primero los mejores)
 - Arriba aparece «⭐ Los mejores que funcionan con tus claves» (ya probados), y cada modelo tiene una línea en palabras simples: muy inteligente, programa bien, rápido, gratis, ve imágenes… y para qué sirve.
-- Si tienes **varias API keys** (por ejemplo dos cuentas de NVIDIA), Noviark prueba cada modelo con todas y usa la clave que funcione con ese modelo. En ⚙ Ajustes → Proveedores, «🩺 Probar cada clave» dice cuál funciona. Al cambiar tus claves se vuelve a probar todo.
+- Si tienes **varias API keys** (por ejemplo dos cuentas de NVIDIA), NoviQ prueba cada modelo con todas y usa la clave que funcione con ese modelo. En ⚙ Ajustes → Proveedores, «🩺 Probar cada clave» dice cuál funciona. Al cambiar tus claves se vuelve a probar todo.
 - Un **agente verificador** (sin IA) prueba en segundo plano, con un mensaje mínimo y respetando los límites gratuitos, qué modelos responden de verdad con tu cuenta (NVIDIA lista muchos que tu cuenta no puede usar). Cada modelo queda ✅ verificado, ❔ sin verificar o ⛔ no operativo con su motivo.
 - Por defecto se ocultan los que no funcionan («✅ Solo los que funcionan»); «🔎 Verificar todos» los vuelve a probar.
 - Al final de la lista aparecen las IAs gratis que aún no conectaste, con **🔑 Conseguir clave gratis** y un campo para pegarla ahí mismo.
@@ -84,7 +84,7 @@ Cuando se le pedía arreglar un programa, la IA a veces se quedaba **razonando s
 ### 🆓 Más IA gratis
 - **Sin cuenta ni clave**: Kilo Gateway (modelos «:free»), LLM7 y OVHcloud AI Endpoints: se activan con un clic.
 - **Con cuenta gratis (sin tarjeta)**: Z.ai (GLM Flash), Cloudflare Workers AI, Cohere, Aion Labs, Pollinations, Ollama Cloud (modelos grandes procesados en su nube), Vercel AI Gateway, además de los que ya había.
-- **Tu servidor GPU gratis en la nube (Kaggle)**: Noviark genera un cuaderno listo; Kaggle pone 2 GPU T4 (32 GB) y la IA corre allá, no en tu PC.
+- **Tu servidor GPU gratis en la nube (Kaggle)**: NoviQ genera un cuaderno listo; Kaggle pone 2 GPU T4 (32 GB) y la IA corre allá, no en tu PC.
 
 ### 🧠 Plan en vivo que puedes editar
 Mientras la IA diseña el plan lo ves en el panel lateral (pestaña 🧠 Plan). Al terminar tienes **30 segundos** para revisarlo: si no haces nada se aprueba solo; si empiezas a editar (tareas, tecnología, archivos) la cuenta se detiene hasta que pulses «Aprobar». También puedes descartarlo.
@@ -112,8 +112,8 @@ Decisiones rápidas y tipadas en los puntos clave: ¿este comando es peligroso?,
 - Etiquetas en la lista: 🚀 vanguardia, 🧠 razonamiento muy alto, 🆓 gratis. El globo informativo muestra también el razonamiento y el costo.
 
 ### 🩺 IAs no operativas: motivo y solución
-- Si un modelo o proveedor falla, Noviark dice **por qué** y **cómo arreglarlo**: 🔑 clave inválida o faltante, ⛔ modelo no disponible para tu cuenta (el error de NVIDIA «Function not found for account»), 💳 sin crédito, ⏳ límite alcanzado, ⬇ modelo local no descargado, 💾 no cabe en tu memoria, 🔌 Ollama/LM Studio cerrado.
-- Esos modelos aparecen **tachados con el motivo** en la lista y Noviark los **salta solo**, pasando al siguiente modelo que funcione **sin perder el trabajo** (se reintentan solos más tarde).
+- Si un modelo o proveedor falla, NoviQ dice **por qué** y **cómo arreglarlo**: 🔑 clave inválida o faltante, ⛔ modelo no disponible para tu cuenta (el error de NVIDIA «Function not found for account»), 💳 sin crédito, ⏳ límite alcanzado, ⬇ modelo local no descargado, 💾 no cabe en tu memoria, 🔌 Ollama/LM Studio cerrado.
+- Esos modelos aparecen **tachados con el motivo** en la lista y NoviQ los **salta solo**, pasando al siguiente modelo que funcione **sin perder el trabajo** (se reintentan solos más tarde).
 - «🩺 Verificar» en la lista de modelos comprueba cuáles responden de verdad. Una barra arriba avisa si alguna clave dejó de funcionar.
 - Arreglado: el 404 de NVIDIA ya no se confunde con «no acepta herramientas».
 
@@ -124,25 +124,25 @@ Debajo del chat se ve la fase actual y cuánto lleva: 📦 cargando el modelo en
 Cada conversación trabaja en su propio hilo: puedes dejar una IA trabajando en un proyecto, abrir otro proyecto (o chat) y trabajar con otra IA al mismo tiempo. Las que siguen trabajando tienen un punto verde en la barra lateral; al volver a ellas ves su progreso en vivo. Te avisa cuando una termina o necesita tu permiso. En la pantalla de proyectos: filtro «Trabajando ahora».
 
 ### 🧬 Agentes que aprenden solos
-Cuando algo falla y la IA lo arregla, Noviark guarda qué error era y qué lo solucionó. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA) le pasa la solución que ya funcionó; las lecciones más probadas se vuelven reglas. También aprende qué paquete instalar para cada módulo de Python. Todo es a prueba de fallos y se puede revisar o borrar en **🧬 Aprendizaje**.
+Cuando algo falla y la IA lo arregla, NoviQ guarda qué error era y qué lo solucionó. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA) le pasa la solución que ya funcionó; las lecciones más probadas se vuelven reglas. También aprende qué paquete instalar para cada módulo de Python. Todo es a prueba de fallos y se puede revisar o borrar en **🧬 Aprendizaje**.
 
 ### 🖥 Control del PC y ⏰ tareas programadas
 - La IA puede manejar tu escritorio con el **mismo método que el navegador**: lee la ventana (cada botón o campo tiene una referencia), actúa (abrir programas, clic, escribir, atajos) y verifica. Funciona sin instalar nada; opcionalmente activa **Windows-MCP** (más completo) en 🖥 PC y tareas. Siempre pide permiso antes de actuar, salvo en ⚡ Todo automático.
-- **Tareas programadas**: una vez, cada día, ciertos días o cada N minutos. También puedes pedírselo a la IA («cada lunes a las 9 revisa mi proyecto y corre las pruebas»). Se ejecutan mientras Noviark esté abierto; activa «Iniciar Noviark con Windows» para que siempre lo esté.
+- **Tareas programadas**: una vez, cada día, ciertos días o cada N minutos. También puedes pedírselo a la IA («cada lunes a las 9 revisa mi proyecto y corre las pruebas»). Se ejecutan mientras NoviQ esté abierto; activa «Iniciar NoviQ con Windows» para que siempre lo esté.
 
 ### 🗂 Proyectos a pantalla completa
 La pantalla de proyectos ocupa toda la ventana, con vista de tarjetas o lista, estadísticas y filtro de los que están trabajando.
 
 ### 🎁 IA gratis (legal)
 Botón **🎁 IA gratis** en la barra lateral:
-- **OpenRouter** se conecta **con un clic**: inicias sesión en su web y Noviark recibe la clave solo. Por defecto muestra solo los modelos «:free».
-- Para **NVIDIA, Gemini, Groq, Cerebras, Mistral y Hugging Face** hay un botón que abre la página oficial para crear la cuenta y la clave gratuita. La pegas y Noviark la guarda cifrada, activa el proveedor y lo prueba.
+- **OpenRouter** se conecta **con un clic**: inicias sesión en su web y NoviQ recibe la clave solo. Por defecto muestra solo los modelos «:free».
+- Para **NVIDIA, Gemini, Groq, Cerebras, Mistral y Hugging Face** hay un botón que abre la página oficial para crear la cuenta y la clave gratuita. La pegas y NoviQ la guarda cifrada, activa el proveedor y lo prueba.
 - Si activas varios, el **respaldo automático** pasa de uno a otro cuando alguno llega a su límite gratuito.
-- Noviark **no** automatiza las webs de pago (ChatGPT, Claude.ai, Gemini web…): va contra sus condiciones y podrían bloquear tus cuentas.
+- NoviQ **no** automatiza las webs de pago (ChatGPT, Claude.ai, Gemini web…): va contra sus condiciones y podrían bloquear tus cuentas.
 
 ### 💻 IA local que ya no pierde el hilo (Ollama y LM Studio)
-**Por qué la IA local empezaba de cero:** Ollama usa por defecto un contexto de solo **4096 tokens**. Las instrucciones, las herramientas y el historial no cabían, Ollama recortaba el inicio de la conversación y el modelo olvidaba el plan. Noviark lo resuelve así:
-- **Contexto a la medida de tu equipo:** Noviark habla con Ollama por su API nativa y fija el contexto (`num_ctx`) en cada petición. Lo calcula según tu **VRAM (16 GB)**, tu **RAM (32 GB)**, el tamaño del modelo y lo que ocupa su memoria por token. Con LM Studio lee el contexto cargado y, si el modelo no está cargado, lo carga con uno adecuado.
+**Por qué la IA local empezaba de cero:** Ollama usa por defecto un contexto de solo **4096 tokens**. Las instrucciones, las herramientas y el historial no cabían, Ollama recortaba el inicio de la conversación y el modelo olvidaba el plan. NoviQ lo resuelve así:
+- **Contexto a la medida de tu equipo:** NoviQ habla con Ollama por su API nativa y fija el contexto (`num_ctx`) en cada petición. Lo calcula según tu **VRAM (16 GB)**, tu **RAM (32 GB)**, el tamaño del modelo y lo que ocupa su memoria por token. Con LM Studio lee el contexto cargado y, si el modelo no está cargado, lo carga con uno adecuado.
 - **Modo compacto paso a paso** (automático con IA local):
   - la IA trabaja **una tarea a la vez**;
   - al terminar cada tarea, el orquestador «limpia la mesa» y le da solo lo necesario para la siguiente: el estado, el mapa del código y la tarea;
@@ -171,10 +171,10 @@ Botón **🎁 IA gratis** en la barra lateral:
 - Siguen activos el **agente ejecutor de código**, el **agente navegador** y el **analizador visual**.
 
 ### 📂 Proyectos que ya tienes en tu PC
-Botón **▦ → 📂 Abrir proyecto existente** o **Elegir…** (abre el selector de carpetas de Windows). Noviark detecta el tipo (Python, Node, web, C#, Java, Android, Flutter, Arduino, PHP) y cómo ejecutarlo y probarlo. La IA trabaja ahí igual que en un proyecto propio. Si el proyecto tiene su propio `.venv`, Noviark usa ese Python. Tus archivos no se mueven. Con ✖ lo quitas de Noviark sin borrar nada.
+Botón **▦ → 📂 Abrir proyecto existente** o **Elegir…** (abre el selector de carpetas de Windows). NoviQ detecta el tipo (Python, Node, web, C#, Java, Android, Flutter, Arduino, PHP) y cómo ejecutarlo y probarlo. La IA trabaja ahí igual que en un proyecto propio. Si el proyecto tiene su propio `.venv`, NoviQ usa ese Python. Tus archivos no se mueven. Con ✖ lo quitas de NoviQ sin borrar nada.
 
 ### ▦ Pantalla de proyectos
-Todos tus proyectos, **los más recientes primero**, con búsqueda, orden y filtro (creados en Noviark o existentes en tu PC). Desde cada tarjeta: 💬 Trabajar, ↩ Último chat, 📁 Archivos, 🧪 Probar (la IA revisa y corrige todo), 📂 carpeta y ✎ instrucciones.
+Todos tus proyectos, **los más recientes primero**, con búsqueda, orden y filtro (creados en NoviQ o existentes en tu PC). Desde cada tarjeta: 💬 Trabajar, ↩ Último chat, 📁 Archivos, 🧪 Probar (la IA revisa y corrige todo), 📂 carpeta y ✎ instrucciones.
 
 ### 📁 Explorador de archivos y editor
 - En el panel derecho, la pestaña **📁 Archivos** muestra el árbol del proyecto. Puedes **arrastrar y soltar** para mover, y con clic derecho: abrir, editar, renombrar, crear, enviar a la papelera, mostrar en el Explorador o «pedir a la IA que lo revise».
@@ -267,7 +267,7 @@ En **🔌 MCP** pegas la configuración (igual que en `claude_desktop_config.jso
 Para servidores con `npx` necesitas Node.js y para los de `uvx`, uv.
 
 ## Si venías de «Rurak» o «NVIDIA Chat»
-Copia la carpeta `datos` de la versión anterior dentro de la carpeta de Noviark: conservas tus claves (la bóveda sigue funcionando), tus conversaciones y tu memoria. La carpeta de proyectos se renombra sola a `Noviq_Proyectos`, y en cada proyecto `.noviq` pasa a `.noviq`.
+Copia la carpeta `datos` de la versión anterior dentro de la carpeta de NoviQ: conservas tus claves (la bóveda sigue funcionando), tus conversaciones y tu memoria. La carpeta de proyectos se renombra sola a `Noviq_Proyectos`, y en cada proyecto `.noviq` pasa a `.noviq`.
 
 ## Archivos del programa
 - `datos/claves.vault`: claves cifradas. **No lo compartas.**

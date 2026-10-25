@@ -1,9 +1,9 @@
-; Instalador de Noviark para Windows (Inno Setup 6)
-#define MyAppName "Noviark"
+; Instalador de NoviQ para Windows (Inno Setup 6)
+#define MyAppName "NoviQ"
 #define MyAppVersion "4.2.0"
-#define MyAppPublisher "Noviark Labs"
+#define MyAppPublisher "NoviQ Labs"
 #define MyAppURL "https://github.com/JUXN1988/noviark"
-#define MyAppExeName "Noviark.exe"
+#define MyAppExeName "NoviQ.exe"
 
 [Setup]
 AppId={{8F1C2A4E-6B3D-4E8A-9C71-5D2F0B9A7E13}
@@ -12,12 +12,12 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
-DefaultDirName={autopf}\Noviark
-DefaultGroupName=Noviark
+DefaultDirName={autopf}\NoviQ
+DefaultGroupName=NoviQ
 DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE.md
 OutputDir=..\..\dist
-OutputBaseFilename=Noviark-Setup-Windows
+OutputBaseFilename=NoviQ-Setup-Windows
 SetupIconFile=..\..\static\noviq.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/ultra
@@ -34,19 +34,19 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "startup"; Description: "Iniciar Noviark con Windows (para las tareas programadas)"; GroupDescription: "Opciones:"; Flags: unchecked
+Name: "startup"; Description: "Iniciar NoviQ con Windows (para las tareas programadas)"; GroupDescription: "Opciones:"; Flags: unchecked
 
 [Files]
-Source: "..\..\dist\Noviark\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\dist\NoviQ\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Noviark"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\Desinstalar Noviark"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Noviark"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{userstartup}\Noviark"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--no-browser"; Tasks: startup
+Name: "{group}\NoviQ"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\Desinstalar NoviQ"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\NoviQ"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{userstartup}\NoviQ"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--no-browser"; Tasks: startup
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Abrir Noviark ahora"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Abrir NoviQ ahora"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{app}\{#MyAppExeName}"; Parameters: "--stop"; Flags: runhidden; RunOnceId: "StopNoviark"
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--stop"; Flags: runhidden; RunOnceId: "StopNoviQ"

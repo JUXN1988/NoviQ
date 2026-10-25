@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Noviark
+Name=NoviQ
 GenericName=Agente de IA para programar
 Comment=Crea, prueba y corrige programas con IA gratis o local
-Exec=/opt/noviark/Noviark
+Exec=/opt/noviark/NoviQ
 Icon=noviark
 Terminal=false
 Categories=Development;IDE;Utility;
@@ -12,5 +12,5 @@ StartupNotify=true
 Actions=Detener;
 
 [Desktop Action Detener]
-Name=Apagar Noviark
-Exec=/opt/noviark/Noviark --stop
+Name=Apagar NoviQ
+Exec=/opt/noviark/NoviQ --stop

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """IA gratis (de forma legal): proveedores con planes gratuitos oficiales y conexión con un clic a OpenRouter
-(OAuth PKCE oficial: el usuario inicia sesión en la web de OpenRouter y Noviark recibe su clave automáticamente)."""
+(OAuth PKCE oficial: el usuario inicia sesión en la web de OpenRouter y NoviQ recibe su clave automáticamente)."""
 import base64
 import hashlib
 import secrets
@@ -62,14 +62,14 @@ GRATIS = [
      "clave_url": "https://cloud.cerebras.ai/"},
     # ── 3. Tu propio servidor con GPU gratis en la nube ──
     {"id": "remoto", "nombre": "Servidor GPU en la nube (Kaggle)", "icono": "🛰", "remoto": True, "grupo": "Tu servidor GPU gratis en la nube",
-     "gratis": "Noviark te da un cuaderno listo: Kaggle pone 2 GPU T4 (32 GB, el doble que tu PC) gratis ~30 h/semana y la IA corre allá, "
+     "gratis": "NoviQ te da un cuaderno listo: Kaggle pone 2 GPU T4 (32 GB, el doble que tu PC) gratis ~30 h/semana y la IA corre allá, "
                "no en tu PC. Sesiones de hasta 12 h; la URL cambia al reiniciar. Requiere cuenta de Kaggle verificada con teléfono.",
      "clave_url": "https://www.kaggle.com/code"},
     # ── 4. Decisiones rápidas (no es chat) ──
     {"id": "typesafe", "nombre": "Jev de TypeSafe (decisiones)", "icono": "⚖", "decisor": True, "grupo": "Decisiones rápidas (opcional)",
-     "gratis": "Modelo «System One» (sept. 2026): no escribe, DECIDE (sí/no, elegir, puntuar) en ~0,1-0,5 s. Noviark lo usa para evaluar el "
+     "gratis": "Modelo «System One» (sept. 2026): no escribe, DECIDE (sí/no, elegir, puntuar) en ~0,1-0,5 s. NoviQ lo usa para evaluar el "
                "riesgo de cada comando y decidir si un pedido necesita plan. De pago por uso pero muy barato (~0,04 USD por millón de "
-               "tokens). Sin clave, Noviark decide con sus reglas locales (gratis).",
+               "tokens). Sin clave, NoviQ decide con sus reglas locales (gratis).",
      "clave_url": "https://typesafe.ai"},
     # ── 5. En tu PC: ilimitado ──
     {"id": "ollama", "nombre": "Ollama (en tu PC)", "icono": "🦙", "local": True, "grupo": "En tu PC (ilimitado)",

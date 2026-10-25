@@ -1,4 +1,4 @@
-/* Noviark i18n: español (idioma base) / English. Idioma automático según el sistema; se puede fijar en Ajustes.
+/* NoviQ i18n: español (idioma base) / English. Idioma automático según el sistema; se puede fijar en Ajustes.
    Traduce la interfaz en vivo (también lo que se crea después) sin tocar las respuestas de la IA ni el código. */
 (function () {
   const KEY = "noviq_idioma";

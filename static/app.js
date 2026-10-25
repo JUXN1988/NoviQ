@@ -1,4 +1,4 @@
-/* Noviark 4.0 — interfaz */
+/* NoviQ 4.0 — interfaz */
 "use strict";
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -145,7 +145,7 @@ function confirmCard(p) {
   const d = document.createElement("div"); d.className = "confirm";
   const a = p.args || {};
   const body = a.comando || a.codigo || (a.contenido != null ? `${a.ruta}\n\n${a.contenido.slice(0, 3000)}` : JSON.stringify(a, null, 2));
-  const rz = p.riesgo ? `<span class="badge ${p.riesgo === "alto" ? "r" : p.riesgo === "medio" ? "c" : "g"}" title="Evaluado por ${p.fuente_riesgo === "jev" ? "Jev (TypeSafe)" : "las reglas de seguridad de Noviark"}">riesgo ${esc(p.riesgo)}</span>` : "";
+  const rz = p.riesgo ? `<span class="badge ${p.riesgo === "alto" ? "r" : p.riesgo === "medio" ? "c" : "g"}" title="Evaluado por ${p.fuente_riesgo === "jev" ? "Jev (TypeSafe)" : "las reglas de seguridad de NoviQ"}">riesgo ${esc(p.riesgo)}</span>` : "";
   if (p.riesgo === "alto") d.classList.add("alto");
   d.innerHTML = `<b>⚠ La IA quiere usar: ${esc(p.label)}</b> ${rz}${p.riesgo === "alto" ? `<div class="bad-t small">Esta acción puede borrar datos o cambiar el sistema: se pregunta siempre, aunque esté en modo automático.</div>` : ""}<div class="small" style="margin:4px 0">${esc(a.explicacion || argSummary(p.name, a))}</div><pre>${esc(body)}</pre>
     <div class="btns"><button class="btn ok" data-a="1">✔ Permitir</button>${p.riesgo === "alto" ? "" : `<button class="btn" data-a="2">✔ Permitir siempre en esta conversación</button>`}<button class="btn no" data-a="0">✖ Rechazar</button></div>`;
@@ -258,7 +258,7 @@ function addMsgActions(body) {
 
 /* ───────────── Pantalla inicial ───────────── */
 function showEmpty() {
-  thread.innerHTML = `<div id="empty"><img src="/static/noviq_icon.png" alt="Noviark" class="hero"><h1>¿Qué construimos hoy?</h1><div>NVIDIA, Gemini, OpenAI, Ollama, LM Studio… con herramientas reales en tu PC, equipo de agentes y respaldo automático.</div>
+  thread.innerHTML = `<div id="empty"><img src="/static/noviq_icon.png" alt="NoviQ" class="hero"><h1>¿Qué construimos hoy?</h1><div>NVIDIA, Gemini, OpenAI, Ollama, LM Studio… con herramientas reales en tu PC, equipo de agentes y respaldo automático.</div>
   <div class="sugs">
     <button class="sug">🐍 Crea un programa en Python con interfaz que organice mi carpeta de Descargas por tipo de archivo</button>
     <button class="sug">🌐 Crea una página web de portafolio moderna y ábrela en el navegador</button>
@@ -735,7 +735,7 @@ function showBubble(el, id) {
     <div class="rows"><span>💻 Programación</span><span>${bar(i.prog)}</span><span>🧠 Inteligencia</span><span>${bar(i.intel)}</span>
     <span>🧩 Razonamiento</span><span>${bar(i.razona)}</span>
     <span>⚡ Velocidad</span><span>${bar(i.vel)}</span><span>💲 Costo</span><span>${i.gratis ? "🆓 Gratis" : "De pago por uso"}</span><span>🪙 Consumo</span><span>${esc(i.tokens || "")}</span>
-    <span>🛠 Herramientas</span><span>${tl}</span><span>👁 Visión</span><span>${i.vision ? "✅ Ve imágenes" : "No (Noviark usa un ayudante visual)"}</span>
+    <span>🛠 Herramientas</span><span>${tl}</span><span>👁 Visión</span><span>${i.vision ? "✅ Ve imágenes" : "No (NoviQ usa un ayudante visual)"}</span>
     ${i.tamano_gb ? `<span>💾 Tamaño</span><span>${i.tamano_gb} GB</span>` : ""}${i.contexto ? `<span>📏 Contexto</span><span>${i.contexto} tokens</span>` : ""}</div>
     ${i.estado ? `<div class="warn"><b>${i.estado.icono} ${i.estado.bloqueado ? "No operativo" : "En pausa"}:</b> ${esc(i.estado.motivo)}<br>💡 ${esc(i.estado.solucion)}</div>` : ""}
     ${i.vanguardia ? `<div class="tip">🚀 De vanguardia: de los modelos más inteligentes disponibles${i.gratis ? " y gratis" : ""}.</div>` : ""}
@@ -965,14 +965,14 @@ function renderProjects() {
       <div class="pd">${esc((p.descripcion || "").slice(0, 110))}</div>
       <div class="pp">${esc(p.path)}${p.existe === false ? " — ⚠ la carpeta ya no existe" : ""}</div>
       <div class="small">🕒 ${ago(p.actividad)} · 💬 ${p.conversaciones || 0} chats${p.externo ? " · existente en tu PC" : ""}${p.comandos && p.comandos.ejecutar ? " · ▶ " + esc(p.comandos.ejecutar) : ""}</div>
-      <div class="pa"><button class="go" data-a="chat">💬 Trabajar</button>${p.ultima_conv ? `<button data-a="last">↩ Último chat</button>` : ""}<button data-a="files">📁 Archivos</button><button data-a="test">🧪 Probar</button><button data-a="folder">📂</button><button data-a="edit">✎</button>${p.externo ? `<button data-a="unlink" title="Quitar de Noviark (no borra archivos)">✖</button>` : ""}</div>`;
+      <div class="pa"><button class="go" data-a="chat">💬 Trabajar</button>${p.ultima_conv ? `<button data-a="last">↩ Último chat</button>` : ""}<button data-a="files">📁 Archivos</button><button data-a="test">🧪 Probar</button><button data-a="folder">📂</button><button data-a="edit">✎</button>${p.externo ? `<button data-a="unlink" title="Quitar de NoviQ (no borra archivos)">✖</button>` : ""}</div>`;
     c.querySelector("[data-a=chat]").onclick = () => { $("#projsModal").classList.remove("show"); showProjectHome(p.name); };
     const last = c.querySelector("[data-a=last]"); if (last) last.onclick = () => { $("#projsModal").classList.remove("show"); curProject = p.name; loadProjects(); openConv(p.ultima_conv); };
     c.querySelector("[data-a=files]").onclick = () => { $("#projsModal").classList.remove("show"); curProject = p.name; if (!convId) setProjectChip(p.name); loadProjects(); loadConvs(); FT.root = null; showPanel("files"); };
     c.querySelector("[data-a=test]").onclick = () => { $("#projsModal").classList.remove("show"); curProject = p.name; loadProjects(); newChat(); $("#inp").value = "Revisa todo el proyecto: usa probar_proyecto, analiza los errores y corrígelos uno por uno hasta que las pruebas pasen."; send(); };
     c.querySelector("[data-a=folder]").onclick = () => openInFolder(p.path);
     c.querySelector("[data-a=edit]").onclick = () => editProject(p);
-    const ul = c.querySelector("[data-a=unlink]"); if (ul) ul.onclick = async () => { if (!confirm(`¿Quitar «${p.name}» de Noviark? Tus archivos NO se borran.`)) return; await jpost(`/api/projects/${encodeURIComponent(p.name)}/quitar`); loadProjects(); };
+    const ul = c.querySelector("[data-a=unlink]"); if (ul) ul.onclick = async () => { if (!confirm(`¿Quitar «${p.name}» de NoviQ? Tus archivos NO se borran.`)) return; await jpost(`/api/projects/${encodeURIComponent(p.name)}/quitar`); loadProjects(); };
     g.append(c);
   });
 }
@@ -1011,7 +1011,7 @@ async function renderGratis() {
     const oc = d.querySelector("[data-a=oneclick]");
     if (oc) oc.onclick = async () => {
       const r = await jpost("/api/gratis/openrouter"); window.open(r.url, "_blank");
-      res.innerHTML = `<span class="spin"></span> Inicia sesión en OpenRouter y acepta; Noviark recibirá la clave automáticamente…`;
+      res.innerHTML = `<span class="spin"></span> Inicia sesión en OpenRouter y acepta; NoviQ recibirá la clave automáticamente…`;
       let n = 0; const t = setInterval(async () => { const l = await jget("/api/gratis"); const o = l.find(x => x.id === "openrouter");
         if (o && o.tiene_clave && o.activo) { clearInterval(t); res.innerHTML = `<span class="ok-t">✔ Conectado: ${o.modelos} modelos gratis</span>`; await loadModels(true); renderGratis(); }
         if (++n > 100) clearInterval(t); }, 3000);
@@ -1054,7 +1054,7 @@ function provCard(id, p) {
     ${id.startsWith("custom") ? `<label>Nombre</label><input data-f="name" value="${esc(p.name)}">` : ""}
     <label>URL base (…/v1)</label><input data-f="base_url" value="${esc(p.base_url || "")}">
     ${p.local ? `<div class="small">IA local: no necesita clave. ${id === "ollama" ? "Instala Ollama y descarga un modelo (ej. <code>ollama pull qwen3:8b</code>). Para más contexto define OLLAMA_CONTEXT_LENGTH=32768." : "En LM Studio: pestaña Developer → Start Server y carga un modelo."}</div>`
-      : `<label>API keys — una por línea (puedes poner claves de varias cuentas: Noviark usa la que funcione con cada modelo)${p.web ? ` · <a href="${esc(p.web)}" target="_blank">obtener clave</a>` : ""}</label><textarea data-f="api_keys" rows="${Math.max(2, (p.api_keys || []).length + 1)}" spellcheck="false" placeholder="pega aquí tu clave">${esc((p.api_keys || []).join("\n"))}</textarea>
+      : `<label>API keys — una por línea (puedes poner claves de varias cuentas: NoviQ usa la que funcione con cada modelo)${p.web ? ` · <a href="${esc(p.web)}" target="_blank">obtener clave</a>` : ""}</label><textarea data-f="api_keys" rows="${Math.max(2, (p.api_keys || []).length + 1)}" spellcheck="false" placeholder="pega aquí tu clave">${esc((p.api_keys || []).join("\n"))}</textarea>
       <div class="row2"><span class="small">${(p.api_keys || []).length ? `🔑 ${(p.api_keys || []).length} clave(s) guardada(s)` : "Sin claves"}</span><button class="btn" data-a="testkeys" type="button">🩺 Probar cada clave</button><span class="small kres"></span></div>`}`;
   const tk = d.querySelector("[data-a=testkeys]");
   if (tk) tk.onclick = async () => {
@@ -1245,7 +1245,7 @@ async function applyVanguardia(out) {
   const des = Object.entries(r.descartados || {});
   const desc = des.length ? `<details class="small"><summary>${des.length} modelo(s) no se usarán por ahora — ver por qué</summary>${des.map(([m, x]) => `<div>• ${esc(m.split("::").pop())}: ${esc(why(x))}</div>`).join("")}</details>` : "";
   if (!r.ok) { out.innerHTML = `<span class="bad-t">✖ ${esc(r.error || "falló")}</span>` + desc; return; }
-  out.innerHTML = `<div class="ok-t">✔ Listo. Tu IA principal ahora es <b>${esc(r.modelo.split("::").pop())}</b> (probada: funciona con tu cuenta).</div><div class="small">Si se ocupa o falla, Noviark sigue solo con: ${esc(r.respaldo.map(m => m.split("::").pop()).join(" → ") || "—")}</div>` + desc;
+  out.innerHTML = `<div class="ok-t">✔ Listo. Tu IA principal ahora es <b>${esc(r.modelo.split("::").pop())}</b> (probada: funciona con tu cuenta).</div><div class="small">Si se ocupa o falla, NoviQ sigue solo con: ${esc(r.respaldo.map(m => m.split("::").pop()).join(" → ") || "—")}</div>` + desc;
   CFG.model = r.modelo; selectModel(r.modelo); const sel = $("#modelSel"); sel.value = r.modelo; if (convId) jpost("/api/conversations/" + convId, {model: r.modelo});
   loadModels(false);
 }
@@ -1461,7 +1461,7 @@ async function renderHomeConvs() {
 try { $("#langSel").value = window.getNoviqLangPref ? window.getNoviqLangPref() : "auto"; $("#langSel").onchange = () => window.setNoviqLang($("#langSel").value); } catch (e) {}
 
 $("#apagarBtn").onclick = async () => {
-  if (!confirm("¿Apagar Noviark? Las IAs que estén trabajando se detendrán.")) return;
+  if (!confirm("¿Apagar NoviQ? Las IAs que estén trabajando se detendrán.")) return;
   try { await jpost("/api/apagar"); } catch (e) {}
-  document.body.innerHTML = `<div style="display:grid;place-items:center;height:100vh;color:#e8f0ec;font:18px sans-serif"><div style="text-align:center"><img src="/static/noviq_icon.png" width="96"><p>${window.T ? T("Noviark se apagó. Ya puedes cerrar esta ventana.") : "Noviark se apagó. Ya puedes cerrar esta ventana."}</p></div></div>`;
+  document.body.innerHTML = `<div style="display:grid;place-items:center;height:100vh;color:#e8f0ec;font:18px sans-serif"><div style="text-align:center"><img src="/static/noviq_icon.png" width="96"><p>${window.T ? T("NoviQ se apagó. Ya puedes cerrar esta ventana.") : "NoviQ se apagó. Ya puedes cerrar esta ventana."}</p></div></div>`;
 };

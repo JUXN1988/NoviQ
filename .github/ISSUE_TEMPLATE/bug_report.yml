@@ -19,7 +19,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Noviark version / Versión
+      label: NoviQ version / Versión
       placeholder: "4.2.0"
   - type: input
     id: model

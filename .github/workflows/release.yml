@@ -1,4 +1,4 @@
-# Compila Noviark para Windows, Linux y macOS (Apple Silicon e Intel) en los servidores de GitHub y publica los instaladores.
+# Compila NoviQ para Windows, Linux y macOS (Apple Silicon e Intel) en los servidores de GitHub y publica los instaladores.
 # Se ejecuta al subir una etiqueta (ej.: git tag v4.2.0 && git push --tags) o a mano desde la pestaña Actions.
 name: Build and release
 on:
@@ -49,11 +49,11 @@ jobs:
         with:
           name: noviark-${{ matrix.name }}
           path: |
-            dist/Noviark-Setup-Windows.exe
-            dist/Noviark-Windows-portable.zip
-            dist/Noviark-Linux-*.deb
-            dist/Noviark-Linux-*.tar.gz
-            dist/Noviark-macOS-*.dmg
+            dist/NoviQ-Setup-Windows.exe
+            dist/NoviQ-Windows-portable.zip
+            dist/NoviQ-Linux-*.deb
+            dist/NoviQ-Linux-*.tar.gz
+            dist/NoviQ-macOS-*.dmg
           if-no-files-found: error
   release:
     needs: build
@@ -69,20 +69,20 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v4.2.0' }}
-          name: Noviark ${{ github.ref_type == 'tag' && github.ref_name || 'v4.2.0' }}
+          name: NoviQ ${{ github.ref_type == 'tag' && github.ref_name || 'v4.2.0' }}
           body: |
             ## ⬇ Download / Descargar
             | System / Sistema | File / Archivo |
             |---|---|
-            | **Windows 10/11** | `Noviark-Setup-Windows.exe` (installer / instalador) · `Noviark-Windows-portable.zip` |
-            | **macOS Apple Silicon** (M1–M4) | `Noviark-macOS-arm64.dmg` |
-            | **macOS Intel** | `Noviark-macOS-x86_64.dmg` |
-            | **Ubuntu / Debian** | `Noviark-Linux-amd64.deb` → `sudo apt install ./Noviark-Linux-amd64.deb` · other distros / otras: `Noviark-Linux-x86_64.tar.gz` |
+            | **Windows 10/11** | `NoviQ-Setup-Windows.exe` (installer / instalador) · `NoviQ-Windows-portable.zip` |
+            | **macOS Apple Silicon** (M1–M4) | `NoviQ-macOS-arm64.dmg` |
+            | **macOS Intel** | `NoviQ-macOS-x86_64.dmg` |
+            | **Ubuntu / Debian** | `NoviQ-Linux-amd64.deb` → `sudo apt install ./NoviQ-Linux-amd64.deb` · other distros / otras: `NoviQ-Linux-x86_64.tar.gz` |
 
             **First launch / Primera vez**
             - Windows: SmartScreen → *More info → Run anyway* / *Más información → Ejecutar de todas formas*.
-            - macOS: right-click Noviark → *Open* / clic derecho → *Abrir*.
-            - Linux: open **Noviark** from the apps menu or run `noviark`.
+            - macOS: right-click NoviQ → *Open* / clic derecho → *Abrir*.
+            - Linux: open **NoviQ** from the apps menu or run `noviark`.
 
             What's new / Novedades: see [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md). Checksums: `SHA256SUMS.txt`.
           files: out/*

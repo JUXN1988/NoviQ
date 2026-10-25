@@ -1,5 +1,5 @@
-<p align="center"><img src="docs/img/logo.png" width="140" alt="NoviArk"></p>
-<h1 align="center">NoviArk</h1>
+<p align="center"><img src="docs/img/logo.png" width="140" alt="NoviQ"></p>
+<h1 align="center">NoviQ</h1>
 <p align="center">
 <b>Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.</b><br>
 <b>An AI agent that writes, runs, tests and fixes programs on your computer.</b>
@@ -8,7 +8,7 @@
 <p align="center">
 <img alt="Estado" src="https://img.shields.io/badge/estado-en%20actualizaci%C3%B3n-d98a5e?style=flat-square">
 <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-3fe9c4?style=flat-square">
-<a href="LICENSE.md"><img alt="Licencia" src="https://img.shields.io/badge/licencia-Community%20(gratis%20personal)-8aff45?style=flat-square"></a>
+<a href="LICENSE.md"><img alt="Licencia" src="https://img.shields.io/badge/licencia-uso%20personal%20gratis-8aff45?style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -26,12 +26,12 @@
 
 ## 🇪🇸 Español
 
-NoviArk es un programa de escritorio que recibe lo que quieres construir, crea el proyecto, escribe el código, lo ejecuta, lee los errores y los corrige. Funciona con modelos de IA en la nube (NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter y más) o con **modelos locales** en tu PC (Ollama y LM Studio); con modelos locales, tu código no sale de tu equipo.
+NoviQ es un programa de escritorio que recibe lo que quieres construir, crea el proyecto, escribe el código, lo ejecuta, lee los errores y los corrige. Funciona con modelos de IA en la nube (NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter y más) o con **modelos locales** en tu PC (Ollama y LM Studio); con modelos locales, tu código no sale de tu equipo.
 
 El repositorio tiene dos partes:
 
-- **NoviArk** (la raíz): el programa principal.
-- **[noviq-avatar](noviq-avatar/README.md)**: un robot asistente de escritorio que flota sobre tus programas, tiene su propia memoria y voz, y se conecta con NoviArk para mostrar en qué está trabajando.
+- **NoviQ** (la raíz): el programa principal.
+- **[noviq-avatar](noviq-avatar/README.md)**: un robot asistente de escritorio que flota sobre tus programas, tiene su propia memoria y voz, y se conecta con NoviQ para mostrar en qué está trabajando.
 
 ### ▶ Ejecutar
 
@@ -53,9 +53,9 @@ Luego entra en **⚙ Ajustes → Proveedores y claves**, pega la API key de un p
 
 ### 📸 Capturas
 
-<p align="center"><img src="docs/img/app_inicio_es.png" width="900" alt="Pantalla de inicio de NoviArk"></p>
+<p align="center"><img src="docs/img/app_inicio_es.png" width="900" alt="Pantalla de inicio de NoviQ"></p>
 <p align="center"><img src="docs/img/app_ia_gratis_es.png" width="900" alt="Conectar modelos de IA gratis"></p>
-<p align="center"><img src="docs/img/work_es.webp" width="900" alt="NoviArk trabajando en un proyecto"></p>
+<p align="center"><img src="docs/img/work_es.webp" width="900" alt="NoviQ trabajando en un proyecto"></p>
 <p align="center"><img src="docs/img/plan_es.webp" width="440" alt="Plan editable en vivo">&nbsp;<img src="docs/img/picker_es.webp" width="440" alt="Selector de modelos que funcionan"></p>
 <p align="center"><img src="docs/img/project_es.webp" width="900" alt="Vista de proyecto a pantalla completa"></p>
 
@@ -64,7 +64,7 @@ Luego entra en **⚙ Ajustes → Proveedores y claves**, pega la API key de un p
 - **Agente con 40 herramientas**: crear y editar archivos, buscar en el código, ejecutar PowerShell, Python y comandos de Linux, administrar procesos, hacer peticiones HTTP, buscar y leer páginas web, descargar archivos, generar imágenes, captura de pantalla, abrir archivos y programas, y usar un navegador automatizado.
 - **Plan antes de actuar**: el agente hace un plan de trabajo que puedes editar o aprobar. Si no haces nada, se aprueba automáticamente tras una cuenta regresiva.
 - **Se prueba a sí mismo**: `diagnosticar` revisa el proyecto y reporta problemas con archivo y línea; `probar_web` abre webs y juegos en un navegador invisible y revisa errores de JavaScript, archivos que no cargan y si los controles responden.
-- **Guardián de razonamiento**: si un modelo piensa demasiado sin actuar o entra en bucle, NoviArk lo corta y lo obliga a actuar.
+- **Guardián de razonamiento**: si un modelo piensa demasiado sin actuar o entra en bucle, NoviQ lo corta y lo obliga a actuar.
 - **Escalado**: si el agente se atasca, pasa el trabajo al modelo más capaz que tengas habilitado.
 - **Trabajo que no se pierde**: guarda el estado (objetivo, plan, lo hecho, archivos y errores). Si un modelo falla o se queda sin cuota, el siguiente continúa desde ahí.
 - **Varios proyectos**, cada uno con su pantalla y su modelo. Puedes importar proyectos que ya tengas en tu PC.
@@ -81,14 +81,14 @@ Luego entra en **⚙ Ajustes → Proveedores y claves**, pega la API key de un p
 
 ### 🤖 El avatar (noviq-avatar)
 
-Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviArk cuando está abierto.
+Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviQ cuando está abierto.
 
 <p align="center"><img src="docs/img/avatar_estados.webp" width="900" alt="Estados del avatar: saluda, trabaja, analiza, usa herramientas, se ríe y pregunta"></p>
 
 | Estado | Qué hace el robot |
 |---|---|
 | 👋 Saluda | Se presenta y saluda cuando lo abres. |
-| ✍️ Trabaja | Pone cara de concentrado cuando NoviArk empieza un trabajo y escribe en su panel. |
+| ✍️ Trabaja | Pone cara de concentrado cuando NoviQ empieza un trabajo y escribe en su panel. |
 | 🛠 Usa herramientas | Muestra un icono en su visor según la herramienta: código, lupa, terminal o web. |
 | ❓ Pide permiso o ayuda | «Necesito tu permiso…» o «Necesito tu ayuda…», y le respondes hablando. |
 | ✅ Termina | Dice «¡Ya terminé!» y pregunta qué más hacemos. |
@@ -105,20 +105,20 @@ Como el proyecto está en actualización, tu opinión ayuda mucho:
 
 ### 📄 Licencia
 
-NoviArk se distribuye bajo la **Noviark Community License 1.0** (ver [LICENSE.md](LICENSE.md)). Es **gratis para uso personal, educativo, de investigación y sin fines de lucro**. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere una licencia comercial.
+NoviQ se distribuye bajo la **Licencia NoviQ de Uso Personal 1.0** (ver [LICENSE.md](LICENSE.md)). Es **gratis para uso personal**. Cualquier **uso comercial** (de empresas, organizaciones, microempresas o trabajo por cuenta propia que genere ingresos) requiere una **licencia comercial de pago**. Para solicitarla, abre un issue con la etiqueta *business*. No es software de código abierto: el código es visible, pero el uso comercial es de pago.
 
-El avatar (`noviq-avatar`) tiene su propio `package.json` marcado como `UNLICENSED`; su licencia se definirá aparte.
+El avatar (`noviq-avatar`) usa la misma licencia; su copia está en [noviq-avatar/LICENSE.md](noviq-avatar/LICENSE.md).
 
 ---
 
 ## 🇬🇧 English
 
-NoviArk is a desktop app that takes what you want to build, creates the project, writes the code, runs it, reads the errors and fixes them. It works with cloud AI models (NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter and more) or with **local models** on your computer (Ollama and LM Studio); with local models, your code stays on your machine.
+NoviQ is a desktop app that takes what you want to build, creates the project, writes the code, runs it, reads the errors and fixes them. It works with cloud AI models (NVIDIA, Google Gemini, OpenAI, Anthropic, OpenRouter and more) or with **local models** on your computer (Ollama and LM Studio); with local models, your code stays on your machine.
 
 The repository has two parts:
 
-- **NoviArk** (the root): the main app.
-- **[noviq-avatar](noviq-avatar/README.md)**: a desktop robot assistant that floats above your programs, has its own memory and voice, and connects to NoviArk to show what it is working on.
+- **NoviQ** (the root): the main app.
+- **[noviq-avatar](noviq-avatar/README.md)**: a desktop robot assistant that floats above your programs, has its own memory and voice, and connects to NoviQ to show what it is working on.
 
 ### ▶ Run
 
@@ -140,9 +140,9 @@ Then go to **⚙ Settings → Providers & keys**, paste an API key from a provid
 
 ### 📸 Screenshots
 
-<p align="center"><img src="docs/img/app_inicio_es.png" width="900" alt="NoviArk home screen"></p>
+<p align="center"><img src="docs/img/app_inicio_es.png" width="900" alt="NoviQ home screen"></p>
 <p align="center"><img src="docs/img/app_ia_gratis_es.png" width="900" alt="Connect free AI models"></p>
-<p align="center"><img src="docs/img/work_en.webp" width="900" alt="NoviArk building an app live"></p>
+<p align="center"><img src="docs/img/work_en.webp" width="900" alt="NoviQ building an app live"></p>
 <p align="center"><img src="docs/img/plan_en.webp" width="440" alt="Editable live plan">&nbsp;<img src="docs/img/picker_en.webp" width="440" alt="Model picker showing only working models"></p>
 <p align="center"><img src="docs/img/project_en.webp" width="900" alt="Full-screen project view"></p>
 
@@ -151,7 +151,7 @@ Then go to **⚙ Settings → Providers & keys**, paste an API key from a provid
 - **Agent with 40 tools**: create and edit files, search code, run PowerShell, Python and Linux commands, manage processes, make HTTP requests, search and read web pages, download files, generate images, take screenshots, open files and programs, and use an automated browser.
 - **Plan before acting**: the agent drafts a work plan you can edit or approve. If you do nothing, it is approved automatically after a countdown.
 - **Tests its own work**: `diagnosticar` checks the project and reports problems with file and line; `probar_web` opens web apps and games in an invisible browser and checks for JavaScript errors, files that fail to load and whether controls respond.
-- **Reasoning guardian**: if a model thinks too long without acting or loops, NoviArk stops it and makes it act.
+- **Reasoning guardian**: if a model thinks too long without acting or loops, NoviQ stops it and makes it act.
 - **Escalation**: if the agent gets stuck, the work moves to the most capable model you have enabled.
 - **Work that is not lost**: keeps the state (goal, plan, done, files, errors). If a model fails or runs out of quota, the next one continues from there.
 - **Several projects**, each with its own screen and model. You can import projects you already have on your PC.
@@ -168,14 +168,14 @@ Then go to **⚙ Settings → Providers & keys**, paste an API key from a provid
 
 ### 🤖 The avatar (noviq-avatar)
 
-A robot that lives above your programs with a transparent background. It has its own mind, memory, voice and hearing, and can use NoviArk's tools when NoviArk is open.
+A robot that lives above your programs with a transparent background. It has its own mind, memory, voice and hearing, and can use NoviQ's tools when NoviQ is open.
 
 <p align="center"><img src="docs/img/avatar_estados.webp" width="900" alt="Avatar states: greets, works, analyzes, uses tools, laughs and asks"></p>
 
 | State | What the robot does |
 |---|---|
 | 👋 Greets | Introduces itself and says hello when you open it. |
-| ✍️ Works | Looks focused when NoviArk starts a job and writes in its panel. |
+| ✍️ Works | Looks focused when NoviQ starts a job and writes in its panel. |
 | 🛠 Uses tools | Shows an icon on its visor for the tool in use: code, magnifier, terminal or web. |
 | ❓ Asks permission or help | «I need your permission…» or «I need your help…», and you answer by voice. |
 | ✅ Finishes | Says «Done!» and asks what to do next. |
@@ -192,10 +192,10 @@ Since the project is being updated, your feedback helps a lot:
 
 ### 📄 License
 
-NoviArk is distributed under the **Noviark Community License 1.0** (see [LICENSE.md](LICENSE.md)). It is **free for personal, educational, research and non-profit use**. Companies may evaluate it for up to 60 days; continued commercial use requires a commercial license.
+NoviQ is distributed under the **NoviQ Personal Use License 1.0** (see [LICENSE.md](LICENSE.md)). It is **free for personal use**. Any **commercial use** (by companies, organizations, microenterprises or self-employed people earning income) requires a **paid commercial license**. To request one, open an issue labeled *business*. This is not open-source software: the code is visible, but commercial use is paid.
 
-The avatar (`noviq-avatar`) has its own `package.json` marked `UNLICENSED`; its license will be defined separately.
+The avatar (`noviq-avatar`) uses the same license; its copy is in [noviq-avatar/LICENSE.md](noviq-avatar/LICENSE.md).
 
 ---
 
-<p align="center">© 2026 Noviark Labs</p>
+<p align="center">© 2026 NoviQ Labs</p>

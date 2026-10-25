@@ -1,12 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Receta de PyInstaller para Noviark (la usan los scripts de windows/, linux/ y macos/).
+# Receta de PyInstaller para NoviQ (la usan los scripts de windows/, linux/ y macos/).
 import sys
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules
 
 ROOT = Path(SPECPATH).resolve().parent
 ICON_WIN = str(ROOT / "static" / "noviq.ico")
-ICON_MAC = str(ROOT / "packaging" / "macos" / "Noviark.icns")
+ICON_MAC = str(ROOT / "packaging" / "macos" / "NoviQ.icns")
 
 hidden = collect_submodules("noviq") + ["app", "pystray", "PIL.Image", "tkinter", "tkinter.filedialog"]
 if sys.platform == "win32":
@@ -28,18 +28,18 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, [],
     exclude_binaries=True,
-    name="Noviark",
-    console=False,                      # sin ventana negra: Noviark vive en la bandeja del sistema
+    name="NoviQ",
+    console=False,                      # sin ventana negra: NoviQ vive en la bandeja del sistema
     icon=ICON_WIN if sys.platform == "win32" else (ICON_MAC if sys.platform == "darwin" and Path(ICON_MAC).exists() else None),
     upx=False,
 )
-coll = COLLECT(exe, a.binaries, a.datas, name="Noviark", upx=False)
+coll = COLLECT(exe, a.binaries, a.datas, name="NoviQ", upx=False)
 if sys.platform == "darwin":
     app = BUNDLE(
         coll,
-        name="Noviark.app",
+        name="NoviQ.app",
         icon=ICON_MAC if Path(ICON_MAC).exists() else None,
         bundle_identifier="com.noviarklabs.noviark",
         info_plist={"CFBundleShortVersionString": "4.2.0", "CFBundleVersion": "4.2.0", "NSHighResolutionCapable": True,
-                    "LSUIElement": False, "CFBundleDisplayName": "Noviark"},
+                    "LSUIElement": False, "CFBundleDisplayName": "NoviQ"},
     )

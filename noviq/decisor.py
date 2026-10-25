@@ -2,7 +2,7 @@
 """Decisor «System One»: decisiones rápidas y tipadas (sí/no, elegir una opción, puntuar) en vez de texto.
 
 Inspirado en Jev (TypeSafe AI, septiembre 2026): un modelo que no escribe, DECIDE, con probabilidades calibradas,
-en ~0,1-0,5 s y a una fracción del costo de un LLM. Noviark lo usa en los puntos de decisión del agente:
+en ~0,1-0,5 s y a una fracción del costo de un LLM. NoviQ lo usa en los puntos de decisión del agente:
   - ¿Esta acción es peligrosa o irreversible?  (antes de ejecutar comandos: guardarraíl)
   - ¿El pedido es un trabajo de varios pasos que merece plan?  (activar el cerebro y la revisión del plan)
   - ¿Qué tan complejo es?  (bajo / medio / alto → no gastar un modelo razonador en un saludo)
@@ -106,7 +106,7 @@ def decidir(state, questions, reglas):
     return res
 
 
-# ───────────── Decisiones concretas que usa Noviark ─────────────
+# ───────────── Decisiones concretas que usa NoviQ ─────────────
 PELIGRO = re.compile(
     r"(Remove-Item\b[^|;\n]*-Recurse|rm\s+-[a-z]*r[a-z]*f|rm\s+-rf|\brmdir\s+/s|\bdel\s+/[sq]|\bformat\s+[a-z]:|diskpart|"
     r"Format-Volume|Clear-Disk|Initialize-Disk|reg\s+delete|Remove-ItemProperty\s+.*HKLM|Stop-Computer|Restart-Computer|"

@@ -22,7 +22,7 @@ from .config import IS_WINDOWS, MCP_FILE, NO_WINDOW
 
 MODERN = "2026-07-28"
 LEGACY = "2025-06-18"
-CLIENT_INFO = {"name": "Noviark", "version": "4.0"}
+CLIENT_INFO = {"name": "NoviQ", "version": "4.0"}
 
 EXAMPLE = {
     "mcpServers": {

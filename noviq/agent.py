@@ -45,7 +45,7 @@ def system_prompt(conv, text_tools=None, handoff=None):
     ctx = T.ToolContext(conv, lambda *a: None, threading.Event())
     cwd = ctx.cwd
     proj = conv.get("project")
-    s = f"""Eres un asistente de IA autónomo y experto que trabaja dentro de "Noviark", una aplicación de escritorio en la PC del usuario ({OS_NAME}). Fecha y hora: {datetime.now():%Y-%m-%d %H:%M}.
+    s = f"""Eres un asistente de IA autónomo y experto que trabaja dentro de "NoviQ", una aplicación de escritorio en la PC del usuario ({OS_NAME}). Fecha y hora: {datetime.now():%Y-%m-%d %H:%M}.
 Responde en el idioma del usuario (normalmente español), con Markdown claro. Los bloques de código llevan su lenguaje (```python, ```powershell…).
 
 ## Cómo trabajas
@@ -325,7 +325,7 @@ def diagnostico_texto(conv, emit, stop_ev, max_items=8):
 
 
 def auto_diagnostico(conv, emit, stop_ev):
-    """Si el usuario dice que algo no funciona, Noviark diagnostica el proyecto ANTES de que la IA empiece
+    """Si el usuario dice que algo no funciona, NoviQ diagnostica el proyecto ANTES de que la IA empiece
     y le entrega la lista de problemas reales (las IAs pequeñas no saben por dónde empezar)."""
     if not CONFIG.get("diagnostico_auto", True) or not conv.get("project") or not conv.get("messages"):
         return
@@ -605,7 +605,7 @@ def run_agent(conv, emit_raw, stop_ev):
                     continue
                 E.save_file(conv)
                 raise APIError(str(e) + "\n\n💾 El trabajo quedó guardado. 💡 Activa más IAs en 🎁 IA gratis (o «🧠 Usar los más "
-                                        "inteligentes gratis» en la lista de modelos) para que Noviark cambie solo a otra que funcione.",
+                                        "inteligentes gratis» en la lista de modelos) para que NoviQ cambie solo a otra que funcione.",
                                e.status, e.kind)
             if mode == "nativo" and e.status in (400, 404, 422, 500) and any(w in t for w in ("tool", "function")) \
                     and "not found for account" not in t and not e.kind and ("tools",) + key not in retried:

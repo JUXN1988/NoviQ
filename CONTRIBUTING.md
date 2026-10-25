@@ -1,9 +1,9 @@
 # Contributing / Cómo contribuir
 
-Thanks for helping improve Noviark! / ¡Gracias por ayudar a mejorar Noviark!
+Thanks for helping improve NoviQ! / ¡Gracias por ayudar a mejorar NoviQ!
 
 - **Bugs and ideas**: open an [issue](../../issues/new/choose) with steps to reproduce, your OS and the model/provider you used. / Abre un issue con los pasos, tu sistema y el modelo que usabas.
-- **Pull requests**: keep them small and focused, and test on at least one OS. By submitting a PR you agree that Noviark Labs may use your contribution under the [project license](LICENSE.md) and its commercial licenses. / Al enviar un PR aceptas que Noviark Labs pueda usar tu aporte bajo la licencia del proyecto y sus licencias comerciales.
+- **Pull requests**: keep them small and focused, and test on at least one OS. By submitting a PR you agree that NoviQ Labs may use your contribution under the [project license](LICENSE.md) and its commercial licenses. / Al enviar un PR aceptas que NoviQ Labs pueda usar tu aporte bajo la licencia del proyecto y sus licencias comerciales.
 - **Never include API keys**, `datos/` or `claves.vault` in issues, logs or PRs. / Nunca incluyas claves, `datos/` ni `claves.vault`.
 
 ## Development / Desarrollo

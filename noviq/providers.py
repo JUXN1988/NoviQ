@@ -83,7 +83,7 @@ def _headers(key, p=None):
     if p and p.get("anthropic_headers"):
         h.update({"x-api-key": key, "anthropic-version": "2023-06-01"})
     if p and "openrouter" in p.get("base_url", ""):
-        h.update({"HTTP-Referer": "http://localhost", "X-Title": "Noviark"})
+        h.update({"HTTP-Referer": "http://localhost", "X-Title": "NoviQ"})
     return h
 
 

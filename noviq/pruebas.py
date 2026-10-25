@@ -33,7 +33,7 @@ PIP_MAP = {"cv2": "opencv-python", "PIL": "pillow", "sklearn": "scikit-learn", "
 
 
 def project_python(cwd: Path):
-    """Python del proyecto si tiene su propio entorno virtual; si no, el de Noviark."""
+    """Python del proyecto si tiene su propio entorno virtual; si no, el de NoviQ."""
     for cand in (cwd / ".venv" / "Scripts" / "python.exe", cwd / "venv" / "Scripts" / "python.exe",
                  cwd / ".venv" / "bin" / "python", cwd / "venv" / "bin" / "python"):
         if cand.exists():

@@ -18,10 +18,10 @@ def user_data_dir():
     if os.environ.get("NOVIQ_DATOS"):
         return Path(os.environ["NOVIQ_DATOS"]).expanduser()
     if platform.system() == "Windows":
-        return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "Noviark"
+        return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "NoviQ"
     if platform.system() == "Darwin":
-        return Path.home() / "Library" / "Application Support" / "Noviark"
-    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "Noviark"
+        return Path.home() / "Library" / "Application Support" / "NoviQ"
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "NoviQ"
 
 
 if FROZEN:
@@ -44,7 +44,7 @@ _py_cache = []
 
 def python_exe():
     """Python con el que se ejecuta el código de los proyectos. En el programa instalado (.exe/.app) no se puede usar
-    el propio ejecutable de Noviark: se busca el Python del sistema. Devuelve None si no hay ninguno."""
+    el propio ejecutable de NoviQ: se busca el Python del sistema. Devuelve None si no hay ninguno."""
     if not FROZEN:
         return sys.executable
     if _py_cache:
@@ -127,7 +127,7 @@ DEFAULT_PROVIDERS = {
     "custom": {"name": "Otro (compatible OpenAI)", "base_url": "", "enabled": False, "context_chars": 200000},
     "remoto": {"name": "Servidor GPU en la nube (Kaggle)", "base_url": "", "enabled": False, "context_chars": 100000,
                "web": "https://www.kaggle.com/code", "remoto": True},
-    # No es de chat: decisiones rápidas tipadas (System One). Lo usa el decisor de Noviark si tiene clave.
+    # No es de chat: decisiones rápidas tipadas (System One). Lo usa el decisor de NoviQ si tiene clave.
     "typesafe": {"name": "TypeSafe Jev (decisiones)", "base_url": "https://api.typesafe.ai/v1", "enabled": False,
                  "decisor": True, "web": "https://typesafe.ai", "modelo": "jev-latest"},
 }

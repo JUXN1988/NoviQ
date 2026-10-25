@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NoviArk — Agente de IA para programar</title>
-<meta name="description" content="NoviArk: agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora. Con modelos en la nube o modelos locales, y su avatar asistente.">
+<title>NoviQ — Agente de IA para programar</title>
+<meta name="description" content="NoviQ: agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora. Con modelos en la nube o modelos locales, y su avatar asistente.">
 <link rel="icon" href="docs/img/favicon.png">
-<meta property="og:title" content="NoviArk — Agente de IA para programar">
+<meta property="og:title" content="NoviQ — Agente de IA para programar">
 <meta property="og:description" content="Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.">
 <meta property="og:image" content="docs/img/og.jpg">
 <style>
@@ -54,7 +54,7 @@
 <body>
 <div class="wrap">
   <header>
-    <a class="brand" href="#"><img src="docs/img/logo.png" alt="">NoviArk</a>
+    <a class="brand" href="#"><img src="docs/img/logo.png" alt="">NoviQ</a>
     <nav>
       <a href="#ejecutar" data-i="nav_run">Ejecutar</a>
       <a href="#capturas" data-i="nav_shots">Capturas</a>
@@ -66,8 +66,8 @@
   </header>
 
   <div class="hero">
-    <img class="logo" src="docs/img/logo.png" alt="NoviArk">
-    <h1>NoviArk</h1>
+    <img class="logo" src="docs/img/logo.png" alt="NoviQ">
+    <h1>NoviQ</h1>
     <p class="lead" data-i="tagline">Agente de IA que escribe, ejecuta, prueba y corrige programas en tu computadora.</p>
     <div class="banner">
       <strong data-i="banner_title">⚠️ En actualización activa.</strong>
@@ -91,7 +91,7 @@ bash iniciar.sh</code></pre>
     <div class="shots">
       <figure><img src="docs/img/app_inicio_es.png" alt="Pantalla de inicio"><figcaption data-i="shot_home">Pantalla de inicio: elige modelo, proyecto y permisos.</figcaption></figure>
       <figure><img src="docs/img/app_ia_gratis_es.png" alt="IA gratis"><figcaption data-i="shot_free">🎁 IA gratis: conecta modelos sin pagar.</figcaption></figure>
-      <figure><img src="docs/img/work_es.webp" alt="Trabajando"><figcaption data-i="shot_work">NoviArk trabajando en un proyecto.</figcaption></figure>
+      <figure><img src="docs/img/work_es.webp" alt="Trabajando"><figcaption data-i="shot_work">NoviQ trabajando en un proyecto.</figcaption></figure>
       <figure><img src="docs/img/plan_es.webp" alt="Plan"><figcaption data-i="shot_plan">Plan editable en vivo.</figcaption></figure>
       <figure><img src="docs/img/picker_es.webp" alt="Selector de modelos"><figcaption data-i="shot_picker">Selector que muestra solo los modelos que funcionan.</figcaption></figure>
       <figure><img src="docs/img/project_es.webp" alt="Proyecto"><figcaption data-i="shot_project">Vista de proyecto a pantalla completa.</figcaption></figure>
@@ -104,7 +104,7 @@ bash iniciar.sh</code></pre>
       <div class="card"><h3 data-i="f1t">40 herramientas</h3><p data-i="f1d">Archivos, búsqueda en el código, PowerShell, Python, Linux, procesos, HTTP, búsqueda y lectura web, imágenes, captura de pantalla, navegador automatizado y más.</p></div>
       <div class="card"><h3 data-i="f2t">Plan antes de actuar</h3><p data-i="f2d">Puedes editar o aprobar el plan. Si no haces nada, se aprueba solo tras una cuenta regresiva.</p></div>
       <div class="card"><h3 data-i="f3t">Se prueba a sí mismo</h3><p data-i="f3d">diagnosticar revisa el proyecto con archivo y línea; probar_web prueba webs y juegos en un navegador invisible.</p></div>
-      <div class="card"><h3 data-i="f4t">Guardián de razonamiento</h3><p data-i="f4d">Si un modelo piensa demasiado sin actuar o entra en bucle, NoviArk lo corta y lo obliga a actuar.</p></div>
+      <div class="card"><h3 data-i="f4t">Guardián de razonamiento</h3><p data-i="f4d">Si un modelo piensa demasiado sin actuar o entra en bucle, NoviQ lo corta y lo obliga a actuar.</p></div>
       <div class="card"><h3 data-i="f5t">Escalado al modelo más capaz</h3><p data-i="f5d">Si el agente se atasca, el trabajo pasa al modelo más capaz que tengas habilitado.</p></div>
       <div class="card"><h3 data-i="f6t">Trabajo que no se pierde</h3><p data-i="f6d">Guarda objetivo, plan, lo hecho y los errores. Si un modelo falla, el siguiente continúa desde ahí.</p></div>
       <div class="card"><h3 data-i="f7t">IA local</h3><p data-i="f7d">Ollama y LM Studio, con el contexto ajustado a la memoria de tu equipo. Tu código no sale de tu PC.</p></div>
@@ -115,13 +115,13 @@ bash iniciar.sh</code></pre>
 
   <section id="avatar">
     <h2 data-i="avatar_title">El avatar (noviq-avatar)</h2>
-    <p class="muted" data-i="avatar_intro">Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviArk cuando está abierto.</p>
+    <p class="muted" data-i="avatar_intro">Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviQ cuando está abierto.</p>
     <img class="avatar-strip" src="docs/img/avatar_estados.webp" alt="Estados del avatar: saluda, trabaja, usa herramientas, pide ayuda y termina">
     <table>
       <thead><tr><th data-i="th_state">Estado</th><th data-i="th_does">Qué hace el robot</th></tr></thead>
       <tbody>
         <tr><td>👋 <span data-i="s1">Saluda</span></td><td data-i="s1d">Se presenta y saluda cuando lo abres.</td></tr>
-        <tr><td>✍️ <span data-i="s2">Trabaja</span></td><td data-i="s2d">Pone cara de concentrado cuando NoviArk empieza un trabajo y escribe en su panel.</td></tr>
+        <tr><td>✍️ <span data-i="s2">Trabaja</span></td><td data-i="s2d">Pone cara de concentrado cuando NoviQ empieza un trabajo y escribe en su panel.</td></tr>
         <tr><td>🛠 <span data-i="s3">Usa herramientas</span></td><td data-i="s3d">Muestra un icono en su visor según la herramienta: código, lupa, terminal o web.</td></tr>
         <tr><td>❓ <span data-i="s4">Pide permiso o ayuda</span></td><td data-i="s4d">«Necesito tu permiso…» o «Necesito tu ayuda…», y le respondes hablando.</td></tr>
         <tr><td>✅ <span data-i="s5">Termina</span></td><td data-i="s5d">Dice «¡Ya terminé!» y pregunta qué más hacemos.</td></tr>
@@ -140,12 +140,12 @@ bash iniciar.sh</code></pre>
 
   <section id="licencia">
     <h2 data-i="lic_title">Licencia</h2>
-    <p class="muted" data-i="lic_text">NoviArk se distribuye bajo la Noviark Community License 1.0. Es gratis para uso personal, educativo, de investigación y sin fines de lucro. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere licencia comercial. El avatar (noviq-avatar) tendrá su licencia definida aparte.</p>
+    <p class="muted" data-i="lic_text">NoviQ se distribuye bajo la Licencia NoviQ de Uso Personal 1.0 (ver LICENSE.md). Es gratis para uso personal. Cualquier uso comercial (de empresas, organizaciones, microempresas o trabajo por cuenta propia que genere ingresos) requiere una licencia comercial de pago. Para solicitarla, abre un issue con la etiqueta business. No es software de código abierto: el código es visible, pero el uso comercial es de pago.</p>
     <p><a href="LICENSE.md" data-i="lic_link">Leer la licencia completa</a> · <a href="ROADMAP.md" data-i="road_link">Hoja de ruta</a> · <a href="CHANGELOG.md" data-i="chg_link">Historial de cambios</a></p>
   </section>
 
   <footer>
-    <p>© 2026 Noviark Labs · <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener">GitHub</a></p>
+    <p>© 2026 NoviQ Labs · <a href="https://github.com/JUXN1988/noviark" target="_blank" rel="noopener">GitHub</a></p>
   </footer>
 </div>
 
@@ -157,28 +157,28 @@ bash iniciar.sh</code></pre>
     banner_title:"⚠️ En actualización activa.", banner_text:"Estamos mejorando el programa y pueden existir pequeñas fallas que se están corrigiendo. Usa siempre la última versión del repositorio.",
     run_title:"Ejecutar", run_req:"Necesitas Python 3.10 o superior. Todavía no hay instaladores publicados: se ejecuta desde el código.",
     run_after:"Luego entra en Ajustes → Proveedores y claves, pega la API key de un proveedor (o conecta Ollama / LM Studio) y empieza a conversar.",
-    shots_title:"Capturas", shot_home:"Pantalla de inicio: elige modelo, proyecto y permisos.", shot_free:"🎁 IA gratis: conecta modelos sin pagar.", shot_work:"NoviArk trabajando en un proyecto.", shot_plan:"Plan editable en vivo.", shot_picker:"Selector que muestra solo los modelos que funcionan.", shot_project:"Vista de proyecto a pantalla completa.",
+    shots_title:"Capturas", shot_home:"Pantalla de inicio: elige modelo, proyecto y permisos.", shot_free:"🎁 IA gratis: conecta modelos sin pagar.", shot_work:"NoviQ trabajando en un proyecto.", shot_plan:"Plan editable en vivo.", shot_picker:"Selector que muestra solo los modelos que funcionan.", shot_project:"Vista de proyecto a pantalla completa.",
     feat_title:"Qué hace",
     f1t:"40 herramientas", f1d:"Archivos, búsqueda en el código, PowerShell, Python, Linux, procesos, HTTP, búsqueda y lectura web, imágenes, captura de pantalla, navegador automatizado y más.",
     f2t:"Plan antes de actuar", f2d:"Puedes editar o aprobar el plan. Si no haces nada, se aprueba solo tras una cuenta regresiva.",
     f3t:"Se prueba a sí mismo", f3d:"diagnosticar revisa el proyecto con archivo y línea; probar_web prueba webs y juegos en un navegador invisible.",
-    f4t:"Guardián de razonamiento", f4d:"Si un modelo piensa demasiado sin actuar o entra en bucle, NoviArk lo corta y lo obliga a actuar.",
+    f4t:"Guardián de razonamiento", f4d:"Si un modelo piensa demasiado sin actuar o entra en bucle, NoviQ lo corta y lo obliga a actuar.",
     f5t:"Escalado al modelo más capaz", f5d:"Si el agente se atasca, el trabajo pasa al modelo más capaz que tengas habilitado.",
     f6t:"Trabajo que no se pierde", f6d:"Guarda objetivo, plan, lo hecho y los errores. Si un modelo falla, el siguiente continúa desde ahí.",
     f7t:"IA local", f7d:"Ollama y LM Studio, con el contexto ajustado a la memoria de tu equipo. Tu código no sale de tu PC.",
     f8t:"Seguridad", f8d:"Modos de permiso, copias y puntos de restauración, borrado a la Papelera, escáner de secretos y bóveda de claves (cifrada con DPAPI en Windows).",
     f9t:"Proveedores y MCP", f9d:"NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq y más. Servidores MCP con el mismo formato que Claude Desktop.",
-    avatar_title:"El avatar (noviq-avatar)", avatar_intro:"Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviArk cuando está abierto.",
+    avatar_title:"El avatar (noviq-avatar)", avatar_intro:"Un robot que vive encima de tus programas, con fondo transparente. Tiene su propia mente, memoria, voz y oído, y puede usar las herramientas de NoviQ cuando está abierto.",
     th_state:"Estado", th_does:"Qué hace el robot",
     s1:"Saluda", s1d:"Se presenta y saluda cuando lo abres.",
-    s2:"Trabaja", s2d:"Pone cara de concentrado cuando NoviArk empieza un trabajo y escribe en su panel.",
+    s2:"Trabaja", s2d:"Pone cara de concentrado cuando NoviQ empieza un trabajo y escribe en su panel.",
     s3:"Usa herramientas", s3d:"Muestra un icono en su visor según la herramienta: código, lupa, terminal o web.",
     s4:"Pide permiso o ayuda", s4d:"«Necesito tu permiso…» o «Necesito tu ayuda…», y le respondes hablando.",
     s5:"Termina", s5d:"Dice «¡Ya terminé!» y pregunta qué más hacemos.",
     avatar_more:"Además: permisos por voz (responde sí o no sin decir su nombre), tareas a la vista con barra de progreso, API compatible con OpenAI y servidor MCP.",
     fb_title:"Comentarios y sugerencias", fb_text:"Como el proyecto está en actualización, tu opinión ayuda mucho.",
     fb_bug:"🐞 Reportar un error", fb_feat:"💡 Proponer una mejora", fb_all:"📋 Ver issues abiertos",
-    lic_title:"Licencia", lic_text:"NoviArk se distribuye bajo la Noviark Community License 1.0. Es gratis para uso personal, educativo, de investigación y sin fines de lucro. Las empresas pueden evaluarlo hasta 60 días; el uso comercial continuado requiere licencia comercial. El avatar (noviq-avatar) tendrá su licencia definida aparte.",
+    lic_title:"Licencia", lic_text:"NoviQ se distribuye bajo la Licencia NoviQ de Uso Personal 1.0 (ver LICENSE.md). Es gratis para uso personal. Cualquier uso comercial (de empresas, organizaciones, microempresas o trabajo por cuenta propia que genere ingresos) requiere una licencia comercial de pago. Para solicitarla, abre un issue con la etiqueta business. No es software de código abierto: el código es visible, pero el uso comercial es de pago.",
     lic_link:"Leer la licencia completa", road_link:"Hoja de ruta", chg_link:"Historial de cambios"
   };
   var EN = {
@@ -187,28 +187,28 @@ bash iniciar.sh</code></pre>
     banner_title:"⚠️ Active development.", banner_text:"We are improving the app and minor bugs may exist while we fix them. Always use the latest version of the repository.",
     run_title:"Run", run_req:"You need Python 3.10 or newer. No installers are published yet: run it from the source code.",
     run_after:"Then go to Settings → Providers & keys, paste an API key from a provider (or connect Ollama / LM Studio) and start a conversation.",
-    shots_title:"Screenshots", shot_home:"Home screen: pick a model, a project and permissions.", shot_free:"🎁 Free AI: connect models without paying.", shot_work:"NoviArk working on a project.", shot_plan:"Editable live plan.", shot_picker:"Picker showing only the models that work.", shot_project:"Full-screen project view.",
+    shots_title:"Screenshots", shot_home:"Home screen: pick a model, a project and permissions.", shot_free:"🎁 Free AI: connect models without paying.", shot_work:"NoviQ working on a project.", shot_plan:"Editable live plan.", shot_picker:"Picker showing only the models that work.", shot_project:"Full-screen project view.",
     feat_title:"What it does",
     f1t:"40 tools", f1d:"Files, code search, PowerShell, Python, Linux, processes, HTTP, web search and reading, images, screenshots, automated browser and more.",
     f2t:"Plan before acting", f2d:"You can edit or approve the plan. If you do nothing, it is approved automatically after a countdown.",
     f3t:"Tests its own work", f3d:"diagnosticar reviews the project with file and line; probar_web tests web apps and games in an invisible browser.",
-    f4t:"Reasoning guardian", f4d:"If a model thinks too long without acting or loops, NoviArk stops it and makes it act.",
+    f4t:"Reasoning guardian", f4d:"If a model thinks too long without acting or loops, NoviQ stops it and makes it act.",
     f5t:"Escalation to the most capable model", f5d:"If the agent gets stuck, the work moves to the most capable model you have enabled.",
     f6t:"Work that is not lost", f6d:"Keeps the goal, plan, what is done and errors. If a model fails, the next one continues from there.",
     f7t:"Local AI", f7d:"Ollama and LM Studio, with context sized to your computer's memory. Your code stays on your PC.",
     f8t:"Safety", f8d:"Permission modes, backups and restore points, deletes go to the Recycle Bin, secret scanner and key vault (DPAPI-encrypted on Windows).",
     f9t:"Providers and MCP", f9d:"NVIDIA, Gemini, OpenAI, Anthropic, OpenRouter, Groq and more. MCP servers with the same format as Claude Desktop.",
-    avatar_title:"The avatar (noviq-avatar)", avatar_intro:"A robot that lives above your programs with a transparent background. It has its own mind, memory, voice and hearing, and can use NoviArk's tools when NoviArk is open.",
+    avatar_title:"The avatar (noviq-avatar)", avatar_intro:"A robot that lives above your programs with a transparent background. It has its own mind, memory, voice and hearing, and can use NoviQ's tools when NoviQ is open.",
     th_state:"State", th_does:"What the robot does",
     s1:"Greets", s1d:"Introduces itself and says hello when you open it.",
-    s2:"Works", s2d:"Looks focused when NoviArk starts a job and writes in its panel.",
+    s2:"Works", s2d:"Looks focused when NoviQ starts a job and writes in its panel.",
     s3:"Uses tools", s3d:"Shows an icon on its visor for the tool in use: code, magnifier, terminal or web.",
     s4:"Asks permission or help", s4d:"«I need your permission…» or «I need your help…», and you answer by voice.",
     s5:"Finishes", s5d:"Says «Done!» and asks what to do next.",
     avatar_more:"Also: voice permissions (answer yes or no without saying its name), tasks at a glance with a progress bar, an OpenAI-compatible API and an MCP server.",
     fb_title:"Comments and suggestions", fb_text:"Since the project is being updated, your feedback helps a lot.",
     fb_bug:"🐞 Report a bug", fb_feat:"💡 Suggest an improvement", fb_all:"📋 See open issues",
-    lic_title:"License", lic_text:"NoviArk is distributed under the Noviark Community License 1.0. It is free for personal, educational, research and non-profit use. Companies may evaluate it for up to 60 days; continued commercial use requires a commercial license. The avatar (noviq-avatar) will have its license defined separately.",
+    lic_title:"License", lic_text:"NoviQ is distributed under the NoviQ Personal Use License 1.0 (see LICENSE.md). It is free for personal use. Any commercial use (by companies, organizations, microenterprises or self-employed people earning income) requires a paid commercial license. To request one, open an issue labeled business. This is not open-source software: the code is visible, but commercial use is paid.",
     lic_link:"Read the full license", road_link:"Roadmap", chg_link:"Changelog"
   };
   var lang = "es";

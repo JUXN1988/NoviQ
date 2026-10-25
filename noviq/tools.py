@@ -1506,7 +1506,7 @@ BUILTIN = [
        "ref": S("Referencia eN de 'elementos'"), "x": I("Coordenada X"), "y": I("Coordenada Y"),
        "objetivo": S("Programa/ruta/URL para abrir, o título de la ventana para enfocar"), "texto": S("Texto a escribir"),
        "enter": B("Pulsar Enter tras escribir"), "teclas": S("Atajo: ctrl+s, alt+f4, enter…"), "segundos": {"type": "number"}}, ["accion"]),
-    T("programar_tarea", "Programa un trabajo para que Noviark lo haga solo más tarde o repetidamente (una vez, cada día, ciertos días o cada N minutos), o lista/pausa/reanuda/elimina las tareas programadas.",
+    T("programar_tarea", "Programa un trabajo para que NoviQ lo haga solo más tarde o repetidamente (una vez, cada día, ciertos días o cada N minutos), o lista/pausa/reanuda/elimina las tareas programadas.",
       {"accion": {"type": "string", "enum": ["crear", "listar", "eliminar", "pausar", "reanudar"]},
        "nombre": S("Nombre corto"), "instruccion": S("Qué debe hacer la IA en cada ejecución (completo)"),
        "tipo": {"type": "string", "enum": ["una_vez", "diario", "semanal", "intervalo"]},

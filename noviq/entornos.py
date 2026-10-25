@@ -210,7 +210,7 @@ def t_instalar_herramienta(a, ctx):
             ["winget", "install", "--id", nombre, "-e", "--accept-package-agreements", "--accept-source-agreements", "--silent"], ctx, 1800)
     out = run_streaming(["winget", "install", "--id", wid, "-e", "--accept-package-agreements", "--accept-source-agreements",
                          "--silent"], ctx, timeout=1800)
-    return out + "\n(Si el programa no aparece en el PATH, puede hacer falta reiniciar Noviark.)"
+    return out + "\n(Si el programa no aparece en el PATH, puede hacer falta reiniciar NoviQ.)"
 
 
 # ───────────── Puntos de restauración ─────────────
@@ -220,8 +220,8 @@ SNAP_EXCL = ["node_modules/", ".venv/", "venv/", "__pycache__/", ".noviq/", ".no
 
 def _git(root: Path, *args, timeout=60):
     gd = root / ".noviq" / "snapshots.git"
-    env = dict(os.environ, GIT_DIR=str(gd), GIT_WORK_TREE=str(root), GIT_AUTHOR_NAME="Noviark", GIT_AUTHOR_EMAIL="noviq@local",
-               GIT_COMMITTER_NAME="Noviark", GIT_COMMITTER_EMAIL="noviq@local")
+    env = dict(os.environ, GIT_DIR=str(gd), GIT_WORK_TREE=str(root), GIT_AUTHOR_NAME="NoviQ", GIT_AUTHOR_EMAIL="noviq@local",
+               GIT_COMMITTER_NAME="NoviQ", GIT_COMMITTER_EMAIL="noviq@local")
     return subprocess.run(["git", *args], capture_output=True, timeout=timeout, env=env, cwd=str(root), creationflags=NO_WINDOW)
 
 

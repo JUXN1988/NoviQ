@@ -4,7 +4,7 @@
 otro, incluso uno local) lo ejecuta paso a paso. Así el plan sale de la mejor IA aunque el trabajo lo haga otra.
 
 - El cerebro se elige solo (catalogo.ranking) o se fija en Ajustes (modelo_cerebro).
-- Si el cerebro falla o no hay ninguno, Noviark sigue como siempre (la IA principal planifica).
+- Si el cerebro falla o no hay ninguno, NoviQ sigue como siempre (la IA principal planifica).
 - Un plan es un JSON con resumen, tecnología, estructura de archivos, tareas y pruebas; las tareas se cargan
   en la lista de tareas y el plan se adjunta al pedido del usuario para que cualquier IA (y los relevos) lo sigan.
 """
@@ -20,7 +20,7 @@ PLAN_RX = re.compile(r"\b(crea|cre[ae]r|cr[eé]ame|haz|hac(er|me|erme)|desarroll
                      r"genera|migra|refactoriz|rehac|necesito (una?|un) |quiero (una?|un) )\w*", re.I)
 MARK = "[PLAN DEL ARQUITECTO"
 
-SYSTEM = """Eres el ARQUITECTO principal de Noviark, un equipo de IAs que construye programas reales en la PC del usuario (Windows).
+SYSTEM = """Eres el ARQUITECTO principal de NoviQ, un equipo de IAs que construye programas reales en la PC del usuario (Windows).
 Tu trabajo NO es programar ahora: es pensar a fondo y diseñar el plan para construir el programa COMPLETO y funcional,
 de modo que otra IA (quizá más pequeña) lo ejecute paso a paso sin perderse.
 Analiza el pedido, elige la tecnología más simple que cumpla todo, define la estructura de archivos y divide el trabajo

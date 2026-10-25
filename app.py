@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Noviark 4.0 — agente de IA de escritorio para modelos de NVIDIA (build.nvidia.com), Gemini, OpenAI,
+NoviQ 4.0 — agente de IA de escritorio para modelos de NVIDIA (build.nvidia.com), Gemini, OpenAI,
 Ollama y LM Studio, con herramientas estilo Claude: proyectos, archivos, PowerShell, Python,
 internet, imágenes, capturas, tareas, memoria y servidores MCP.
 
@@ -970,10 +970,10 @@ def oauth_openrouter():
         CONFIG["providers"]["openrouter"].setdefault("solo_gratis", True)
         save_config()
         list_models("openrouter", refresh=True)
-        msg, color = "✅ ¡OpenRouter conectado! Ya puedes cerrar esta pestaña y volver a Noviark.", "#3fdc2b"
+        msg, color = "✅ ¡OpenRouter conectado! Ya puedes cerrar esta pestaña y volver a NoviQ.", "#3fdc2b"
     except Exception as e:
         msg, color = f"❌ No se pudo conectar: {e}", "#ef5350"
-    return Response(f"""<!doctype html><meta charset="utf-8"><title>Noviark</title>
+    return Response(f"""<!doctype html><meta charset="utf-8"><title>NoviQ</title>
 <body style="background:#0a0f14;color:#e8f0ec;font:18px Segoe UI,sans-serif;display:grid;place-items:center;height:100vh;margin:0">
 <div style="text-align:center"><img src="/static/noviq_icon.png" width="96" style="border-radius:18px"><p style="color:{color}">{html_escape(msg)}</p></div>
 <script>setTimeout(()=>window.close(),2500)</script></body>""", mimetype="text/html")
@@ -1039,12 +1039,12 @@ def prog_action(tid, accion):
 
 @app.route("/api/inicio_windows", methods=["GET", "POST"])
 def inicio_windows():
-    """Acceso directo en la carpeta Inicio de Windows para que Noviark (y sus tareas programadas) arranque con el PC."""
+    """Acceso directo en la carpeta Inicio de Windows para que NoviQ (y sus tareas programadas) arranque con el PC."""
     if not IS_WINDOWS:
         return jsonify({"ok": False, "activo": False, "error": "Solo en Windows."})
     import subprocess
     startup = Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs/Startup"
-    lnk = startup / "Noviark.lnk"
+    lnk = startup / "NoviQ.lnk"
     if request.method == "GET":
         return jsonify({"ok": True, "activo": lnk.exists()})
     on = bool(J().get("activo"))
@@ -1119,7 +1119,7 @@ def apr_set():
 
 @app.post("/api/apagar")
 def apagar():
-    """Cierra Noviark por completo (botón ⏻ o el icono de la bandeja)."""
+    """Cierra NoviQ por completo (botón ⏻ o el icono de la bandeja)."""
     threading.Timer(0.5, lambda: os._exit(0)).start()
     return jsonify({"ok": True})
 
@@ -1132,7 +1132,7 @@ def puerto_ocupado(port=PORT):
 
 
 def main(abrir_navegador=True, bloquear=True, abrir_si_ocupado=True):
-    """Arranca el servidor. Si Noviark ya estaba abierto, solo muestra su ventana/página."""
+    """Arranca el servidor. Si NoviQ ya estaba abierto, solo muestra su ventana/página."""
     url = f"http://127.0.0.1:{PORT}"
     if puerto_ocupado():
         if abrir_si_ocupado:
@@ -1149,7 +1149,7 @@ def main(abrir_navegador=True, bloquear=True, abrir_si_ocupado=True):
     except OSError:
         pass
     print("=" * 64)
-    print(f"  Noviark {VERSION} listo en:", url)
+    print(f"  NoviQ {VERSION} listo en:", url)
     print("  Proyectos en:            ", projects_root())
     print("  Datos en:                ", DATA_DIR)
     print("=" * 64)

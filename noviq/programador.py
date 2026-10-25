@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Tareas programadas de Noviark: la IA hace un trabajo sola a una hora (una vez, cada día, ciertos días
+"""Tareas programadas de NoviQ: la IA hace un trabajo sola a una hora (una vez, cada día, ciertos días
 o cada N minutos) — revisar algo, generar un informe, abrir programas, probar un proyecto…
-Funcionan mientras Noviark está abierto (activa «Iniciar Noviark con Windows» para que siempre lo esté).
-Si el PC estaba apagado a la hora programada, la tarea se hace al abrir Noviark (si «recuperar» está activo)."""
+Funcionan mientras NoviQ está abierto (activa «Iniciar NoviQ con Windows» para que siempre lo esté).
+Si el PC estaba apagado a la hora programada, la tarea se hace al abrir NoviQ (si «recuperar» está activo)."""
 import json
 import threading
 import time
@@ -202,7 +202,7 @@ def tool(a, ctx):
             t = crear(a.get("nombre"), a.get("instruccion") or "", cuando, a.get("proyecto") or ctx.conv.get("project"),
                       ctx.conv.get("model"), autonomo=a.get("autonomo", True))
             return (f"✔ Tarea programada [{t['id']}] «{t['nombre']}»: {describe(t)}. Próxima: "
-                    f"{datetime.fromtimestamp(t['proxima']):%Y-%m-%d %H:%M}. (Se ejecuta mientras Noviark esté abierto; "
+                    f"{datetime.fromtimestamp(t['proxima']):%Y-%m-%d %H:%M}. (Se ejecuta mientras NoviQ esté abierto; "
                     "el usuario la ve en 🖥 PC y tareas.)")
         return "ERROR: accion debe ser crear, listar, eliminar, pausar o reanudar."
     except Exception as e:
@@ -211,7 +211,7 @@ def tool(a, ctx):
 
 TOOL_DEF = {"type": "function", "function": {
     "name": "programar_tarea",
-    "description": "Programa un trabajo para que Noviark lo haga solo más tarde o de forma repetida (una vez, diario, ciertos días o cada N minutos). También lista, pausa, reanuda o elimina tareas programadas.",
+    "description": "Programa un trabajo para que NoviQ lo haga solo más tarde o de forma repetida (una vez, diario, ciertos días o cada N minutos). También lista, pausa, reanuda o elimina tareas programadas.",
     "parameters": {"type": "object", "properties": {
         "accion": {"type": "string", "enum": ["crear", "listar", "eliminar", "pausar", "reanudar"]},
         "nombre": {"type": "string"}, "instruccion": {"type": "string", "description": "Qué debe hacer la IA cuando se ejecute (instrucción completa)"},

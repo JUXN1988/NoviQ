@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Noviark</title>
+<title>NoviQ</title>
 <link rel="icon" type="image/png" href="/static/favicon.png">
 <link rel="stylesheet" href="/static/lib/github-dark.min.css">
 <link rel="stylesheet" href="/static/app.css">
@@ -18,7 +18,7 @@
 <body>
 <div id="app">
   <aside id="side">
-    <div id="brand"><img src="/static/noviq_icon.png" alt="" class="logo"><div>Noviark<br><small>agente de IA · v4.2</small></div></div>
+    <div id="brand"><img src="/static/noviq_icon.png" alt="" class="logo"><div>NoviQ<br><small>agente de IA · v4.2</small></div></div>
     <button class="sbtn primary" id="newChat">＋ Nueva conversación</button>
     <div class="shead"><span>Proyectos</span><span><button id="allProjs" title="Ver todos los proyectos">▦</button><button id="newProj" title="Nuevo proyecto">＋</button></span></div>
     <div id="projects"></div>
@@ -34,7 +34,7 @@
         <button class="sbtn" id="openFolder" title="Abrir carpeta">📁 Carpeta</button>
         <button class="sbtn" id="openCfg" title="Ajustes">⚙ Ajustes</button>
       </div>
-      <button class="sbtn off" id="apagarBtn" title="Cierra Noviark por completo">⏻ Apagar Noviark</button>
+      <button class="sbtn off" id="apagarBtn" title="Cierra NoviQ por completo">⏻ Apagar NoviQ</button>
     </div>
   </aside>
   <main id="main">
@@ -163,7 +163,7 @@
     <datalist id="allModels"></datalist>
   </div>
   <div class="tabpane" id="t-local">
-    <div class="small">Optimiza Ollama y LM Studio para tu equipo. Noviark calcula el contexto ideal según la VRAM, la RAM y el tamaño de cada modelo, y hace que la IA trabaje paso a paso para que no pierda el hilo.</div>
+    <div class="small">Optimiza Ollama y LM Studio para tu equipo. NoviQ calcula el contexto ideal según la VRAM, la RAM y el tamaño de cada modelo, y hace que la IA trabaje paso a paso para que no pierda el hilo.</div>
     <div class="row">
       <div><label>VRAM de tu tarjeta (GB)</label><input id="l-vram" type="number" min="2" max="192"></div>
       <div><label>RAM del sistema (GB)</label><input id="l-ram" type="number" min="4" max="1024"></div>
@@ -232,7 +232,7 @@
   <div id="projsBar">
     <input id="pjSearch" placeholder="Buscar por nombre, tipo o carpeta…">
     <select id="pjSort"><option value="recientes">Más recientes</option><option value="nombre">Nombre A-Z</option><option value="tipo">Tipo</option></select>
-    <select id="pjFilter"><option value="">Todos</option><option value="propios">Creados en Noviark</option><option value="externos">Existentes en mi PC</option><option value="trabajando">Trabajando ahora</option></select>
+    <select id="pjFilter"><option value="">Todos</option><option value="propios">Creados en NoviQ</option><option value="externos">Existentes en mi PC</option><option value="trabajando">Trabajando ahora</option></select>
     <select id="pjView"><option value="grid">▦ Tarjetas</option><option value="list">☰ Lista</option></select>
     <button class="btn" id="pjImport">📂 Abrir proyecto existente</button>
     <button class="btn ok" id="pjNew">＋ Nuevo proyecto</button>
@@ -243,11 +243,11 @@
 <!-- Importar proyecto existente -->
 <div class="modal" id="importModal"><div class="card">
   <h2>📂 Abrir un proyecto que ya tienes</h2>
-  <div class="small">Elige la carpeta raíz del proyecto. Noviark detecta su tipo y la IA podrá leerlo, revisarlo, probarlo y corregirlo como si lo hubiera creado aquí. Tus archivos no se mueven.</div>
+  <div class="small">Elige la carpeta raíz del proyecto. NoviQ detecta su tipo y la IA podrá leerlo, revisarlo, probarlo y corregirlo como si lo hubiera creado aquí. Tus archivos no se mueven.</div>
   <label>Carpeta raíz</label>
   <div class="row"><div style="flex:4"><input id="imPath" placeholder="C:\Users\tu_usuario\Proyectos\mi_app"></div>
     <div style="flex:1"><button class="btn" id="imPick" style="width:100%">Elegir…</button></div></div>
-  <label>Nombre en Noviark (opcional)</label><input id="imName" placeholder="(el nombre de la carpeta)">
+  <label>Nombre en NoviQ (opcional)</label><input id="imName" placeholder="(el nombre de la carpeta)">
   <div class="small" id="imOut" style="margin-top:8px"></div>
   <div class="foot"><button class="btn" data-close>Cancelar</button><button class="btn ok" id="imOk">Abrir proyecto</button></div>
 </div></div>
@@ -255,10 +255,10 @@
 <!-- IA gratis -->
 <div class="modal" id="gratisModal"><div class="card wide">
   <h2>🎁 IA gratis</h2>
-  <div class="small">Estos proveedores dan acceso <b>gratis y legal</b> a modelos potentes con su plan gratuito oficial. Crea la cuenta en su web (1 minuto, casi todos sin tarjeta), pega la clave y listo: Noviark la guarda cifrada y la prueba. Si activas varios, cuando uno llega a su límite diario el <b>respaldo automático</b> continúa con otro sin perder el trabajo.</div>
+  <div class="small">Estos proveedores dan acceso <b>gratis y legal</b> a modelos potentes con su plan gratuito oficial. Crea la cuenta en su web (1 minuto, casi todos sin tarjeta), pega la clave y listo: NoviQ la guarda cifrada y la prueba. Si activas varios, cuando uno llega a su límite diario el <b>respaldo automático</b> continúa con otro sin perder el trabajo.</div>
   <div class="vgbox">
     <h3>🧠 Modo vanguardia</h3>
-    <div class="small">Noviark usa siempre los modelos <b>gratuitos más inteligentes</b> (los que más razonan) que tengas conectados. Antes de construir un programa, el <b>cerebro</b> (el más inteligente) diseña el plan completo con razonamiento alto y luego la IA de trabajo lo ejecuta paso a paso. Si uno falla o se agota, sigue el siguiente sin perder nada.</div>
+    <div class="small">NoviQ usa siempre los modelos <b>gratuitos más inteligentes</b> (los que más razonan) que tengas conectados. Antes de construir un programa, el <b>cerebro</b> (el más inteligente) diseña el plan completo con razonamiento alto y luego la IA de trabajo lo ejecuta paso a paso. Si uno falla o se agota, sigue el siguiente sin perder nada.</div>
     <div class="row2"><button class="btn ok" id="vgApply2">🧠 Elegir y probar los mejores ahora</button>
       <label class="chk"><input type="checkbox" id="vgPlan"> El cerebro planifica antes de construir</label>
       <label class="chk"><input type="checkbox" id="vgAuto"> Respaldo automático con los mejores gratis</label></div>
@@ -266,7 +266,7 @@
     <div id="vgOut" class="small"></div>
   </div>
   <div id="gratisGrid"></div>
-  <div class="small" style="margin-top:8px">Los límites gratuitos los fija cada proveedor y pueden cambiar. Noviark no usa las webs de chat de pago (ChatGPT, Claude.ai…) porque va contra sus condiciones y podrían bloquear tus cuentas.</div>
+  <div class="small" style="margin-top:8px">Los límites gratuitos los fija cada proveedor y pueden cambiar. NoviQ no usa las webs de chat de pago (ChatGPT, Claude.ai…) porque va contra sus condiciones y podrían bloquear tus cuentas.</div>
   <div class="foot"><button class="btn" data-close>Cerrar</button></div>
 </div></div>
 
@@ -280,7 +280,7 @@
       <div id="pcState" class="small"></div>
       <div class="row2"><button class="btn" id="pcTest">🩺 Probar control integrado</button><button class="btn ok" id="pcMcp">⬆ Activar Windows-MCP (más completo)</button></div>
       <div id="pcOut" class="small"></div>
-      <label class="chk"><input type="checkbox" id="pcStartup"> Iniciar Noviark con Windows (para que las tareas programadas siempre se ejecuten)</label>
+      <label class="chk"><input type="checkbox" id="pcStartup"> Iniciar NoviQ con Windows (para que las tareas programadas siempre se ejecuten)</label>
     </div>
     <div class="gcard">
       <h3>⏰ Nueva tarea programada</h3>
@@ -301,7 +301,7 @@
 <!-- Aprendizaje -->
 <div class="modal" id="aprModal"><div class="card wide">
   <h2>🧬 Aprendizaje de los agentes</h2>
-  <div class="small">Los agentes de Noviark aprenden solos: cuando algo falla y luego la IA lo arregla, se guarda <b>qué error era y qué lo solucionó</b>. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA) Noviark le pasa la solución que ya funcionó. También aprende qué paquete instalar para cada módulo y qué modelos no están operativos.</div>
+  <div class="small">Los agentes de NoviQ aprenden solos: cuando algo falla y luego la IA lo arregla, se guarda <b>qué error era y qué lo solucionó</b>. La próxima vez que aparezca ese error (en cualquier proyecto y con cualquier IA) NoviQ le pasa la solución que ya funcionó. También aprende qué paquete instalar para cada módulo y qué modelos no están operativos.</div>
   <div class="row2" style="margin:10px 0"><label class="chk"><input type="checkbox" id="aprOn"> Aprendizaje activo</label><span id="aprStats" class="small"></span><span class="grow"></span><button class="btn" id="aprClear">🗑 Olvidar todo lo aprendido</button></div>
   <div id="aprHealth"></div>
   <div id="aprList"></div>

@@ -1,5 +1,5 @@
 :root{
-  /* Paleta Noviark (del logo): verde neón + cobre del cerebro + fondo grafito azulado */
+  /* Paleta NoviQ (del logo): verde neón + cobre del cerebro + fondo grafito azulado */
   --bg:#0a0f14; --panel:#111920; --panel2:#18222c; --panel3:#202c38; --border:#243241; --text:#e8f0ec; --muted:#93a4a0;
   --accent:#3fdc2b; --accent2:#8aff45; --accent-soft:#3fdc2b1f; --copper:#d98a5e; --copper2:#a95735;
   --danger:#ef5350; --warn:#f0a93b; --code:#070b0f; --blue:#5aa9ff;
@@ -198,7 +198,7 @@ details.think .t{white-space:pre-wrap;max-height:320px;overflow:auto}
 .confirm textarea:focus{outline:none;border-color:var(--accent)}
 .confirm.ask{border-color:var(--accent);background:#0f2410}
 
-/* Noviark: detalles de marca */
+/* NoviQ: detalles de marca */
 .msg.ai .av{background:linear-gradient(135deg,#8aff45,#19d92d);color:#062006}
 details.think{border-left-color:var(--copper)}
 .sbtn.primary,#send,.btn.ok{background:linear-gradient(135deg,#63ff35,#19d92d);color:#041604}
