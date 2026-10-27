@@ -1,5 +1,9 @@
 # Changelog / Historial de cambios
 
+## v4.7.2 — 2026-10-26
+- **🎚 Every request gets only the process it needs / Cada pedido recibe solo el proceso que necesita.** Instant rule-based levels (no AI call): 💬 chat or simple question → direct answer (max 6 steps); ⚡ information/notification → fast path without files (max 20); 🔧 small change or fix in code → no architect plan or plan review: locate → edit → verify once (max 30); 🏗 new program/game/page → full process (plan, team, tests). Unclear requests keep the usual process.
+- **Fix:** 4.7.1 crashed (`UnboundLocalError`) on fast-path requests because another import inside the agent reused the name `VR`. New end-to-end test runs the agent loop on every level. / Arreglo del fallo de la 4.7.1 en la vía rápida.
+
 ## v4.7.1 — 2026-10-26
 - **⚡ Fast path for simple tasks / Vía rápida.** Information and notification requests (news, weather, prices, search, summaries, send by Telegram/email, reminders) run directly: no project diagnosis, no architect plan or plan review, no file tree in the instructions, at most 20 steps, and a clear guide to use `buscar_en_internet`, `leer_pagina_web` and `telegram`. Real case fixed: «Revisa las noticias… y envíalas por Telegram» took 5 minutes and 40+ steps editing `.env` and scripts. / Las tareas simples se hacen directo.
 - The bug detector no longer treats «revisa / corrige / arregla» alone as «fix the project», and never auto-diagnoses `_General`. / «Revisa» solo ya no dispara el diagnóstico.

@@ -91,7 +91,9 @@ Trabaja como un programador senior, sin adivinar ni reescribir a ciegas:
 - Carpeta de proyectos: {projects_root()}
 - Directorio de trabajo actual (rutas relativas): {cwd}
 """
-    if conv.get("_rapida"):
+    if conv.get("_nivel") in VR.BLOQUES:
+        s += "\n" + VR.BLOQUES[conv["_nivel"]]
+    elif conv.get("_rapida"):
         s += "\n" + VR.BLOQUE
     if proj and not conv.get("_rapida"):
         info = T.project_info(proj)
@@ -526,7 +528,11 @@ def run_agent(conv, emit_raw, stop_ev):
     # ⚡ ¿Tarea rápida (información/aviso)? → sin diagnóstico, sin plan, sin árbol de archivos y pocas vueltas
     ult = next((m for m in reversed(conv.get("messages") or []) if m.get("role") == "user"
                 and not _texto(m.get("content")).startswith("[")), None)
-    conv["_rapida"] = bool(ult and VR.es_tarea_rapida(_texto(ult.get("content"))))
+    txt_ult = _texto(ult.get("content")) if ult else ""
+    conv["_nivel"] = VR.nivel(txt_ult, arreglo=pide_arreglo(txt_ult)) if ult else "normal"
+    conv["_rapida"] = conv["_nivel"] in ("rapida", "charla")   # sin diagnóstico, sin plan y sin árbol de archivos
+    if conv["_nivel"] in VR.AVISO_NIVEL:
+        emit("status", {"text": VR.AVISO_NIVEL[conv["_nivel"]]})
     conv.pop("_tipo", None)
     conv["_tipo"] = EV.tipo_conv(conv)  # tipo del pedido actual (crear, arreglar, web, analizar, general)
     conv.setdefault("_turno_modelos", {})
@@ -577,7 +583,9 @@ def _run_once(conv, emit_raw, stop_ev):
     compact = C.is_compact(model_id)
     from .local import cfg_local
     max_steps = int(cfg_local().get("max_steps", 150)) if compact else int(CONFIG.get("max_steps", 40))
-    if conv.get("_rapida"):
+    if conv.get("_nivel") in VR.MAX_PASOS_NIVEL:
+        max_steps = min(max_steps, VR.MAX_PASOS_NIVEL[conv["_nivel"]])
+    elif conv.get("_rapida"):
         max_steps = min(max_steps, VR.MAX_PASOS)
     changed_run = set()      # archivos de código cambiados en este turno (para las pruebas finales)
     final_fixes, last_report, stalls = 0, "", {}
@@ -1088,8 +1096,8 @@ def _run_once(conv, emit_raw, stop_ev):
                 if tools_used or text.strip():
                     EV.registrar(model_id, "fin", tipo, detalle="trabajo terminado")
                 if conv.pop("_entrega_lista", False):
-                    from . import versiones as VR
-                    VR.entrega_automatica(conv, emit)
+                    from . import versiones as VERS   # (no «VR»: ese nombre es la vía rápida)
+                    VERS.entrega_automatica(conv, emit)
                 _salir(conv, "terminado", model_id, chain)
             return
         tools_used += len(calls)
@@ -1164,7 +1172,7 @@ def _run_once(conv, emit_raw, stop_ev):
                                 except Exception:
                                     pass
                 if approved and name == "actualizar_tareas" and not conv.get("plan_cerebro") and not conv.get("_plan_revisado") \
-                        and not conv.get("_rapida") \
+                        and not conv.get("_rapida") and conv.get("_nivel") != "pequena" \
                         and len(args.get("tareas") or []) >= 3 and not (conv.get("tasks") or []):
                     # primer plan de la IA principal: el usuario puede revisarlo/editarlo (se aprueba solo al acabar el tiempo)
                     conv["_plan_revisado"] = True

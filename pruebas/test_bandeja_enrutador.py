@@ -393,3 +393,51 @@ def test_tarea_rapida_sin_plan_ni_diagnostico(monkeypatch):
     monkeypatch.setattr(AG, "diagnostico_texto", lambda *a, **k: llamado.append(1) or ("x", 1))
     AG.auto_diagnostico(conv, lambda *a: None, threading.Event())
     assert not llamado
+
+
+def test_niveles_de_pedido():
+    from noviq import via_rapida as VRP
+    from noviq.agent import pide_arreglo
+    casos = {
+        "hola, ¿qué tal?": "charla", "gracias": "charla", "¿qué puedes hacer?": "charla",
+        NOTICIAS: "rapida", "¿Qué clima hará mañana en Quito?": "rapida",
+        "Crea una página web de recetas con buscador": "grande", "hazme un juego de naves en 3D": "grande",
+        "Necesito una app para controlar mis gastos": "grande",
+        "cambia el color del botón de guardar a verde en la página de login": "pequena",
+        "el juego de naves no carga, arréglalo": "pequena",
+        "agrega un campo de teléfono al formulario de la app": "pequena",
+        "explícame cómo funciona la recursividad con un ejemplo en python": "normal",
+    }
+    for t, esperado in casos.items():
+        assert VRP.nivel(t, arreglo=pide_arreglo(t)) == esperado, (t, VRP.nivel(t, arreglo=pide_arreglo(t)))
+
+
+def test_cambio_puntual_sin_plan_y_con_guia(monkeypatch):
+    from noviq import agent as AG
+    from noviq import cerebro as CB
+    from noviq import tools as T
+    monkeypatch.setattr(T, "project_info", lambda n: {"tipo": "web", "descripcion": ""})
+    monkeypatch.setattr(AG, "project_tree", lambda p, limit=80: "index.html")
+    conv = {"id": "p1", "project": "tienda", "_nivel": "pequena", "tasks": [],
+            "messages": [{"role": "user", "content": "cambia el color del botón de guardar a verde en la página de login"}]}
+    assert CB.needs_plan(conv) is None
+    s = AG.system_prompt(conv)
+    assert "CAMBIO PUNTUAL" in s and "index.html" in s     # en un cambio puntual SÍ ve los archivos del proyecto
+
+
+@pytest.mark.parametrize("pedido", [NOTICIAS, "hola", "cambia el color del botón de guardar a verde en la página de login",
+                                    "Crea una página web de recetas"])
+def test_ciclo_del_agente_corre_en_todos_los_niveles(monkeypatch, pedido):
+    """El ciclo completo (run_agent → director → _run_once) debe correr en cada nivel sin errores (antes, la vía rápida
+    caía con UnboundLocalError porque otro import usaba el nombre «VR»)."""
+    from noviq import agent as AG
+    from noviq import cerebro as CB
+    monkeypatch.setattr(AG, "stream_chat", lambda *a, **k: ("Listo.", "", [], "stop"))
+    monkeypatch.setattr(CB, "plan", lambda *a, **k: False)
+    monkeypatch.setattr(AG, "fallback_chain", lambda conv, first=None: ["prueba::modelo"])
+    monkeypatch.setattr(AG.EV, "modelo_inicial", lambda conv, want: ("prueba::modelo", None))
+    monkeypatch.setattr(AG.EV, "registrar", lambda *a, **k: None)
+    conv = {"id": "lv", "title": "x", "model": "prueba::modelo", "project": None, "tasks": [], "allowed_tools": [],
+            "messages": [{"role": "user", "content": pedido}], "display": []}
+    AG.run_agent(conv, lambda *a: None, threading.Event())
+    assert conv["display"][-1]["text"] == "Listo."
