@@ -50,6 +50,8 @@ def needs_plan(conv):
         return None
     if any(t.get("estado") in ("pendiente", "en_progreso") for t in conv.get("tasks") or []):
         return None
+    if conv.get("_rapida"):
+        return None  # ⚡ tarea rápida (información/aviso): sin arquitecto ni plan
     if conv.get("modo_juego"):
         return None  # videojuegos: el diseño lo hace crear_juego (🎮 Estudio) y los cambios van a juego.js; sin plan del arquitecto
     msgs = conv.get("messages") or []

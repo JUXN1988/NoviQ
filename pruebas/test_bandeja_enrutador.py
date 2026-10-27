@@ -336,3 +336,60 @@ def test_titulo_ia(monkeypatch):
     c = new_conv("t4"); c["title"] = "Título que el usuario cambió a mano"; save_conv(c)
     APP._titulo_ia("t4", "otro título automático", "un pedido bastante largo para que se intente titular")
     assert load_conv("t4")["title"] == "Título que el usuario cambió a mano"
+
+
+# ───────────── ⚡ vía rápida (caso real: noticias por Telegram) ─────────────
+NOTICIAS = ("Revisa las noticias sobre el Ecuador: las 5 más relevantes a nivel nacional y las 3 más relevantes en "
+            "Santo Domingo de los Colorados, y envíalas por Telegram.")
+
+
+def test_noticias_por_telegram_es_tarea_rapida_y_no_arreglo():
+    from noviq import via_rapida as VRP
+    from noviq.agent import pide_arreglo
+    assert VRP.es_tarea_rapida(NOTICIAS)
+    assert not pide_arreglo(NOTICIAS)           # antes «revisa» disparaba el diagnóstico del proyecto
+
+
+def test_tareas_rapidas_y_de_programacion():
+    from noviq import via_rapida as VRP
+    rapidas = ["¿Qué clima hará mañana en Quito?", "Búscame el precio del dólar hoy", "Resume las noticias de tecnología",
+               "Mándame por correo los resultados del partido de Ecuador", "Recuérdame llamar a Ana a las 5"]
+    codigo = ["Crea una página web de recetas", "Revisa el código del login, no funciona", "busca el error en mi juego de naves",
+              "Haz un script en Python que descargue noticias", "Resume el archivo informe.docx de mi proyecto"]
+    for t in rapidas:
+        assert VRP.es_tarea_rapida(t), t
+    for t in codigo:
+        assert not VRP.es_tarea_rapida(t), t
+
+
+def test_pide_arreglo_sigue_detectando_fallas_reales():
+    from noviq.agent import pide_arreglo
+    for t in ("Revisa por qué mi juego no carga", "el login no funciona, arréglalo", "corrige el código de la calculadora",
+              "me sale un error en la consola"):
+        assert pide_arreglo(t), t
+    for t in ("Revisa mi correo y dime lo importante", "corrige la ortografía de este texto: hola komo estas"):
+        assert not pide_arreglo(t), t
+
+
+def test_prompt_de_tarea_rapida_sin_arbol_de_archivos(monkeypatch):
+    from noviq import agent as AG
+    from noviq import tools as T
+    monkeypatch.setattr(T, "project_info", lambda n: {"tipo": "general", "descripcion": ""})
+    monkeypatch.setattr(AG, "project_tree", lambda p, limit=80: "config.json\nenviar_telegram.py")
+    conv = {"id": "r1", "project": "_General", "messages": [{"role": "user", "content": NOTICIAS}], "tasks": [], "_rapida": True}
+    s = AG.system_prompt(conv)
+    assert "TAREA RÁPIDA" in s and "enviar_telegram.py" not in s and "Archivos del proyecto" not in s
+    conv["_rapida"] = False
+    assert "enviar_telegram.py" in AG.system_prompt(conv)
+
+
+def test_tarea_rapida_sin_plan_ni_diagnostico(monkeypatch):
+    from noviq import agent as AG
+    from noviq import cerebro as CB
+    conv = {"id": "r2", "project": "_General", "_rapida": True, "tasks": [],
+            "messages": [{"role": "user", "content": NOTICIAS}], "display": []}
+    assert CB.needs_plan(conv) is None
+    llamado = []
+    monkeypatch.setattr(AG, "diagnostico_texto", lambda *a, **k: llamado.append(1) or ("x", 1))
+    AG.auto_diagnostico(conv, lambda *a: None, threading.Event())
+    assert not llamado

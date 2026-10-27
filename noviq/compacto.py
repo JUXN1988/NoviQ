@@ -97,7 +97,11 @@ Carpeta de trabajo: {cwd}
     est = E.build(conv, max_actions=12)
     if est:
         s += "\n" + est[:3500] + "\n"
-    mp = indice.compact_map(cwd, meta_dir(conv["project"]) if conv.get("project") else None, map_chars) if cwd.exists() else ""
+    if conv.get("_rapida"):   # ⚡ tarea rápida: guía directa y sin mapa de archivos (no es programación)
+        from .via_rapida import BLOQUE
+        s += "\n" + BLOQUE
+    mp = "" if conv.get("_rapida") else (
+        indice.compact_map(cwd, meta_dir(conv["project"]) if conv.get("project") else None, map_chars) if cwd.exists() else "")
     if mp:
         s += "\n### MAPA DEL CÓDIGO (nombre@línea; usa leer_archivo con desde_linea/hasta_linea para ver detalles)\n" + mp + "\n"
     try:

@@ -11,6 +11,7 @@ from pathlib import Path
 from datetime import datetime
 
 from . import bandeja as BJ
+from . import via_rapida as VR
 from . import compacto as C
 from . import diagnostico as D
 from . import director as DIR
@@ -90,13 +91,15 @@ Trabaja como un programador senior, sin adivinar ni reescribir a ciegas:
 - Carpeta de proyectos: {projects_root()}
 - Directorio de trabajo actual (rutas relativas): {cwd}
 """
-    if proj:
+    if conv.get("_rapida"):
+        s += "\n" + VR.BLOQUE
+    if proj and not conv.get("_rapida"):
         info = T.project_info(proj)
         s += f"- Proyecto activo: **{proj}** (tipo: {info.get('tipo', '?')}). {info.get('descripcion', '')}\n"
         if info.get("instrucciones"):
             s += f"\n## Instrucciones del proyecto\n{info['instrucciones']}\n"
         s += f"\n## Archivos del proyecto\n{project_tree(cwd)}\n"
-    else:
+    elif not proj:
         s += "- No hay proyecto activo (se usa la carpeta _General). Si el usuario pide un programa, crea un proyecto.\n"
     try:  # 🧠 memoria en 3 lugares (usuario · proyecto · ajustes) + mapa de dónde buscar
         from .experto import memoria as MEM
@@ -334,10 +337,22 @@ def _texto(content):
     return str(content or "")
 
 
+def pide_arreglo(txt):
+    """¿El pedido es arreglar algo que no funciona? «Revisa», «corrige» o «arregla» SOLOS no bastan: también se usan
+    para noticias, correos o textos («Revisa las noticias…» se tomaba como «arregla el proyecto» y disparaba el
+    diagnóstico). Cuentan si el pedido habla de código/proyecto o si además hay otra señal de falla («no funciona»…)."""
+    txt = txt or ""
+    if not BUG_RX.search(txt) or VR.es_tarea_rapida(txt):
+        return False
+    if VR.CODIGO_RX.search(VR._norm(txt)):
+        return True
+    return bool(BUG_RX.search(re.sub(r"(?i)\b(revis|corrig|arregl|repar)\w*", " ", txt)))
+
+
 def es_depuracion(conv):
     """¿El último pedido del usuario es revisar/arreglar algo que no funciona?"""
     pedidos = (conv.get("estado") or {}).get("pedidos") or []
-    return bool(pedidos and BUG_RX.search(pedidos[-1].get("texto") or ""))
+    return bool(pedidos and pide_arreglo(pedidos[-1].get("texto") or ""))
 
 
 def diagnostico_texto(conv, emit, stop_ev, max_items=8):
@@ -358,11 +373,12 @@ def diagnostico_texto(conv, emit, stop_ev, max_items=8):
 def auto_diagnostico(conv, emit, stop_ev):
     """Si el usuario dice que algo no funciona, Noviq diagnostica el proyecto ANTES de que la IA empiece
     y le entrega la lista de problemas reales (las IAs pequeñas no saben por dónde empezar)."""
-    if not CONFIG.get("diagnostico_auto", True) or not conv.get("project") or not conv.get("messages"):
+    if not CONFIG.get("diagnostico_auto", True) or not conv.get("project") or not conv.get("messages") \
+            or conv.get("_rapida") or str(conv.get("project")).startswith("_"):   # _General no es un proyecto a arreglar
         return
     last = conv["messages"][-1]
     txt = _texto(last.get("content"))
-    if last.get("role") != "user" or txt.startswith("[") or DIAG_MARK in txt or not BUG_RX.search(txt):
+    if last.get("role") != "user" or txt.startswith("[") or DIAG_MARK in txt or not pide_arreglo(txt):
         return
     emit("status", {"text": "🩺 Diagnóstico automático del proyecto antes de empezar (errores reales, navegador de pruebas)…"})
     rep_, n = diagnostico_texto(conv, emit, stop_ev)
@@ -507,6 +523,10 @@ def run_agent(conv, emit_raw, stop_ev):
     #    se trata como un pedido normal, ANTES del plan y del tipo de pedido, para que todo se base en lo nuevo
     if conv.pop("_bandeja_turno_nuevo", False):
         BJ.inyectar(conv, emit, en_curso=False)
+    # ⚡ ¿Tarea rápida (información/aviso)? → sin diagnóstico, sin plan, sin árbol de archivos y pocas vueltas
+    ult = next((m for m in reversed(conv.get("messages") or []) if m.get("role") == "user"
+                and not _texto(m.get("content")).startswith("[")), None)
+    conv["_rapida"] = bool(ult and VR.es_tarea_rapida(_texto(ult.get("content"))))
     conv.pop("_tipo", None)
     conv["_tipo"] = EV.tipo_conv(conv)  # tipo del pedido actual (crear, arreglar, web, analizar, general)
     conv.setdefault("_turno_modelos", {})
@@ -557,6 +577,8 @@ def _run_once(conv, emit_raw, stop_ev):
     compact = C.is_compact(model_id)
     from .local import cfg_local
     max_steps = int(cfg_local().get("max_steps", 150)) if compact else int(CONFIG.get("max_steps", 40))
+    if conv.get("_rapida"):
+        max_steps = min(max_steps, VR.MAX_PASOS)
     changed_run = set()      # archivos de código cambiados en este turno (para las pruebas finales)
     final_fixes, last_report, stalls = 0, "", {}
     seen_sigs, loops = {}, 0
@@ -1142,6 +1164,7 @@ def _run_once(conv, emit_raw, stop_ev):
                                 except Exception:
                                     pass
                 if approved and name == "actualizar_tareas" and not conv.get("plan_cerebro") and not conv.get("_plan_revisado") \
+                        and not conv.get("_rapida") \
                         and len(args.get("tareas") or []) >= 3 and not (conv.get("tasks") or []):
                     # primer plan de la IA principal: el usuario puede revisarlo/editarlo (se aprueba solo al acabar el tiempo)
                     conv["_plan_revisado"] = True

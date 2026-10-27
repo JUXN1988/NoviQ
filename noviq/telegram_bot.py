@@ -560,7 +560,7 @@ def tool(a, ctx):
 
 TOOL_DEF = {"type": "function", "function": {
     "name": "telegram",
-    "description": "Manda un aviso importante (o una imagen/captura) al Telegram del usuario: resultados de trabajos largos, algo urgente o que necesita saber aunque no esté en el PC.",
+    "description": "Envía un mensaje al Telegram del usuario. Úsala SIEMPRE que el usuario pida enviarle algo por Telegram (noticias, resúmenes, resultados, listas): accion='avisar' con el texto completo ya redactado (los textos largos se dividen solos). accion='foto' manda una imagen. También sirve para avisos importantes o urgentes.",
     "parameters": {"type": "object", "properties": {"accion": {"type": "string", "enum": ["avisar", "foto"]},
                                                     "texto": {"type": "string"}, "ruta": {"type": "string", "description": "foto: ruta de la imagen"}},
                    "required": ["accion", "texto"]}}}

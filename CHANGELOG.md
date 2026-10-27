@@ -1,5 +1,10 @@
 # Changelog / Historial de cambios
 
+## v4.7.1 — 2026-10-26
+- **⚡ Fast path for simple tasks / Vía rápida.** Information and notification requests (news, weather, prices, search, summaries, send by Telegram/email, reminders) run directly: no project diagnosis, no architect plan or plan review, no file tree in the instructions, at most 20 steps, and a clear guide to use `buscar_en_internet`, `leer_pagina_web` and `telegram`. Real case fixed: «Revisa las noticias… y envíalas por Telegram» took 5 minutes and 40+ steps editing `.env` and scripts. / Las tareas simples se hacen directo.
+- The bug detector no longer treats «revisa / corrige / arregla» alone as «fix the project», and never auto-diagnoses `_General`. / «Revisa» solo ya no dispara el diagnóstico.
+- The `telegram` tool now says it sends any message the user asks for (not only urgent notices). / La herramienta telegram se describe mejor.
+
 ## v4.7.0 — 2026-10-25
 - **📥 Requests while it works / Peticiones en caliente.** Messages sent while a conversation is working are no longer rejected (HTTP 409). They go to that conversation's inbox and the agent merges them into its plan at the next step; if the job had just finished, a new turn starts with them. Works from the window (button «📥 Agregar», queue bar with ✕), the avatar, Telegram and MCP (`noviq_agregar`). / Lo que pides mientras trabaja entra en la bandeja y se integra al plan en el siguiente paso, sin detenerlo.
 - **🧭 Conversation router / Enrutador de conversaciones.** Each request goes to the same conversation, resumes another one, opens a new one (also inside the project you name) or creates a new project. Rules first, the fastest AI only when in doubt. The avatar and Telegram no longer put everything into a single conversation; Telegram no longer answers «busy» (other topics run in parallel). MCP: `noviq_enrutar`. / Cada pedido va a su conversación o proyecto.
