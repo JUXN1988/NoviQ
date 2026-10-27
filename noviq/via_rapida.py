@@ -68,8 +68,14 @@ CONSTRUIR_RX = re.compile(r"\b(crea|crear|creame|haz|hazme|hacer|desarrolla|cons
                           r"bot|api|tienda|plataforma|script|herramienta|calculadora|dashboard|panel)\b")
 UI_RX = re.compile(r"\b(boton|botones|formulario|campo|pantalla|menu|ventana|titulo|encabezado|pie de pagina|color|fuente|"
                    r"icono|imagen|logo|estilo|tamano|margen|login|registro|pagina de|seccion|tabla|columna|lista|enlace|link)\b")
-MAX_PASOS_NIVEL = {"charla": 6, "rapida": MAX_PASOS, "pequena": 30}
+DOC_RX = re.compile(r"\b(crea|creame|haz|hazme|genera|redacta|escribe|escribeme|prepara|elabora|arma|armame|convierte|exporta|"
+                    r"pasa|pasame|pasalo|pasala|conviertelo|conviertela|exportalo|exportala|guarda|guardalo|necesito|quiero|dame)\b.{0,60}\b(documento|informe|reporte|carta|oficio|solicitud|cv|curriculum|"
+                    r"hoja de vida|word|docx|pdf|excel|xlsx|hoja de calculo|planilla|presentacion|diapositivas|powerpoint|pptx|csv|"
+                    r"acta|contrato|cotizacion|proforma|factura|propuesta|memo|memorando|resumen en|tabla|lista de)\b")
+DOC_CODIGO_RX = re.compile(r"\b(script|programa|app\b|aplicacion|codigo|funcion|api\b|base de datos|sistema)\b")
+MAX_PASOS_NIVEL = {"charla": 6, "rapida": MAX_PASOS, "documento": MAX_PASOS, "pequena": 30}
 AVISO_NIVEL = {"charla": "💬 Respuesta directa.", "rapida": "⚡ Vía rápida: tarea de información/aviso, sin tocar archivos.",
+               "documento": "📄 Documento: lo creo directo con la herramienta de documentos.",
                "pequena": "🔧 Cambio puntual: sin plan del arquitecto; localizo, edito y verifico."}
 
 
@@ -81,6 +87,8 @@ def nivel(texto, arreglo=False):
         return "normal"
     if len(n) <= 60 and SALUDO_RX.match(n) and not RAPIDA_RX.search(n) and not CODIGO_RX.search(n):
         return "charla"
+    if DOC_RX.search(n) and not DOC_CODIGO_RX.search(n):
+        return "documento"
     if es_tarea_rapida(texto):
         return "rapida"
     if CONSTRUIR_RX.search(n):
@@ -92,6 +100,13 @@ def nivel(texto, arreglo=False):
 
 BLOQUES = {
     "rapida": BLOQUE,
+    "documento": "## 📄 DOCUMENTO (no es programación)\n"
+                 "- Si necesitas información actual, primero `buscar_en_internet` (y `leer_pagina_web` solo para 1 o 2 páginas).\n"
+                 "- Luego crea el archivo con `crear_documento` en UNA llamada (formato pedido: pdf, docx, xlsx, pptx, html, md, txt, "
+                 "csv o json), con el contenido completo y bien organizado (# títulos, - viñetas, tablas | a | b |).\n"
+                 "- NO escribas scripts, NO instales librerías y NO leas archivos de otros trabajos. Si el usuario pidió enviarlo, "
+                 "usa `telegram` o `correo`.\n"
+                 "- Termina diciendo dónde quedó el archivo.\n",
     "charla": "## 💬 CHARLA O PREGUNTA SIMPLE\nResponde directo, en pocas líneas. Usa una herramienta solo si de verdad hace falta "
               "(por ejemplo buscar_en_internet para un dato actual). No crees ni edites archivos ni hagas planes.\n",
     "pequena": "## 🔧 CAMBIO PUNTUAL (no es un proyecto nuevo)\n"

@@ -453,7 +453,19 @@ def _avisar_ruta(job, conv, ruta):
 
 
 def _encolar(cid, d, ruta=None):
-    """📥 La conversación está trabajando: el pedido va a su bandeja y se integra en el siguiente paso."""
+    """📥 La conversación está trabajando: el pedido va a su bandeja y se integra en el siguiente paso.
+    🧠 Si está esperando que revises su plan, lo que escribes es la respuesta al plan: «sí» lo aprueba, «no/cancela»
+    detiene el trabajo y otro texto aprueba el plan y entra como cambio (antes se encolaba y el plan se aprobaba solo)."""
+    try:
+        from noviq import cerebro as CB
+        resp = CB.respuesta_chat(cid, d.get("text"))
+    except Exception:
+        resp = None
+    if resp == "detenido":
+        return jsonify({"ok": True, "plan": "detenido", "conversation_id": cid,
+                        "texto": "⏹ Cancelaste el plan: detuve el trabajo."})
+    if resp == "aprobado":
+        return jsonify({"ok": True, "plan": "aprobado", "conversation_id": cid, "texto": "✔ Plan aprobado: empiezo."})
     it = BJ.agregar(cid, d.get("text"), d.get("images"), d.get("files"), d.get("origen") or "ventana")
     if not it:
         return jsonify({"error": "No hay nada que agregar."}), 400

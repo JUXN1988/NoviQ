@@ -314,6 +314,8 @@ TOOL_DEF = {"type": "function", "function": {
 def para_prompt(conv, compacto=False):
     """Texto de memoria para el prompt del sistema: el mapa y lo más útil (corto en modo compacto)."""
     proyecto = conv.get("project")
+    if proyecto and str(proyecto).startswith("_") and conv.get("carpeta_propia"):
+        proyecto = None   # 🗂 _General no es un proyecto: su memoria es de otros pedidos
     s = ""
     if compacto:
         pm = leer("proyecto", proyecto).strip() if proyecto else ""

@@ -205,7 +205,7 @@ def save_file(conv):
 
 
 def read_project_file(project):
-    if not project:
+    if not project or str(project).startswith("_"):   # _General: el estado de otros pedidos no es contexto de este
         return ""
     f = meta_dir(project, create=False) / "ESTADO.md"
     return f.read_text(encoding="utf-8") if f.exists() else ""

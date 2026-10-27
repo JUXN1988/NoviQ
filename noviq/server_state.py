@@ -16,7 +16,8 @@ def conv_path(cid):
 
 def new_conv(cid, project=None, model=None):
     return {"id": cid, "title": "Nueva conversación", "created": time.time(), "updated": time.time(),
-            "project": project, "model": model, "messages": [], "display": [], "tasks": [], "allowed_tools": []}
+            "project": project, "model": model, "messages": [], "display": [], "tasks": [], "allowed_tools": [],
+            "carpeta_propia": True}   # 🗂 sin proyecto real trabaja en su propia carpeta (no en la _General compartida)
 
 
 def load_conv(cid):

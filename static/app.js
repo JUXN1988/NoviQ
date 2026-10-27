@@ -554,6 +554,7 @@ async function encolarPedido() {
     const j = await jpost(`/api/conversations/${cid}/bandeja`, body);
     if (j.encolado) { (COLAS[cid] = COLAS[cid] || []).push({id: j.id, texto: text}); renderCola(); toast(j.texto || "📥 Recibido: se integra en el siguiente paso."); }
     else if (j.iniciado) { REENGANCHAR = cid; toast(j.texto || "▶ Empiezo un turno nuevo con tu pedido."); }
+    else if (j.plan) toast(j.texto || (j.plan === "detenido" ? "⏹ Trabajo detenido" : "✔ Plan aprobado"));
     else toast("No pude agregarlo: " + (j.error || "error desconocido"));
   } catch (e) { toast("No pude agregarlo: " + e.message); }
 }
@@ -1815,12 +1816,12 @@ function planReview(p, r) {
   showPanel("plan"); PLAN.txt = null;
   const b = $("#planBody"); PLAN.id = p.id;
   b.innerHTML = `<h3>🧠 Plan propuesto${p.modelo ? " por " + esc(p.modelo) : ""}</h3><div class="pcount"><div class="pbar"><span></span></div><span class="ptime"></span></div>
-    <div class="small">Revísalo. Si no haces nada se aprueba solo; si empiezas a editar, la cuenta se detiene hasta que pulses «Aprobar».</div>
+    <div class="small">Revísalo. Si no haces nada se aprueba solo; si empiezas a editar, la cuenta se detiene hasta que pulses «Aprobar». También puedes escribir en el chat: «sí» lo aprueba, «no» / «cancela» detiene el trabajo y cualquier otro texto se agrega como cambio.</div>
     <div class="pform">${planForm(p.plan)}</div>
-    <div class="pact"><button class="btn ok" data-a="ok">✔ Aprobar y empezar</button><button class="btn" data-a="no">✖ Descartar plan</button></div>`;
+    <div class="pact"><button class="btn ok" data-a="ok">✔ Aprobar y empezar</button><button class="btn" data-a="sin">▶ Seguir sin plan</button><button class="btn stop" data-a="no">⏹ Cancelar el trabajo</button></div>`;
   // tarjeta también en el chat
   const card = document.createElement("div"); card.className = "plancard"; card.dataset.id = p.id;
-  card.innerHTML = `<b>🧠 Plan listo (${(p.plan.tareas || []).length} tareas)</b> <span class="ptime"></span> <button class="btn" data-a="ver">Ver / editar</button> <button class="btn ok" data-a="ok">✔ Aprobar</button>`;
+  card.innerHTML = `<b>🧠 Plan listo (${(p.plan.tareas || []).length} tareas)</b> <span class="ptime"></span> <button class="btn" data-a="ver">Ver / editar</button> <button class="btn ok" data-a="ok">✔ Aprobar</button> <button class="btn" data-a="no">⏹ Cancelar</button>`;
   r.place(card); scrollEnd(true);
   card.querySelector("[data-a=ver]").onclick = () => showPanel("plan");
   let left = p.segundos, editing = false;
@@ -1835,7 +1836,9 @@ function planReview(p, r) {
   b.querySelectorAll("[data-f]").forEach(x => x.addEventListener("input", () => { if (!editing) { editing = true; tick(); jpost(`/api/plan/${p.id}`, {accion: "editando"}); } }));
   const approve = () => send("aprobar", editing ? readPlanForm(b) : null);
   b.querySelector("[data-a=ok]").onclick = approve; card.querySelector("[data-a=ok]").onclick = approve;
-  b.querySelector("[data-a=no]").onclick = () => send("cancelar");
+  const cancelar = () => { send("detener"); $$(".ptime").forEach(x => x.textContent = "⏹ cancelado"); };   // «no» = detener el trabajo
+  b.querySelector("[data-a=no]").onclick = cancelar; card.querySelector("[data-a=no]").onclick = cancelar;
+  b.querySelector("[data-a=sin]").onclick = () => send("sin_plan");
 }
 function planDone(p) {
   clearInterval(PLAN.timer);

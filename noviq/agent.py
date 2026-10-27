@@ -12,6 +12,7 @@ from datetime import datetime
 
 from . import bandeja as BJ
 from . import via_rapida as VR
+from . import espacio as ES
 from . import compacto as C
 from . import diagnostico as D
 from . import director as DIR
@@ -50,6 +51,8 @@ def system_prompt(conv, text_tools=None, handoff=None):
     ctx = T.ToolContext(conv, lambda *a: None, threading.Event())
     cwd = ctx.cwd
     proj = conv.get("project")
+    if proj and conv.get("carpeta_propia") and str(proj).startswith("_"):
+        proj = None   # 🗂 _General no es un proyecto: no se le pasan árbol, estado ni memoria de pedidos anteriores
     s = f"""Eres un asistente de IA autónomo y experto que trabaja dentro de "Noviq", una aplicación de escritorio en la PC del usuario ({OS_NAME}). Fecha y hora: {datetime.now():%Y-%m-%d %H:%M}.
 Responde en el idioma del usuario (normalmente español), con Markdown claro. Los bloques de código llevan su lenguaje (```python, ```powershell…).
 
@@ -530,9 +533,17 @@ def run_agent(conv, emit_raw, stop_ev):
                 and not _texto(m.get("content")).startswith("[")), None)
     txt_ult = _texto(ult.get("content")) if ult else ""
     conv["_nivel"] = VR.nivel(txt_ult, arreglo=pide_arreglo(txt_ult)) if ult else "normal"
-    conv["_rapida"] = conv["_nivel"] in ("rapida", "charla")   # sin diagnóstico, sin plan y sin árbol de archivos
+    conv["_rapida"] = conv["_nivel"] in ("rapida", "charla", "documento")   # sin diagnóstico, sin plan y sin árbol de archivos
     if conv["_nivel"] in VR.AVISO_NIVEL:
         emit("status", {"text": VR.AVISO_NIVEL[conv["_nivel"]]})
+    # 🗂 Construir algo NUEVO sin proyecto → su propio proyecto (carpeta aparte) antes de empezar: no se mezcla con nada
+    n_pedidos = sum(1 for m in conv.get("messages") or [] if m.get("role") == "user" and not _texto(m.get("content")).startswith("["))
+    if conv["_nivel"] == "grande" and n_pedidos == 1 and conv.get("carpeta_propia") and not ES.es_real(conv.get("project")) \
+            and not conv.get("modo_juego"):
+        try:
+            ES.crear_proyecto_auto(conv, txt_ult, emit)
+        except Exception as ex:
+            emit("status", {"text": f"(no pude crear el proyecto automático: {type(ex).__name__})"})
     conv.pop("_tipo", None)
     conv["_tipo"] = EV.tipo_conv(conv)  # tipo del pedido actual (crear, arreglar, web, analizar, general)
     conv.setdefault("_turno_modelos", {})

@@ -50,8 +50,8 @@ def needs_plan(conv):
         return None
     if any(t.get("estado") in ("pendiente", "en_progreso") for t in conv.get("tasks") or []):
         return None
-    if conv.get("_rapida"):
-        return None  # ⚡ tarea rápida (información/aviso): sin arquitecto ni plan
+    if conv.get("_rapida") or conv.get("_nivel") == "pequena":
+        return None  # ⚡ tarea rápida o 🔧 cambio puntual: sin arquitecto ni plan
     if conv.get("modo_juego"):
         return None  # videojuegos: el diseño lo hace crear_juego (🎮 Estudio) y los cambios van a juego.js; sin plan del arquitecto
     msgs = conv.get("messages") or []
@@ -145,7 +145,8 @@ def review(conv, emit, stop_ev, d, modelo=""):
     import time
     import uuid
     rid = uuid.uuid4().hex[:12]
-    st = PLANS[rid] = {"event": __import__("threading").Event(), "accion": None, "plan": None, "editando": False}
+    st = PLANS[rid] = {"event": __import__("threading").Event(), "accion": None, "plan": None, "editando": False,
+                       "cid": conv.get("id"), "stop": stop_ev}
     emit("plan_review", {"id": rid, "plan": d, "segundos": seg, "modelo": modelo.split("::")[-1]})
     t0 = time.time()
     try:
@@ -156,8 +157,14 @@ def review(conv, emit, stop_ev, d, modelo=""):
             if time.time() - t0 > lim:
                 st["accion"] = "aprobar"
                 break
-        if st["accion"] == "cancelar":
-            emit("notice", {"text": "✖ Plan descartado por el usuario: la IA trabajará sin él."})
+        if st["accion"] in ("detener", "cancelar"):
+            # «no» / «cancela» / ⏹: el usuario NO quiere este trabajo → se detiene de verdad (antes solo descartaba el plan
+            # y la IA seguía trabajando sin él)
+            stop_ev.set()
+            emit("notice", {"text": "⏹ Cancelaste el plan: detuve el trabajo. Escribe de nuevo lo que quieres cuando gustes."})
+            return None
+        if st["accion"] == "sin_plan":
+            emit("notice", {"text": "▶ Plan descartado: la IA trabajará sin él."})
             return None
         nd = st.get("plan") or d
         if st.get("plan"):
@@ -167,6 +174,32 @@ def review(conv, emit, stop_ev, d, modelo=""):
         return nd
     finally:
         PLANS.pop(rid, None)
+
+
+_SI = re.compile(r"(?i)^\W*(s[ií]|ok|okay|dale|va|vale|listo|perfecto|de acuerdo|adelante|apruebo|aprueba(lo)?|hazlo|empieza|"
+                 r"comienza|correcto|me parece bien|esta bien|está bien)\b[\w\s,.!¡]{0,25}$")
+_NO = re.compile(r"(?i)^\W*(no|nop|nel|cancela(lo|r)?|canc[eé]lalo|det[eé]n(te|lo)?|para(lo)?|alto|stop|basta|olv[ií]dalo|d[eé]jalo|"
+                 r"no quiero|no lo hagas|no gracias|mejor no|ya no)\b[\w\s,.!¡]{0,40}$")
+
+
+def pendiente(cid):
+    """Id de la revisión de plan que está esperando en esa conversación (o None)."""
+    return next((rid for rid, st in list(PLANS.items()) if st.get("cid") == cid and not st["event"].is_set()), None)
+
+
+def respuesta_chat(cid, texto):
+    """Lo que el usuario ESCRIBE en el chat mientras el plan espera revisión (antes se encolaba sin que nadie lo leyera
+    y el plan se aprobaba solo). «sí» → aprueba · «no/cancela/detén» → detiene el trabajo · otro texto → aprueba y el
+    texto sigue a la bandeja como cambio al plan. → 'aprobado' | 'detenido' | 'cambio' | None (no había plan esperando)."""
+    rid = pendiente(cid)
+    if not rid:
+        return None
+    t = (texto or "").strip()
+    if _NO.match(t):
+        responder(rid, "detener")
+        return "detenido"
+    responder(rid, "aprobar")
+    return "aprobado" if _SI.match(t) else "cambio"
 
 
 def responder(rid, accion, plan=None):
@@ -266,6 +299,18 @@ def plan(conv, cwd, emit, stop_ev, main_model):
         conv["tasks"] = tasks
         emit("tasks", {"tasks": tasks})
         texto = format_plan(d, mid)
+        # 🧰 Agente preparador (sin IA): carpetas, PLAN.md, README.md y archivos base del plan → la IA solo los completa
+        try:
+            from . import espacio as ES
+            if ES.es_real(conv.get("project")):
+                creados = ES.preparar(cwd, d)
+                if creados:
+                    texto += ("\n\nArchivos base YA CREADOS por Noviq (complétalos con editar_archivo/escribir_archivo; no los "
+                              "crees de nuevo ni cambies la estructura sin motivo): " + ", ".join(creados[:30]))
+                    emit("notice", {"text": f"🧰 Preparé {len(creados)} archivos y carpetas base del plan (PLAN.md, README y "
+                                            "esqueletos): la IA solo los completa."})
+        except Exception as ex:
+            emit("status", {"text": f"(preparador omitido: {type(ex).__name__})"})
         last = conv["messages"][-1]
         if isinstance(last.get("content"), list):
             last["content"] = last["content"] + [{"type": "text", "text": "\n\n" + texto}]

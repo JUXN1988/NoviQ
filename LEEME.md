@@ -1,10 +1,17 @@
-# NoviQ 4.7: agente de IA de escritorio
+# NoviQ 4.8: agente de IA de escritorio
 
 NoviQ es un programa para trabajar con IA en tu PC al estilo de Claude. La IA no solo conversa: crea proyectos, escribe y edita código, lo prueba, ejecuta PowerShell y Python, busca en internet, dibuja, ve tu pantalla y recuerda lo que haces. Funciona con **NVIDIA (build.nvidia.com)**, **Gemini, OpenAI, Anthropic, OpenRouter, Groq, DeepSeek, Mistral, xAI y más**, y con **IA local mediante Ollama y LM Studio**. Si una IA falla, **continúa con otra sin perder nada**.
 
 > **Estado:** en actualización activa. Todavía **no hay instaladores publicados**: NoviQ se ejecuta desde el código (abajo). Si quieres un instalador propio, puedes compilarlo con los scripts de `packaging/` (sección «Compilar los instaladores»).
 
 NoviQ se abre en **su propia ventana nativa**, como cualquier programa (no en el navegador). El idioma (**español o inglés**) se elige solo según tu sistema; puedes cambiarlo en ⚙ Ajustes. Para cerrarlo por completo usa **⏻ Apagar Noviq**. Tus datos se guardan en `%APPDATA%\Noviq` (Windows), `~/Library/Application Support/Noviq` (macOS) o `~/.local/share/Noviq` (Linux).
+
+## Novedades de la 4.8
+- **⏹ Cancelar el plan cancela de verdad:** el botón «⏹ Cancelar el trabajo», o escribir «no» / «cancela» mientras el plan espera, detiene el trabajo. «sí» lo aprueba; otro texto lo aprueba y se agrega como cambio; «▶ Seguir sin plan» trabaja sin él.
+- **🗂 Cada trabajo en su carpeta:** las conversaciones nuevas sin proyecto ya no comparten `_General` ni leen lo de pedidos anteriores (cada una usa `_General/conversaciones/…`). Pedir algo nuevo para construir crea su propio proyecto.
+- **🧰 Agente preparador:** al aprobar el plan crea carpetas, `PLAN.md`, `README.md` y los archivos base; la IA solo los completa.
+- **📄 Documentos nativos:** `crear_documento` crea PDF, Word, Excel, PowerPoint, HTML, Markdown, TXT, CSV o JSON en una sola llamada, sin scripts.
+- **🎚 Cada pedido con su proceso:** charla, información/aviso, documento, cambio puntual o programa nuevo (ver CHANGELOG).
 
 ## Novedades de la 4.7: pedir cosas mientras trabaja y conversaciones que no se mezclan
 - **📥 Peticiones en caliente.** Si la IA o los agentes están trabajando y escribes algo más (en la ventana, por voz al avatar, por Telegram o por MCP), ya no aparece «Esta conversación ya está trabajando». El pedido entra en la **bandeja** de esa conversación y la IA lo **integra en el siguiente paso**, sin detenerse: si corrige el rumbo, lo ajusta; si es algo adicional, lo agrega al plan (conservando lo ya completado); si es una pregunta, la responde y sigue. Si el trabajo terminó justo antes, arranca solo un turno nuevo con lo pendiente. En la ventana, con la IA trabajando y texto en la caja, el botón cambia a **📥 Agregar**; lo que está en cola se ve sobre la caja y puedes quitarlo con ✕ antes de que la IA lo lea.

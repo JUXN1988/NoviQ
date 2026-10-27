@@ -67,6 +67,10 @@ Luego entra en **⚙ Ajustes → Proveedores y claves**, pega la API key de un p
 
 - **📥 Pídele más mientras trabaja (nuevo en 4.7)**: si la IA o los agentes están trabajando y escribes algo más (en la ventana, por voz al avatar, por Telegram o por MCP), el pedido entra en la bandeja de esa conversación y se **integra al plan en el siguiente paso**, sin detener nada. En la ventana, el botón cambia a **📥 Agregar** y ves lo que está en cola.
 - **🧭 Conversaciones que no se mezclan (nuevo en 4.7)**: cada pedido va a donde corresponde: sigue la misma conversación, retoma otra («sigue con lo del login»), abre una nueva («nueva conversación: …» / «otro tema…»), trabaja dentro del proyecto que nombras o crea un proyecto nuevo. Con el avatar y Telegram decide solo; en la ventana nunca te cambia de chat sin pedirlo.
+- **🎚 Cada pedido con su proceso (nuevo en 4.8)**: una charla responde directo; información o avisos (noticias, clima, enviar por Telegram) van por la vía rápida; un documento se crea en una sola llamada; un cambio puntual se hace sin plan largo; un programa nuevo recibe el proceso completo.
+- **🗂 Cada trabajo en su carpeta (nuevo en 4.8)**: las conversaciones nuevas no leen lo de pedidos anteriores, y lo que vas a construir recibe su propio proyecto. Al aprobar el plan, un agente prepara las carpetas, `PLAN.md` y los archivos base.
+- **📄 Documentos nativos (nuevo en 4.8)**: PDF, Word, Excel, PowerPoint, HTML, Markdown, TXT, CSV y JSON con la herramienta `crear_documento`, sin scripts.
+- **⏹ Cancelar el plan cancela el trabajo (nuevo en 4.8)**: también escribiendo «no» o «cancela» mientras el plan espera.
 - **🏷 Títulos automáticos (nuevo en 4.7)**: el primer pedido de cada conversación se resume en un título corto.
 - **Agente con 62 herramientas**: crear y editar archivos, buscar en el código, ejecutar PowerShell, Python y comandos de Linux, administrar procesos, hacer peticiones HTTP, buscar y leer páginas web, descargar archivos, generar imágenes, captura de pantalla, abrir archivos y programas, usar un navegador automatizado, y herramientas de juegos, oficina y Windows.
 - **Estudio de juegos** 2D, 3D y voxel, con modelos 3D propios.
@@ -159,6 +163,10 @@ Then go to **⚙ Settings → Providers & keys**, paste an API key from a provid
 
 - **📥 Ask for more while it works (new in 4.7)**: if the AI or the agents are working and you type something else (in the window, by voice to the avatar, by Telegram or by MCP), the request goes into that conversation's inbox and is **merged into the plan at the next step**, without stopping anything. In the window, the button turns into **📥 Add** and you see what is queued.
 - **🧭 Conversations that don't mix (new in 4.7)**: each request goes where it belongs: it continues the same conversation, resumes another one («continue with the login»), opens a new one («new conversation: …»), works inside the project you name, or creates a new project. With the avatar and Telegram it decides on its own; in the window it never switches your chat unless you ask.
+- **🎚 Each request gets its own process (new in 4.8)**: chat answers directly; information or notifications go through the fast path; documents are created in one call; small changes skip the long plan; new programs get the full process.
+- **🗂 Each job in its own folder (new in 4.8)**: new conversations don't read older requests, and what you build gets its own project. When the plan is approved, an agent prepares folders, `PLAN.md` and base files.
+- **📄 Native documents (new in 4.8)**: PDF, Word, Excel, PowerPoint, HTML, Markdown, TXT, CSV and JSON with the `crear_documento` tool, no scripts.
+- **⏹ Canceling the plan cancels the job (new in 4.8)**: also by typing «no» or «cancel» while the plan waits.
 - **🏷 Automatic titles (new in 4.7)**: the first request of each conversation is summarized in a short title.
 - **Agent with 62 tools**: create and edit files, search code, run PowerShell, Python and Linux commands, manage processes, make HTTP requests, search and read web pages, download files, generate images, take screenshots, open files and programs, use an automated browser, plus game, office and Windows tools.
 - **Game studio** for 2D, 3D and voxel games, with its own 3D models.

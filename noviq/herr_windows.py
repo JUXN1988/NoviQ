@@ -7,6 +7,7 @@ import re
 from . import agenda as _AG
 from . import correo as _CO
 from . import oficina as _OF
+from . import documentos as _DOC
 from . import telegram_bot as _TG
 
 MCP_SYSTEM = """Eres un agente que completa UNA tarea usando SOLO las herramientas del servidor MCP «{nombre}» ({desc}).
@@ -54,9 +55,9 @@ def def_agente_mcp():
                        "required": ["servidor", "tarea"]}}}
 
 
-DEFS = [_OF.TOOL_DEF, _CO.TOOL_DEF, _AG.TOOL_DEF, _TG.TOOL_DEF]
-FUNCS = {"oficina": _OF.tool, "correo": _CO.tool, "agenda": _AG.tool, "telegram": _TG.tool, "agente_mcp": t_agente_mcp}
-LABELS = {"oficina": "📎 Oficina (Word/Excel/PDF/carpetas)", "correo": "✉ Correo", "agenda": "📅 Agenda", "telegram": "📱 Telegram",
+DEFS = [_DOC.TOOL_DEF, _OF.TOOL_DEF, _CO.TOOL_DEF, _AG.TOOL_DEF, _TG.TOOL_DEF]
+FUNCS = {"crear_documento": _DOC.tool, "oficina": _OF.tool, "correo": _CO.tool, "agenda": _AG.tool, "telegram": _TG.tool, "agente_mcp": t_agente_mcp}
+LABELS = {"crear_documento": "📄 Creando documento", "oficina": "📎 Oficina (Word/Excel/PDF/carpetas)", "correo": "✉ Correo", "agenda": "📅 Agenda", "telegram": "📱 Telegram",
           "agente_mcp": "🔌 Agente MCP"}
 LECTURA = {("oficina", "word_leer"), ("oficina", "excel_leer"), ("oficina", "pdf_leer"), ("oficina", "buscar"), ("oficina", "recientes"),
            ("correo", "leer"), ("correo", "cuentas")}
@@ -73,6 +74,11 @@ def necesita_permiso(name, args, mode):
         return None
     if name in ("agenda", "telegram", "agente_mcp"):
         return False
+    if name == "crear_documento":   # en la carpeta del trabajo actual no pregunta; en Escritorio/Documentos/… según el modo
+        r = str(args.get("ruta") or "").replace("\\", "/").lower()
+        fuera = r.startswith(("/", "~")) or re.match(r"^[a-z]:", r) or r.split("/")[0] in (
+            "escritorio", "desktop", "documentos", "documents", "descargas", "downloads", "imagenes", "pictures")
+        return bool(fuera) and mode == "preguntar"
     if (name, (args.get("accion") or "").lower()) in LECTURA:
         return False
     return mode == "preguntar"
@@ -92,7 +98,7 @@ def prompt_extra(conv):
     if IS_WINDOWS:
         partes.append(
             "## Windows, Office, correo y agenda (gasta pocos tokens)\n"
-            "- Documentos: `oficina` (Word/Excel/PDF/buscar/ordenar) sin abrir programas. Correo: `correo`.\n"
+            "- Documentos NUEVOS (txt, md, html, pdf, Word, Excel, csv, PowerPoint, json): `crear_documento` en UNA llamada (no escribas scripts para eso). Leer/editar/buscar/ordenar: `oficina`. Correo: `correo`.\n"
             "- Escritorio: `agente_pc` para tareas largas; paso a paso `control_pc`: primero 'elementos' o 'leer_texto' (OCR, sin imagen), "
             "'clic_texto' para pulsar lo que ves escrito; 'captura' solo si el texto no alcanza.\n"
             "- Webs: `agente_navegador` (Gmail/Hotmail web con la sesión del usuario si está «Tu Chrome abierto»).\n"

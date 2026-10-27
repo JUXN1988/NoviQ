@@ -46,12 +46,15 @@ class ToolContext:
 
     @property
     def cwd(self) -> Path:
+        """Carpeta de trabajo: la del proyecto; si no hay proyecto real, la carpeta PROPIA de la conversación
+        (🗂 espacio.py: las conversaciones nuevas ya no comparten _General ni leen lo de pedidos anteriores)."""
+        from . import espacio as ES
         pr = self.conv.get("project")
-        if pr:
+        if pr and (ES.es_real(pr) or not self.conv.get("carpeta_propia")):
             p = project_path(pr)
             if p.exists():
                 return p
-        return general_dir()
+        return ES.carpeta_conversacion(self.conv)
 
     def resolve(self, ruta) -> Path:
         ruta = os.path.expandvars(os.path.expanduser(str(ruta or ".").strip().strip('"').strip("'")))

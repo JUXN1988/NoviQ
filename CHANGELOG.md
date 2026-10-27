@@ -1,5 +1,11 @@
 # Changelog / Historial de cambios
 
+## v4.8.0 — 2026-10-26
+- **⏹ Canceling a plan really cancels / Cancelar el plan cancela de verdad.** «⏹ Cancelar el trabajo» (and typing «no», «cancela», «detente»… while the plan waits for review) now STOPS the job; before, it only dropped the plan and the AI kept working, and typed replies were queued unread while the plan auto-approved. «sí» approves, any other text approves and is added as a change, «▶ Seguir sin plan» keeps the old behavior.
+- **🗂 Each job in its own folder / Cada trabajo en su carpeta.** New conversations without a project no longer share `_General` (they used to receive its file tree, ESTADO.md and memory from older requests and read them first). Each one works in `_General/conversaciones/<fecha>_<tema>_<id>`. Building something new («crea una página…») creates its own project before starting. Old conversations keep their folder.
+- **🧰 Preparer agent / Agente preparador.** After the architect plan is approved, Noviq (without AI) creates the folders, `PLAN.md`, `README.md` and minimal valid base files from the plan, so the AI only fills them in.
+- **📄 Native documents / Documentos nativos.** New tool `crear_documento`: txt, md, html, pdf, docx, xlsx, csv, pptx and json in ONE call (titles, bullets, bold, tables, Excel sheets, slides). New level «📄 documento»: no plan, no scripts. New dependencies: `fpdf2`, `python-pptx` (installed by `iniciar.bat`).
+
 ## v4.7.2 — 2026-10-26
 - **🎚 Every request gets only the process it needs / Cada pedido recibe solo el proceso que necesita.** Instant rule-based levels (no AI call): 💬 chat or simple question → direct answer (max 6 steps); ⚡ information/notification → fast path without files (max 20); 🔧 small change or fix in code → no architect plan or plan review: locate → edit → verify once (max 30); 🏗 new program/game/page → full process (plan, team, tests). Unclear requests keep the usual process.
 - **Fix:** 4.7.1 crashed (`UnboundLocalError`) on fast-path requests because another import inside the agent reused the name `VR`. New end-to-end test runs the agent loop on every level. / Arreglo del fallo de la 4.7.1 en la vía rápida.
