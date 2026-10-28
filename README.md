@@ -24,7 +24,7 @@
 <a href="#-english">English</a>
 </p>
 
-> **⚠️ En actualización activa.** Estamos mejorando el programa y pueden existir pequeñas fallas que se están corrigiendo. Usa siempre la última versión del repositorio. / **Active development.** We are improving the app and minor bugs may exist while we fix them. Always use the latest version of the repository.
+> 🧪 **Versión de prueba en actualización activa.** Pueden existir pequeñas fallas que se están corrigiendo; usa siempre la última versión. **Tu opinión ayuda mucho:** [reporta un error](https://github.com/JUXN1988/NoviQ/issues/new?template=bug_report.yml) o [sugiere una mejora](https://github.com/JUXN1988/NoviQ/issues/new?template=feature_request.yml). / **Beta in active development.** Minor bugs may exist while we fix them; always use the latest version. **Your feedback helps:** [report a bug](https://github.com/JUXN1988/NoviQ/issues/new?template=bug_report.yml) or [suggest an improvement](https://github.com/JUXN1988/NoviQ/issues/new?template=feature_request.yml).
 
 ---
 
@@ -42,8 +42,8 @@ El repositorio tiene dos partes:
 Necesitas **Python 3.10 o superior**.
 
 ```bash
-git clone https://github.com/JUXN1988/noviark.git
-cd noviark
+git clone https://github.com/JUXN1988/NoviQ.git
+cd NoviQ
 # Windows: doble clic en iniciar.bat   (crea el entorno .venv y abre la app)
 # Linux / macOS:
 bash iniciar.sh
@@ -112,9 +112,9 @@ Además: **permisos por voz** (responde sí o no sin decir su nombre), **tareas 
 
 Como el proyecto está en actualización, tu opinión ayuda mucho:
 
-- **Reportar un error:** [abre un issue de error](https://github.com/JUXN1988/noviark/issues/new?template=bug_report.yml)
-- **Proponer una mejora:** [abre una sugerencia](https://github.com/JUXN1988/noviark/issues/new?template=feature_request.yml)
-- **Ver lo que se está corrigiendo:** [issues abiertos](https://github.com/JUXN1988/noviark/issues)
+- **Reportar un error:** [abre un issue de error](https://github.com/JUXN1988/NoviQ/issues/new?template=bug_report.yml)
+- **Proponer una mejora:** [abre una sugerencia](https://github.com/JUXN1988/NoviQ/issues/new?template=feature_request.yml)
+- **Ver lo que se está corrigiendo:** [issues abiertos](https://github.com/JUXN1988/NoviQ/issues)
 
 ### 📄 Licencia
 
@@ -138,8 +138,8 @@ The repository has two parts:
 You need **Python 3.10 or newer**.
 
 ```bash
-git clone https://github.com/JUXN1988/noviark.git
-cd noviark
+git clone https://github.com/JUXN1988/NoviQ.git
+cd NoviQ
 # Windows: double-click iniciar.bat   (creates .venv and opens the app)
 # Linux / macOS:
 bash iniciar.sh
@@ -208,9 +208,9 @@ Also: **voice permissions** (answer yes or no without saying its name), **tasks 
 
 Since the project is being updated, your feedback helps a lot:
 
-- **Report a bug:** [open a bug issue](https://github.com/JUXN1988/noviark/issues/new?template=bug_report.yml)
-- **Suggest an improvement:** [open a feature request](https://github.com/JUXN1988/noviark/issues/new?template=feature_request.yml)
-- **See what is being fixed:** [open issues](https://github.com/JUXN1988/noviark/issues)
+- **Report a bug:** [open a bug issue](https://github.com/JUXN1988/NoviQ/issues/new?template=bug_report.yml)
+- **Suggest an improvement:** [open a feature request](https://github.com/JUXN1988/NoviQ/issues/new?template=feature_request.yml)
+- **See what is being fixed:** [open issues](https://github.com/JUXN1988/NoviQ/issues)
 
 ### 📄 License
 

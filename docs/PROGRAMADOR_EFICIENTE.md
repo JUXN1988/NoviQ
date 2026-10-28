@@ -34,7 +34,7 @@ respuesta es casi solo ese bloque. Así un ejemplo dentro de una explicación nu
 ### 2.2 Rutas tolerantes
 Si la ruta no existe, Noviq busca **dentro del proyecto** el archivo que la IA quiso decir:
 - solo el nombre (`motor3d.js`, cuando el archivo está en `lib/`);
-- otra carpeta de usuario inventada (`C:\Users\gclaudio\…`);
+- otra carpeta de usuario inventada (`C:\Users\otro_usuario\…`);
 - el nombre del proyecto repetido;
 - barras al revés o mayúsculas distintas.
 

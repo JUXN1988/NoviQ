@@ -4,7 +4,7 @@
 Errores reales de las IAs pequeñas en los registros de Noviq:
   · solo el nombre («motor3d.js») cuando el archivo está en lib/ o src/js/  → buscar_en_archivos decía
     «Sin coincidencias» (¡buscaba en un archivo que no existe!) y la IA concluía que el código no estaba
-  · otra carpeta de usuario inventada («C:\\Users\\gclaudio\\…\\Noviq_Proyectos\\…»)
+  · otra carpeta de usuario inventada («C:\\Users\\otro_usuario\\…\\Noviq_Proyectos\\…»)
   · el nombre del proyecto repetido («MiJuego/src/x.js» estando ya dentro de MiJuego)
   · barras al revés o de más
 Si hay UNA sola candidata clara se usa y se avisa; si hay varias, se listan para que la IA elija (sin adivinar).

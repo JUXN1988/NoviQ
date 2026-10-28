@@ -364,7 +364,7 @@ def escenarios():
                         C("editar_archivo", lambda e: {"ruta": _ruta_falsa(e, "src/jugador.js"), "texto_anterior": "this.vida = 3;",
                                                        "texto_nuevo": "this.vida = 4;"}), FIN()],
                        lambda r: "this.vida = 4;" in L(r, "src/jugador.js"),
-                       desc="ruta absoluta con otra carpeta de usuario (pasó con «C:\\Users\\gclaudio\\…»)"))
+                       desc="ruta absoluta con otra carpeta de usuario (pasó con «C:\\Users\\otro_usuario\\…»)"))
     E.append(Escenario("ruta-proyecto-repetido", "Cambia el impulso del salto a -14.", {"src/js/motor.js": MOTOR},
                        [C("editar_archivo", lambda e: {"ruta": f"{e.id}/src/js/motor.js", "texto_anterior": "jugador.vy = -12;",
                                                        "texto_nuevo": "jugador.vy = -14;"}), FIN()],
@@ -600,8 +600,8 @@ def _primer_archivo_ext(e, ext):
 
 def _ruta_falsa(e, rel):
     if os.name == "nt":
-        return "C:\\Users\\gclaudio\\OneDrive\\Public\\Documents\\" + PROYECTOS.name + "\\" + e.id + "\\" + rel.replace("/", "\\")
-    return "/home/gclaudio/Documents/" + PROYECTOS.name + "/" + e.id + "/" + rel
+        return "C:\\Users\\otro_usuario\\OneDrive\\Public\\Documents\\" + PROYECTOS.name + "\\" + e.id + "\\" + rel.replace("/", "\\")
+    return "/home/otro_usuario/Documents/" + PROYECTOS.name + "/" + e.id + "/" + rel
 
 
 def _primer_archivo(e):

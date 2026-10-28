@@ -30,7 +30,7 @@ import requests
 
 from .config import DATA_DIR
 
-UA = {"User-Agent": "Noviq/4.3 (estudio de juegos; https://github.com/JUXN1988/noviark)"}
+UA = {"User-Agent": "Noviq/4.3 (estudio de juegos; https://github.com/JUXN1988/NoviQ)"}
 CACHE = DATA_DIR / "activos_cache"
 _lock = threading.Lock()
 
